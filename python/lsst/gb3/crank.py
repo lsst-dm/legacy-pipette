@@ -23,7 +23,10 @@
 
 import os
 import re
-from lsst.daf.persistence import ButlerLocation, LogicalLocation, Mapping, CalibrationMapping
+
+import lsst.gb3.config as cfg
+
+import lsst.daf.persistence as dafPersist
 import lsst.daf.butlerUtils as butlerUtils
 import lsst.daf.base as dafBase
 import lsst.afw.image as afwImage
@@ -31,8 +34,8 @@ import lsst.afw.cameraGeom as afwCameraGeom
 import lsst.afw.cameraGeom.utils as cameraGeomUtils
 import lsst.afw.image.utils as imageUtils
 import lsst.pex.logging as pexLog
-import lsst.pex.policy as pexPolicy
 import lsst.ip.isr as ipIsr
+
 
 
 """This module defines the Crank base class for LSST Algorithms testing (Green Blob 3)."""
@@ -52,31 +55,20 @@ class Crank(object):
                  ):
         self.name = name
         self.mapper = mapper
-        self.config = Config(policy)
         self.log = pexLog.Log(pexLog.getDefaultLog(), "Crank")
-
-
-
-        # Policy setup
-        if policy is None:
-            self.policy = pexPolicy.Policy()
-        elif isinstance(policy, pexPolicy.Policy):
-            self.policy = policy
-        elif isinstance(policy, pexPolicy.PolicyFile):
-            self.policy = pexPolicy.Policy.createPolicy(policy, policy.getRepositoryPath())
-        else:
-            raise RuntimeError, "Can't interpret provided policy"
-        dictFile = pexPolicy.DefaultPolicyFile("sia", "Processor.paf", "policy")
-        dictPolicy = pexPolicy.Policy.createPolicy(dictFile, dictFile.getRepositoryPath()) # Dictionary
-        self.policy.mergeDefaults(dictPolicy)
-
-        self.do = dict()                # Things to do
-        self.do["isr"] = self.policy.getBool("isr")
-        self.do["imgchar"] = self.policy.getBool("imgchar")
-        self.do["ap"] = self.policy.getBool("ap")
-
         self.bf = dafPersist.ButlerFactory(mapper=mapper)
         self.butler = self.bf.create()
+
+        dictFile = pexPolicy.DefaultPolicyFile("gb3", "Crank.paf", "policy")
+        dictPolicy = pexPolicy.Policy.createPolicy(dictFile, dictFile.getRepositoryPath()) # Dictionary
+        policy.mergeDefaults(dictPolicy)
+        self.config = cfg.Config(policy)
+
+        if not self.config.has_key('do'):
+            raise RuntimeError, "No 'do' subpolicy in configuration"
+        self.do = self.config['do']
+        if not isinstance(self.do, cfg.Config):
+            raise RuntimeError, "'do' subpolicy is not set up correctly"
 
         return
 
@@ -90,7 +82,6 @@ class Crank(object):
 
         exposure = butler.get('raw', dataId)
         mImg = exposure.getMaskedImage()
-        mImg.setVarianceFromGain()
         return exposure
 
 
@@ -101,13 +92,19 @@ class Crank(object):
         subtract overscan, bias, dark; divide by flat-field;
         subtract fringes.
         """
-        self._saturation(exposure, dataId)
-        self._overscan(exposure, dataId)
-        self._bias(exposure, dataId)
+        if self.do['saturation']:
+            self._saturation(exposure, dataId)
+        if self.do['overscan']:
+            self._overscan(exposure, dataId)
+        if self.do['bias']:
+            self._bias(exposure, dataId)
         self._variance(exposure, dataId)
-        self._dark(exposure, dataId)
-        self._flat(exposure, dataId)
-        #self._fringe(exposure, dataId)
+        if self.do['dark']:
+            self._dark(exposure, dataId)
+        if self.do['flat']:
+            self._flat(exposure, dataId)
+        if self.do['fringe']:
+            self._fringe(exposure, dataId)
         return
 
 
@@ -123,19 +120,33 @@ class Crank(object):
         cosmic-ray rejection, source detection and measurement,
         PSF determination, and photometric and astrometric
         calibration."""
-        self._defects(exposure, dataId)
-        bgSubExp = self._background(exposure, dataId)
-        self._cosmicray(bgSubExp, dataId)
-        posSources, negSources = self._detect(bgSubExp, dataId)
-        sources = self._measure(bgSubExp, dataId, posSources, negSources)
-        psf = self._psfMeasurement(bgSubExp, dataId, sources)
-        matches, wcs = self._astrometry(bgSubExp, dataId, sources)
-        self._photcal(bgSubExp, dataId, matches)
-        # Repeat with proper PSF
-        posSources, negSources = self._detect(bgSubExp, dataId, psf=psf)
-        sources = self._measure(bgSubExp, dataId, posSources, negSources, psf=psf, wcs=wcs)
 
-        return bgSubExp, psf, sources, matches
+        # Default return values
+        bgSubExp = None
+        psf = None
+        sources = None
+        matches = None
+        wcs = exposure.getWcs()
+
+        if self.do['defects']:
+            self._defects(exposure, dataId)
+        if self.do['background']:
+            bgSubExp = self._background(exposure, dataId)
+        else: bgSubExp = exposure
+        if self.do['cr']:
+            self._cosmicray(bgSubExp, dataId)
+        if self.do['phot']:
+            posSources, negSources = self._detect(bgSubExp, dataId)
+            sources = self._measure(bgSubExp, dataId, posSources, negSources)
+            psf = self._psfMeasurement(bgSubExp, dataId, sources)
+            posSources, negSources = self._detect(bgSubExp, dataId, psf=psf)
+            sources = self._measure(bgSubExp, dataId, posSources, negSources, psf=psf, wcs=wcs)
+        if self.do['ast']:
+            matches, wcs = self._astrometry(bgSubExp, dataId, sources)
+        if self.do['cal'] and matches is not None and len(matches) > 0:
+            self._photcal(bgSubExp, dataId, matches)
+
+        return bgSubExp, psf, sources, matches, wcs
 
 
     def write(exposure, dataId, psf, sources, matches):
@@ -189,7 +200,7 @@ class Crank(object):
     def _flat(exposure, dataId):
         flat = self.butler.get("flat", dataId)
         # This API is bad --- you NEVER want to rescale your flat on the fly.
-        # Scale it properly and never rescale again.
+        # Scale it properly when you make it and never rescale again.
         ipIsr.flatCorrection(exposure, dark, "USER", 1.0)
         return
 

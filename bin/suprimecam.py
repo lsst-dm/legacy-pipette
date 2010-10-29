@@ -2,7 +2,6 @@
 
 import os
 import sys
-import optparse
 import lsst.obs.suprime as suprime
 import lsst.gb3.config as gb3Config
 import lsst.gb3.crank as gb3Crank
@@ -22,23 +21,18 @@ def run(rerun,                          # Rerun name
 
 
 if __name__ == "__main__":
-    parser = optparse.OptionParser(usage=__doc__)
+    parser = gb3Config.OptionParser(usage=__doc__)
     parser.add_option("-r", "--rerun", default=os.getenv("USER", default="rerun"), dest="rerun",
                       help="rerun name (default=%default)")
     parser.add_option("-f", "--frame", dest="frame",
                       help="visit to run (default=%default)")
     parser.add_option("-c", "--ccd", default="0:1:2:3:4:5:6:7:8:9", dest="ccd",
                       help="CCD to run (default=%default)")
-    parser.add_option("-o", "--overrides", dest="overrides", action="append",
-                      help="Configuration override files")
     opts, args = parser.parse_args()
 
-    if opts.overrides is None:
-        opts.overrides = []
-    opts.overrides.append("policy/suprimecam.paf")
-    config = gb3Config.configuration(opts.overrides)
-    if len(args) > 0 or len(sys.argv) == 1:
+    config = gb3Config.configuration("policy/suprimecam.paf", opts.config)
+    if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or opts.frame is None or opts.ccd is None:
         parser.print_help()
         sys.exit(1)
 
-    main(opts.rerun, int(opts.frame), int(opts.ccd), config)
+    run(opts.rerun, int(opts.frame), int(opts.ccd), config)

@@ -26,14 +26,10 @@ import re
 
 import lsst.gb3.config as cfg
 
+import lsst.pex.logging as pexLog
 import lsst.daf.persistence as dafPersist
-import lsst.daf.butlerUtils as butlerUtils
-import lsst.daf.base as dafBase
-import lsst.afw.image as afwImage
-import lsst.afw.cameraGeom as afwCameraGeom
 import lsst.afw.cameraGeom.utils as cameraGeomUtils
 import lsst.afw.image.utils as imageUtils
-import lsst.pex.logging as pexLog
 import lsst.ip.isr as ipIsr
 
 
@@ -50,43 +46,46 @@ class Crank(object):
 
     def __init__(self,                  # Crank
                  name,                  # Base name for outputs
-                 mapper,                # Mapper for data butler
-                 policy=None,           # Policy for configuration
+                 mapperClass,           # Mapper class to use
+                 config=None,           # Configuration
                  ):
         self.name = name
-        self.mapper = mapper
         self.log = pexLog.Log(pexLog.getDefaultLog(), "Crank")
         self.bf = dafPersist.ButlerFactory(mapper=mapper)
         self.butler = self.bf.create()
+        self.config = configuration if config is None else config
 
-        dictFile = pexPolicy.DefaultPolicyFile("gb3", "Crank.paf", "policy")
-        dictPolicy = pexPolicy.Policy.createPolicy(dictFile, dictFile.getRepositoryPath()) # Dictionary
-        policy.mergeDefaults(dictPolicy)
-        self.config = cfg.Config(policy)
+        roots = self.config['roots']
+        self.mapper = mapperClass(root=roots['data'], calibRoot=roots['calib'])
 
-        if not self.config.has_key('do'):
-            raise RuntimeError, "No 'do' subpolicy in configuration"
         self.do = self.config['do']
-        if not isinstance(self.do, cfg.Config):
-            raise RuntimeError, "'do' subpolicy is not set up correctly"
-
         return
 
+    def turn(self,
+             dataId                     # Data identifier
+             ):
+        exposure = self.read(dataId)
+        self.isr(exposure, dataId)
+        exposure = self.ccdAssembly(exposure, dataId)
+        exposure, psf, sources, matches, wcs = self.imageChar(exposure, dataId)
+        self.write(exposure, dataId, psf, sources, matches)
+        return
 
-    def read(dataId                        # Data identifier
+    def read(self,
+             dataId                     # Data identifier
              ):
         """Read raw data."""
         camera = butler.get('camera', dataId)
         ccd = cameraGeomUtils.findCcd(camera, cameraGeom.Id(dataId['ccd']))
-        print "Loading: ccd: ", ccd.getId().getSerial(), ", ccdName: ", ccdName = ccd.getId().getName()
+        print "Loading: ccd: ", ccd.getId().getSerial(), ", ccdName: ", ccd.getId().getName()
 
         exposure = butler.get('raw', dataId)
         mImg = exposure.getMaskedImage()
         return exposure
 
-
-    def isr(exposure,                    # Exposure to correct
-            dataId                        # Data identifier
+    def isr(self,
+            exposure,                   # Exposure to correct
+            dataId                      # Data identifier
             ):
         """Instrument signature removal: generate mask and variance;
         subtract overscan, bias, dark; divide by flat-field;
@@ -108,14 +107,14 @@ class Crank(object):
         return
 
 
-    def ccdAssembly(exposures, dataId):
+    def ccdAssembly(self, exposures, dataId):
         """Assembly of amplifiers into CCDs.
         Also applies defects (static mask)."""
         exposure = self._assembly(exposure, dataId)
         return exposure
 
 
-    def imageChar(exposure, dataId):
+    def imageChar(self, exposure, dataId):
         """Image characterisation: background subtraction,
         cosmic-ray rejection, source detection and measurement,
         PSF determination, and photometric and astrometric
@@ -133,12 +132,12 @@ class Crank(object):
         if self.do['background']:
             bgSubExp = self._background(exposure, dataId)
         else: bgSubExp = exposure
-        if self.do['cr']:
-            self._cosmicray(bgSubExp, dataId)
         if self.do['phot']:
             posSources, negSources = self._detect(bgSubExp, dataId)
             sources = self._measure(bgSubExp, dataId, posSources, negSources)
             psf = self._psfMeasurement(bgSubExp, dataId, sources)
+            if self.do['cr']:
+                self._cosmicray(bgSubExp, dataId)
             posSources, negSources = self._detect(bgSubExp, dataId, psf=psf)
             sources = self._measure(bgSubExp, dataId, posSources, negSources, psf=psf, wcs=wcs)
         if self.do['ast']:
@@ -149,7 +148,7 @@ class Crank(object):
         return bgSubExp, psf, sources, matches, wcs
 
 
-    def write(exposure, dataId, psf, sources, matches):
+    def write(self, exposure, dataId, psf, sources, matches):
         """Write processed data."""
         butler.put('processed', exposure, dataId)
         if psf is not None:
@@ -265,7 +264,7 @@ class Crank(object):
         policy = self.policy.getPolicy("detect") # XXX needs work
         posSources, negSources = sourceDetection.detectSources(exposure, psf, policy)
         self.log.log(Log.INFO, "Detected %d positive and %d negative sources." % \
-                     (len(posSources), len(negSources))
+                     (len(posSources), len(negSources)))
         return posSources, negSources
 
     def _measure(exposure, dataId, posSources, negSources, psf=None, wcs=None):

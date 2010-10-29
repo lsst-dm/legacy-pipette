@@ -1,0 +1,90 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    saturation: {
+        type: boolean
+        description: "Mask saturated pixels?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    overscan: {
+        type: boolean
+        description: "Perform overscan correction?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    bias: {
+        type: boolean
+        description: "Perform bias correction?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    dark: {
+        type: boolean
+        description: "Perform dark correction?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    flat: {
+        type: boolean
+        description: "Perform flat correction?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    fringe: {
+        type: boolean
+        description: "Perform fringe correction?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    defects: {
+        type: boolean
+        description: "Mask static defects?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    background: {
+        type: boolean
+        description: "Perform background subtraction?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    phot: {
+        type: boolean
+        description: "Perform photometry?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    cr: {
+        type: boolean
+        description: "Mask cosmic rays?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    ast: {
+        type: boolean
+        description: "Perform astrometric calibration?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    cal: {
+        type: boolean
+        description: "Perform photometric calibration?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+}

@@ -21,6 +21,7 @@
 # see <http://www.lsstcorp.org/LegalNotices/>.
 #
 
+import sys
 import lsst.pex.policy as pexPolicy
 
 """This module defines the configuration for LSST Algorithms testing (Green Blob 3)."""
@@ -32,7 +33,7 @@ class Config(object):
     """
 
     def __init__(self,                  # Config
-                 policy                 # Filename/file/policy for configuration
+                 policy=None            # Filename/file/policy for configuration
                  ):
         if policy is None:
             policy = pexPolicy.Policy()
@@ -42,10 +43,6 @@ class Config(object):
             policy = pexPolicy.Policy.createPolicy(policy)
         if not isinstance(policy, pexPolicy.Policy):
             raise RuntimeError, "Can't interpret provided policy"
-
-        #dictFile = pexPolicy.DefaultPolicyFile("gb3", "ConfigDictionary.paf", "policy")
-        #dictPolicy = pexPolicy.Policy.createPolicy(dictFile, dictFile.getRepositoryPath()) # Dictionary
-        #policy.mergeDefaults(dictPolicy)
 
         self._policy = policy
         return
@@ -111,17 +108,18 @@ class Config(object):
         policy = pexPolicy.Policy(overrides._policy)
         policy.mergeDefaults(self._policy)
         self._policy = policy
+        return
 
 
 class DefaultConfig(Config):
     """DefaultConfig is a configuration class for LSST Algorithms testing (Green Blob 3).
 
-    It contains the default configuration from the package dictionary.
+    It contains the default configuration from the package dictionary, plus any merges.
     """
     def __init__(self):
         dictFile = pexPolicy.DefaultPolicyFile("gb3", "ConfigDictionary.paf", "policy")
         dictPolicy = pexPolicy.Policy.createPolicy(dictFile, dictFile.getRepositoryPath()) # Dictionary
-        Config.__init(self, dictPolicy)
+        Config.__init__(self, dictPolicy)
         return
 
 
@@ -132,28 +130,38 @@ class CommandConfig(Config):
     """
     def __init__(self):
         import optparse
-        parser = OptionParser()
-        parser.add_option("-D", "--define", dest="define",
+        parser = optparse.OptionParser()
+        parser.add_option("-D", "--define", dest="defines",
                           action="append", nargs=2,
                           help="Configuration definition")
+        parser.add_option("--data", dest="data", help="Data root directory")
+        parser.add_option("--calib", dest="calib", help="Calibration root directory")
         (options, args) = parser.parse_args()
         sys.argv[1:] = args            # Remove instances so other parsers don't worry about them
 
-        Config.__init__(self, None)
+        Config.__init__(self)
 
-        defines = options.define
-        for key, value in defines:
-            self[key] = value
+        if options.defines is not None:
+            for key, value in options.defines:
+                self[key] = value
+
+        if options.data is not None or options.calib is not None:
+            roots = Config()
+            roots['root'] = options.data
+            roots['calib'] = options.calib
+            self['roots'] = roots
+
         return
 
 
-def configuration(overrides=None        # List of particlar policies to override the defaults
+def configuration(overrides=None        # List of particlar configuration(s) to override the defaults
                   ):
     """Set up configuration for LSST Algorithms testing (Green Blob 3)."""
     config = DefaultConfig()
     if overrides is not None:
         for override in overrides:
-            config.merge(Config(override))
+            newConfig = override if isinstance(override, Config) else Config(override)
+            config.merge(newConfig)
     config.merge(CommandConfig())
 
     return config

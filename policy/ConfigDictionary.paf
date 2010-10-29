@@ -1,0 +1,134 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    roots: {
+        type: Policy
+        description: "Root directories"
+        minOccurs: 1
+        maxOccurs: 1
+        dictionary: {
+            target: Config
+            definitions: {
+                output: {
+                    type: string
+                    description: "Root directory for output data"
+                    minOccurs: 1
+                    maxOccurs: 1
+                }
+                data: {
+                    type: string
+                    description: "Root directory for data"
+                    minOccurs: 1
+                    maxOccurs: 1
+                }
+                calib: {
+                    type: string
+                    description: "Root directory for calibrations"
+                    minOccurs: 0
+                    maxOccurs: 1
+                }
+            }
+        }
+    }
+
+    do: {
+        type: Policy
+        description: "Do we do these tasks?"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "doDictionary.paf"
+    }
+
+#    saturation: {
+#        type: Policy
+#        description: "Saturation masking policy"
+#        minOccurs: 0
+#        maxOccurs: 1
+#        dictionary: {
+#        }
+#    }
+#    overscan: {
+#        type: Policy
+#        description: "Overscan correction policy"
+#        minOccurs: 0
+#        maxOccurs: 1
+#        dictionary: {
+#        }
+#    }
+#    bias: {
+#        type: Policy
+#        description: "Bias correction policy"
+#        minOccurs: 0
+#        maxOccurs: 1
+#        dictionary: {
+#        }
+#    }
+#    dark: {
+#        type: Policy
+#        description: "Dark correction policy"
+#        minOccurs: 0
+#        maxOccurs: 1
+#        dictionary: {
+#        }
+#    }
+#    flat: {
+#        type: Policy
+#        description: "Perform flat correction?"
+#        minOccurs: 0
+#        maxOccurs: 1
+#        dictionary: {
+#        }
+#    }
+#    fringe: {
+#        type: Policy
+#        description: "Perform fringe correction?"
+#        minOccurs: 0
+#        maxOccurs: 1
+#        dictionary: {
+#        }
+#    }
+#    defects: {
+#        type: Policy
+#        description: "Mask static defects?"
+#        minOccurs: 0
+#        maxOccurs: 1
+#        dictionary: @@meas_algorithms:policy:BadPixels.paf
+#    }
+    background: {
+        type: Policy
+        description: "Perform background subtraction?"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_utils:policy:BackgroundDictionary.paf
+    }
+#    phot: {
+#        type: Policy
+#        description: "Perform photometry?"
+#        minOccurs: 0
+#        maxOccurs: 1
+#        dictionaryFile: "@PhotometryDictionary.paf"
+#    }
+    cr: {
+        type: Policy
+        description: "Mask cosmic rays?"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_algorithms:policy:CrRejectDictionary.paf
+    }
+    ast: {
+        type: Policy
+        description: "Perform astrometric calibration?"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_pipeline:policy:WcsDeterminationStageDictionary.paf
+    }
+#    cal: {
+#        type: Policy
+#        description: "Perform photometric calibration?"
+#        minOccurs: 0
+#        maxOccurs: 1
+#        dictionary: {
+#        }
+    }

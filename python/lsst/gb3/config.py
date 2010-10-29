@@ -26,14 +26,13 @@ import lsst.pex.policy as pexPolicy
 """This module defines the configuration for LSST Algorithms testing (Green Blob 3)."""
 
 class Config(object):
-
     """Config is a configuration class for LSST Algorithms testing (Green Blob 3).
 
     It quacks like a Python dictionary.
     """
 
     def __init__(self,                  # Config
-                 policy                 # Filename for configuration
+                 policy                 # Filename/file/policy for configuration
                  ):
         if policy is None:
             policy = pexPolicy.Policy()
@@ -106,3 +105,56 @@ class Config(object):
     def has_key(self, key):
         """Contains the key?"""
         return self._policy.exists(key)
+
+    def merge(self, overrides):
+        """Merge overrides into defaults"""
+        policy = pexPolicy.Policy(overrides._policy)
+        policy.mergeDefaults(self._policy)
+        self._policy = policy
+
+
+class DefaultConfig(Config):
+    """DefaultConfig is a configuration class for LSST Algorithms testing (Green Blob 3).
+
+    It contains the default configuration from the package dictionary.
+    """
+    def __init__(self):
+        dictFile = pexPolicy.DefaultPolicyFile("gb3", "ConfigDictionary.paf", "policy")
+        dictPolicy = pexPolicy.Policy.createPolicy(dictFile, dictFile.getRepositoryPath()) # Dictionary
+        Config.__init(self, dictPolicy)
+        return
+
+
+class CommandConfig(Config):
+    """CommandConfig is a configuration class for LSST Algorithms testing (Green Blob 3).
+
+    It reads configuration settings from the command-line
+    """
+    def __init__(self):
+        import optparse
+        parser = OptionParser()
+        parser.add_option("-D", "--define", dest="define",
+                          action="append", nargs=2,
+                          help="Configuration definition")
+        (options, args) = parser.parse_args()
+        sys.argv[1:] = args            # Remove instances so other parsers don't worry about them
+
+        Config.__init__(self, None)
+
+        defines = options.define
+        for key, value in defines:
+            self[key] = value
+        return
+
+
+def configuration(overrides=None        # List of particlar policies to override the defaults
+                  ):
+    """Set up configuration for LSST Algorithms testing (Green Blob 3)."""
+    config = DefaultConfig()
+    if overrides is not None:
+        for override in overrides:
+            config.merge(Config(override))
+    config.merge(CommandConfig())
+
+    return config
+

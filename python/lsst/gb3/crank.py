@@ -28,6 +28,7 @@ import lsst.gb3.config as gb3Config
 
 import lsst.pex.logging as pexLog
 import lsst.daf.persistence as dafPersist
+import lsst.afw.cameraGeom as cameraGeom
 import lsst.afw.cameraGeom.utils as cameraGeomUtils
 import lsst.afw.image.utils as imageUtils
 import lsst.ip.isr as ipIsr
@@ -75,11 +76,11 @@ class Crank(object):
              dataId                     # Data identifier
              ):
         """Read raw data."""
-        camera = butler.get('camera', dataId)
+        camera = self.butler.get('camera', dataId)
         ccd = cameraGeomUtils.findCcd(camera, cameraGeom.Id(dataId['ccd']))
         print "Loading: ccd: ", ccd.getId().getSerial(), ", ccdName: ", ccd.getId().getName()
 
-        exposure = butler.get('raw', dataId)
+        exposure = self.butler.get('raw', dataId)
         mImg = exposure.getMaskedImage()
         return exposure
 
@@ -150,13 +151,13 @@ class Crank(object):
 
     def write(self, exposure, dataId, psf, sources, matches):
         """Write processed data."""
-        butler.put('processed', exposure, dataId)
+        self.butler.put('processed', exposure, dataId)
         if psf is not None:
-            butler.put('psf', psf, dataId)
+            self.butler.put('psf', psf, dataId)
         if sources is not None:
-            butler.put('src', lsst.afw.detection.PersistableSourceVector(sources), dataId)
+            self.butler.put('src', lsst.afw.detection.PersistableSourceVector(sources), dataId)
         if matches is not None:
-            butler.put('matches', matches, dataId)
+            self.butler.put('matches', matches, dataId)
         return
 
 

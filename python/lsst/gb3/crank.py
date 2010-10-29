@@ -24,7 +24,7 @@
 import os
 import re
 
-import lsst.gb3.config as cfg
+import lsst.gb3.config as gb3Config
 
 import lsst.pex.logging as pexLog
 import lsst.daf.persistence as dafPersist
@@ -51,12 +51,12 @@ class Crank(object):
                  ):
         self.name = name
         self.log = pexLog.Log(pexLog.getDefaultLog(), "Crank")
-        self.bf = dafPersist.ButlerFactory(mapper=mapper)
-        self.butler = self.bf.create()
-        self.config = configuration if config is None else config
 
+        self.config = gb3Config.configuration() if config is None else config
         roots = self.config['roots']
         self.mapper = mapperClass(root=roots['data'], calibRoot=roots['calib'])
+        self.bf = dafPersist.ButlerFactory(mapper=self.mapper)
+        self.butler = self.bf.create()
 
         self.do = self.config['do']
         return

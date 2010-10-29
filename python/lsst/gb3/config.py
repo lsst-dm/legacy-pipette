@@ -58,20 +58,25 @@ class Config(object):
 
     def __getitem__(self, key):
         """Retrieve a value"""
-        if self._policy.exists(key):
-            value = self._policy.get(key)
-            return value if not isinstance(value, pexPolicy.Policy) else Config(value)
-        raise KeyError, "Policy doesn't contain entry: %s" % key
+        if not self._policy.exists(key):
+            raise KeyError, "Policy doesn't contain entry: %s" % key
+        value = self._policy.get(key)
+        return value if not isinstance(value, pexPolicy.Policy) else Config(value)
 
     def __setitem__(self, key, value):
         """Set a value; adds if doesn't exist"""
-        if self._policy.exists(key): return self._policy.set(key, value)
-        self._policy.add(key, value)
+        if isinstance(value, Config):
+            value = value._policy
+        if self._policy.exists(key): self._policy.set(key, value)
+        else: self._policy.add(key, value)
+        return value
 
     def __delitem__(self, key):
         """Delete an entry"""
-        if self._policy.exists(key): return self._policy.remove(key)
-        raise KeyError, "Policy doesn't contain entry: %s" % key
+        if not self._policy.exists(key):
+            raise KeyError, "Policy doesn't contain entry: %s" % key
+        self._policy.remove(key)
+        return
 
     def __iter__(self):
         """Iterator for keys"""
@@ -134,9 +139,9 @@ def optConfigOverride(option, opt, value, parser):
     return
 
 def optConfigRoot(option, opt, value, parser):
-    if not parser.values.config.has_key('root'):
-        parser.values.config['root'] = Config()
-    root = parser.values.config['root']
+    if not parser.values.config.has_key('roots'):
+        parser.values.config['roots'] = Config()
+    root = parser.values.config['roots']
     root[option.dest] = value
     return
 
@@ -148,12 +153,15 @@ class OptionParser(optparse.OptionParser):
     """
     def __init__(self, *args, **kwargs):
         optparse.OptionParser.__init__(self, *args, **kwargs)
-        self.add_option("-D", "--define", action="callback", nargs=2, callback=optConfigDefinition,
+        self.add_option("-D", "--define", type="string", nargs=2,
+                        action="callback", callback=optConfigDefinition,
                         help="Configuration definition (single value)")
-        self.add_option("-O", "--override", action="callback", callback=optConfigOverride,
+        self.add_option("-O", "--override", type="string", action="callback", callback=optConfigOverride,
                         help="Configuration override file")
-        self.add_option("--data", dest="data", help="Data root directory")
-        self.add_option("--calib", dest="calib", help="Calibration root directory")
+        self.add_option("--data", dest="data", type="string", action="callback", callback=optConfigRoot,
+                        help="Data root directory")
+        self.add_option("--calib", dest="calib", type="string", action="callback", callback=optConfigRoot,
+                        help="Calibration root directory")
 
         self.set_default('config', Config())
         return

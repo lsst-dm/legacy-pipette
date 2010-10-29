@@ -13,7 +13,7 @@ def run(rerun,                          # Rerun name
         config,                         # Configuration
         ):
     roots = config['roots']
-    basename = os.path.join(roots['output'], '%s-%d%d' % (rerun, visit, ccd))
+    basename = os.path.join(roots['output'], '%s-%d%d' % (rerun, frame, ccd))
     crank = gb3Crank.Crank(basename, suprime.SuprimeMapper, config=config)
     dataId = { 'visit': frame, 'ccd': ccd }
     crank.turn(dataId)

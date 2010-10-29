@@ -1,13 +1,16 @@
 setupRequired(pex_logging)
 setupRequired(pex_policy)
-setupRequired(afw)
 
-setupRequired(daf_persistence)
 setupRequired(ip_isr)
 setupRequired(meas_utils)
 setupRequired(meas_algorithms)
 setupRequired(meas_pipeline)
 
-setupOptional(obs_subaru)
+setupOptional(obs_subaru branches_price)
+
+setupRequired(afw branches_price)
+setupRequired(daf_persistence branches_price)
+setupRequired(afw branches_price)
+
 
 envAppend(PYTHONPATH, ${PRODUCT_DIR}/python)

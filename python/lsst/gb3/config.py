@@ -116,6 +116,10 @@ class Config(object):
         self._policy = policy
         return
 
+    def getPolicy(self):
+        """Return Policy object"""
+        return self._policy
+
 
 class DefaultConfig(Config):
     """DefaultConfig is a configuration class for LSST Algorithms testing (Green Blob 3).

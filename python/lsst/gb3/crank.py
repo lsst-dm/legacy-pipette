@@ -77,10 +77,7 @@ class Crank(object):
              dataId                     # Data identifier
              ):
         """Read raw data."""
-        camera = self.mapper.camera
-        ccd = cameraGeomUtils.findCcd(camera, cameraGeom.Id(dataId['ccd']))
-        print "Loading: ccd: ", ccd.getId().getSerial(), ", ccdName: ", ccd.getId().getName()
-
+        self.log.log(self.log.INFO, "Reading: %s" % (dataId))
         exposure = self.butler.get('raw', dataId)
         mImg = exposure.getMaskedImage()
         if isinstance(exposure, afwImage.ExposureU):
@@ -99,6 +96,7 @@ class Crank(object):
             self._saturation(exposure, dataId)
         if self.do['overscan']:
             self._overscan(exposure, dataId)
+        self._trim(exposure, dataId)
         if self.do['bias']:
             self._bias(exposure, dataId)
         self._variance(exposure, dataId)
@@ -179,11 +177,30 @@ class Crank(object):
     def _overscan(self, exposure, dataId):
         self.log.log(self.log.INFO, "Performing overscan correction...")
         fittype = "MEDIAN"                # XXX policy argument
-        amp = cameraGeom.cast_Amp(exposure.getDetector())
-        overscanBbox = amp.getDiskBiasSec()
-        dataBbox = amp.getDiskDataSec()
-        ipIsr.overscanCorrection(exposure, overscanBbox, fittype)
+        ccd = exposure.getDetector()
+        for amp in cameraGeom.cast_Ccd(ccd):
+            biassec = amp.getDiskBiasSec()
+            self.log.log(self.log.INFO, "Doing overscan correction on amp %s: %s" % (amp.getId(), biassec))
+            ipIsr.overscanCorrection(exposure, biassec, fittype)
         return
+
+    def _trim(self, exposure, dataId):
+        ccd = cameraGeomUtils.findCcd(self.mapper.camera, cameraGeom.Id(dataId['ccd']))
+        miBefore = exposure.getMaskedImage()
+        MaskedImage = type(miBefore)
+        miAfter = MaskedImage(ccd.getAllPixels(True).getDimensions())
+        for amp in ccd:
+            datasecBefore = amp.getDataSec(False)
+            datasecAfter = amp.getDataSec(True)
+            self.log.log(self.log.INFO, "Trimming amp %s: %s --> %s" %
+                         (amp.getId(), datasecBefore, datasecAfter))
+            trimAmp = MaskedImage(miBefore, datasecBefore)
+            trimImage = MaskedImage(miAfter, datasecAfter)
+            trimImage <<= trimAmp
+            amp.setTrimmed(True)
+        exposure.setMaskedImage(miAfter)
+        return
+
 
     def _bias(self, exposure, dataId):
         bias = self.butler.get("bias", dataId)
@@ -191,7 +208,16 @@ class Crank(object):
         return
 
     def _variance(self, exposure, dataId):
-        ipIsr.updateVariance(exposure)
+        ccd = exposure.getDetector()
+        mi = exposure.getMaskedImage()
+        MaskedImage = type(mi)
+        for amp in cameraGeom.cast_Ccd(ccd):
+            gain = amp.getElectronicParams().getGain()
+            self.log.log(self.log.INFO, "Setting variance for amp %s: %f" % (amp.getId(), gain))
+            miAmp = MaskedImage(mi, amp.getDataSec())
+            variance = miAmp.getVariance()
+            variance <<= miAmp.getImage()
+            variance /= gain
         return
 
     def _dark(self, exposure, dataId):
@@ -203,9 +229,17 @@ class Crank(object):
 
     def _flat(self, exposure, dataId):
         flat = self.butler.get("flat", dataId)
-        # This API is bad --- you NEVER want to rescale your flat on the fly.
-        # Scale it properly when you make it and never rescale again.
-        ipIsr.flatCorrection(exposure, flat, "USER", 1.0)
+        mi = exposure.getMaskedImage()
+        image = mi.getImage()
+        variance = mi.getVariance()
+        flatImage = flat.getMaskedImage().getImage()
+        # XXX This looks awful because AFW doesn't define useful functions.  Need to fix this.
+        image /= flatImage
+        variance /= flatImage
+        variance /= flatImage
+        ### This API is bad --- you NEVER want to rescale your flat on the fly.
+        ### Scale it properly when you make it and never rescale again.
+        #ipIsr.flatCorrection(exposure, flat, "USER", 1.0)
         return
 
     def _fringe(self, exposure, dataId):

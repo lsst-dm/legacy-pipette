@@ -111,10 +111,10 @@ class Crank(object):
         return
 
 
-    def ccdAssembly(self, exposures, dataId):
+    def ccdAssembly(self, exposureList, dataId):
         """Assembly of amplifiers into CCDs.
         Also applies defects (static mask)."""
-        exposure = self._assembly(exposures, dataId)
+        exposure = self._assembly(exposureList, dataId)
         return exposure
 
 
@@ -173,10 +173,11 @@ class Crank(object):
         amp = cameraGeom.cast_Amp(exposure.getDetector())
         saturation = amp.getElectronicParams().getSaturationLevel()
         bboxes = ipIsr.saturationDetection(exposure, int(saturation), doMask = True)
-        self.log.log(Log.INFO, "Found %d saturated regions." % len(bboxes))
+        self.log.log(self.log.INFO, "Found %d saturated regions." % len(bboxes))
         return
 
     def _overscan(self, exposure, dataId):
+        self.log.log(self.log.INFO, "Performing overscan correction...")
         fittype = "MEDIAN"                # XXX policy argument
         amp = cameraGeom.cast_Amp(exposure.getDetector())
         overscanBbox = amp.getDiskBiasSec()
@@ -204,7 +205,7 @@ class Crank(object):
         flat = self.butler.get("flat", dataId)
         # This API is bad --- you NEVER want to rescale your flat on the fly.
         # Scale it properly when you make it and never rescale again.
-        ipIsr.flatCorrection(exposure, dark, "USER", 1.0)
+        ipIsr.flatCorrection(exposure, flat, "USER", 1.0)
         return
 
     def _fringe(self, exposure, dataId):
@@ -239,7 +240,7 @@ class Crank(object):
             defects.append(new)
         fwhm = 3.0                        # XXX policy argument
         ipIsr.maskBadPixelsDef(exposure, defects, fwhm, interpolate=False, maskName='BAD')
-        self.log.log(Log.INFO, "Masked %d static defects." % len(statics))
+        self.log.log(self.log.INFO, "Masked %d static defects." % len(statics))
 
         sat = ipIsr.defectListFromMask(exposure, growFootprints=1, maskName='SAT') # Saturated defects
         for defect in sat:
@@ -247,11 +248,11 @@ class Crank(object):
             new = measAlg.Defect(bbox)
             defects.append(new)
         ipIsr.interpolateDefectList(exposure, defects, fwhm)
-        self.log.log(Log.INFO, "Interpolated over %d static+saturated defects." % len(defects))
+        self.log.log(self.log.INFO, "Interpolated over %d static+saturated defects." % len(defects))
 
         nans = ipIsr.UnmaskedNanCounterF() # Search for unmasked NaNs
         nans.apply(exposure.getMaskedImage())
-        self.log.log(Log.INFO, "Fixed %d unmasked NaNs." % nans.getNpix())
+        self.log.log(self.log.INFO, "Fixed %d unmasked NaNs." % nans.getNpix())
         return
 
     def _background(self, exposure, dataId):
@@ -264,13 +265,13 @@ class Crank(object):
         fwhm = 1.0                        # XXX policy argument: seeing in arcsec
         keepCRs = True                    # Keep CR list?
         crs = ipUtils.cosmicRays.findCosmicRays(exposure, self.crRejectPolicy, defaultFwhm, keepCRs)
-        self.log.log(Log.INFO, "Identified %d cosmic rays." % len(crs))
+        self.log.log(self.log.INFO, "Identified %d cosmic rays." % len(crs))
         return
 
     def _detect(self, exposure, dataId, psf=None):
         policy = self.policy.getPolicy("detect") # XXX needs work
         posSources, negSources = sourceDetection.detectSources(exposure, psf, policy)
-        self.log.log(Log.INFO, "Detected %d positive and %d negative sources." % \
+        self.log.log(self.log.INFO, "Detected %d positive and %d negative sources." % \
                      (len(posSources), len(negSources)))
         return posSources, negSources
 
@@ -278,10 +279,10 @@ class Crank(object):
         policy = self.policy.getPolicy("measure") # XXX needs work
         footprints = []                    # Footprints to measure
         if posSources:
-            self.log.log(Log.INFO, "Measuring %d positive sources" % len(posSources))
+            self.log.log(self.log.INFO, "Measuring %d positive sources" % len(posSources))
             footprints.append([posSources.getFootprints(), False])
         if negSources:
-            self.log.log(Log.INFO, "Measuring %d positive sources" % len(posSources))
+            self.log.log(self.log.INFO, "Measuring %d positive sources" % len(posSources))
             footprints.append([negSources.getFootprints(), True])
 
         sources = srcMeas.sourceMeasurement(exposure, psf, footprints, policy)
@@ -317,5 +318,5 @@ class Crank(object):
     def _photcal(self, exposure, dataId, matches):
         zp = photocal.calcPhotoCal(matches, log=self.log)
         exposure.getCalib().setFluxMag0(zp.getFlux(0))
-        self.log.log(Log.INFO, "Flux of magnitude 0: %g" % zp.getFlux(0))
+        self.log.log(self.log.INFO, "Flux of magnitude 0: %g" % zp.getFlux(0))
         return

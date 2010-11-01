@@ -5,3 +5,8 @@ roots: {
     calib: /path/to/calib
     output: /path/for/output
 }
+
+do: {
+    overscan: true
+    flat: true
+}

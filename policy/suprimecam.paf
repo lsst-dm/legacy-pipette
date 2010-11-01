@@ -9,4 +9,9 @@ roots: {
 do: {
     overscan: true
     flat: true
+    background: true
+    phot: true
 }
+
+
+measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf

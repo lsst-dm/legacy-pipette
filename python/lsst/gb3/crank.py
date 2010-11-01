@@ -33,7 +33,11 @@ import lsst.afw.cameraGeom.utils as cameraGeomUtils
 import lsst.afw.image as afwImage
 import lsst.afw.image.utils as imageUtils
 import lsst.ip.isr as ipIsr
+import lsst.meas.utils.sourceDetection as muDetection
+import lsst.meas.utils.sourceMeasurement as muMeasurement
+import lsst.meas.algorithms.Psf as maPsf
 
+import lsst.sdqa as sdqa
 
 
 """This module defines the Crank base class for LSST Algorithms testing (Green Blob 3)."""
@@ -290,8 +294,8 @@ class Crank(object):
         return
 
     def _background(self, exposure, dataId):
-        bgPolicy = self.policy.getPolicy("background") # XXX needs work
-        bg, subtracted = sourceDetection.estimateBackground(exposure, bgPolicy, subtract=True)
+        policy = self.config['background'].getPolicy()
+        bg, subtracted = muDetection.estimateBackground(exposure, policy, subtract=True)
         # XXX Dropping bg on the floor
         return subtracted
 
@@ -303,23 +307,26 @@ class Crank(object):
         return
 
     def _detect(self, exposure, dataId, psf=None):
-        policy = self.policy.getPolicy("detect") # XXX needs work
-        posSources, negSources = sourceDetection.detectSources(exposure, psf, policy)
-        self.log.log(self.log.INFO, "Detected %d positive and %d negative sources." % \
-                     (len(posSources), len(negSources)))
+        policy = self.config['detect'].getPolicy()
+        posSources, negSources = muDetection.detectSources(exposure, psf, policy)
+        numPos = len(posSources.getFootprints()) if posSources is not None else 0
+        numNeg = len(negSources.getFootprints()) if negSources is not None else 0
+        self.log.log(self.log.INFO, "Detected %d positive and %d negative sources." % (numPos, numNeg))
         return posSources, negSources
 
     def _measure(self, exposure, dataId, posSources, negSources=None, psf=None, wcs=None):
-        policy = self.policy.getPolicy("measure") # XXX needs work
+        policy = self.config['measure'].getPolicy()
         footprints = []                    # Footprints to measure
         if posSources:
-            self.log.log(self.log.INFO, "Measuring %d positive sources" % len(posSources))
+            num = len(posSources.getFootprints())
+            self.log.log(self.log.INFO, "Measuring %d positive sources" % num)
             footprints.append([posSources.getFootprints(), False])
         if negSources:
-            self.log.log(self.log.INFO, "Measuring %d positive sources" % len(posSources))
+            num = len(negSources.getFootprints())
+            self.log.log(self.log.INFO, "Measuring %d positive sources" % num)
             footprints.append([negSources.getFootprints(), True])
 
-        sources = srcMeas.sourceMeasurement(exposure, psf, footprints, policy)
+        sources = muMeasurement.sourceMeasurement(exposure, psf, footprints, policy)
 
         if wcs is not None:
             sourceMeasurement.computeSkyCoords(wcs, sources)
@@ -327,9 +334,9 @@ class Crank(object):
         return sources
 
     def _psfMeasurement(self, exposure, dataId, sources):
-        policy = self.policy.getPolicy("psf") # XXX needs work
+        policy = self.config['psf'].getPolicy()
         sdqaRatings = sdqa.SdqaRatingSet()
-        psf, cellSet = Psf.getPsf(exposure, sources, policy, sdqaRatings)
+        psf, cellSet = maPsf.getPsf(exposure, sources, policy, sdqaRatings)
         # XXX Dropping cellSet on the floor
         return psf
 

@@ -28,7 +28,13 @@ if __name__ == "__main__":
                       help="visit to run (default=%default)")
     parser.add_option("-c", "--ccd", default="0:1:2:3:4:5:6:7:8:9", dest="ccd",
                       help="CCD to run (default=%default)")
+    parser.add_option("--debug", dest="debug", action="store_true", default=False,
+                      help="Debugging output?")
     opts, args = parser.parse_args()
+
+    if opts.debug:
+        try: import debug
+        except ImportError: print "No 'debug' module found"
 
     config = gb3Config.configuration("policy/suprimecam.paf", opts.config)
     if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or opts.frame is None or opts.ccd is None:

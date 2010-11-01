@@ -30,6 +30,7 @@ import lsst.pex.logging as pexLog
 import lsst.daf.persistence as dafPersist
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.afw.cameraGeom.utils as cameraGeomUtils
+import lsst.afw.image as afwImage
 import lsst.afw.image.utils as imageUtils
 import lsst.ip.isr as ipIsr
 
@@ -76,12 +77,14 @@ class Crank(object):
              dataId                     # Data identifier
              ):
         """Read raw data."""
-        camera = self.butler.get('camera', dataId)
+        camera = self.mapper.camera
         ccd = cameraGeomUtils.findCcd(camera, cameraGeom.Id(dataId['ccd']))
         print "Loading: ccd: ", ccd.getId().getSerial(), ", ccdName: ", ccd.getId().getName()
 
         exposure = self.butler.get('raw', dataId)
         mImg = exposure.getMaskedImage()
+        if isinstance(exposure, afwImage.ExposureU):
+            exposure = exposure.convertF()
         return exposure
 
     def isr(self,
@@ -111,7 +114,7 @@ class Crank(object):
     def ccdAssembly(self, exposures, dataId):
         """Assembly of amplifiers into CCDs.
         Also applies defects (static mask)."""
-        exposure = self._assembly(exposure, dataId)
+        exposure = self._assembly(exposures, dataId)
         return exposure
 
 
@@ -151,13 +154,13 @@ class Crank(object):
 
     def write(self, exposure, dataId, psf, sources, matches):
         """Write processed data."""
-        self.butler.put('processed', exposure, dataId)
+        self.butler.put(exposure, 'postISRCCD', dataId)
         if psf is not None:
-            self.butler.put('psf', psf, dataId)
+            self.butler.put(psf, 'psf', dataId)
         if sources is not None:
-            self.butler.put('src', lsst.afw.detection.PersistableSourceVector(sources), dataId)
+            self.butler.put(lsst.afw.detection.PersistableSourceVector(sources), 'src', dataId)
         if matches is not None:
-            self.butler.put('matches', matches, dataId)
+            self.butler.put(matches, 'matches', dataId)
         return
 
 
@@ -165,7 +168,7 @@ class Crank(object):
 # ISR methods
 ##############################################################################################################
 
-    def _saturation(expsure, dataId):
+    def _saturation(self, expsure, dataId):
         exposure = ipIsr.convertImageForIsr(exposure)
         amp = cameraGeom.cast_Amp(exposure.getDetector())
         saturation = amp.getElectronicParams().getSaturationLevel()
@@ -173,7 +176,7 @@ class Crank(object):
         self.log.log(Log.INFO, "Found %d saturated regions." % len(bboxes))
         return
 
-    def _overscan(exposure, dataId):
+    def _overscan(self, exposure, dataId):
         fittype = "MEDIAN"                # XXX policy argument
         amp = cameraGeom.cast_Amp(exposure.getDetector())
         overscanBbox = amp.getDiskBiasSec()
@@ -181,30 +184,30 @@ class Crank(object):
         ipIsr.overscanCorrection(exposure, overscanBbox, fittype)
         return
 
-    def _bias(exposure, dataId):
+    def _bias(self, exposure, dataId):
         bias = self.butler.get("bias", dataId)
         ipIsr.biasCorrection(exposure, bias)
         return
 
-    def _variance(exposure, dataId):
+    def _variance(self, exposure, dataId):
         ipIsr.updateVariance(exposure)
         return
 
-    def _dark(exposure, dataId):
+    def _dark(self, exposure, dataId):
         dark = self.butler.get("dark", dataId)
         expTime = float(exposure.getCalib().getExptime())
         darkTime = float(dark.getCalib().getExptime())
         ipIsr.darkCorrection(exposure, dark, expTime, darkTime)
         return
 
-    def _flat(exposure, dataId):
+    def _flat(self, exposure, dataId):
         flat = self.butler.get("flat", dataId)
         # This API is bad --- you NEVER want to rescale your flat on the fly.
         # Scale it properly when you make it and never rescale again.
         ipIsr.flatCorrection(exposure, dark, "USER", 1.0)
         return
 
-    def _fringe(exposure, dataId):
+    def _fringe(self, exposure, dataId):
         flat = self.butler.get("fringe", dataId)
         raise NotimplementedError, "Fringe subtraction is not yet implemented."
 
@@ -212,19 +215,22 @@ class Crank(object):
 # CCD assembly method
 ##############################################################################################################
 
-    def _assembly(exposures, dataid):
+    def _assembly(self, exposureList, dataid):
+        if not hasattr(exposureList, "__getitem__"):
+            # This is not a list; presumably it's a single item needing no assembly
+            return exposureList
         rmKeys = ["CCDID", "AMPID", "E2AOCHI", "E2AOFILE",
                   "DC3BPATH", "GAIN", "BIASSEC", "DATASEC"]    # XXX policy argument
         amp = cameraGeom.cast_Amp(exposureList[0].getDetector())
         ccd = cameraGeom.cast_Ccd(amp.getParent())
-        exposure = ipIsr.ccdAssemble.assembleCcd(exposures, ccd, keysToRemove=rmKeys)
+        exposure = ipIsr.ccdAssemble.assembleCcd(exposureList, ccd, keysToRemove=rmKeys)
         return exposure
 
 ##############################################################################################################
 # Image characterisation methods
 ##############################################################################################################
 
-    def _defects(exposure, dataId):
+    def _defects(self, exposure, dataId):
         defects = measAlg.DefectListT()
         statics = cameraGeom.cast_Ccd(exposure.getDetector()).getDefects() # Static defects
         for defect in statics:
@@ -248,27 +254,27 @@ class Crank(object):
         self.log.log(Log.INFO, "Fixed %d unmasked NaNs." % nans.getNpix())
         return
 
-    def _background(exposure, dataId):
+    def _background(self, exposure, dataId):
         bgPolicy = self.policy.getPolicy("background") # XXX needs work
         bg, subtracted = sourceDetection.estimateBackground(exposure, bgPolicy, subtract=True)
         # XXX Dropping bg on the floor
         return subtracted
 
-    def _cosmicray(exposure, dataId):
+    def _cosmicray(self, exposure, dataId):
         fwhm = 1.0                        # XXX policy argument: seeing in arcsec
         keepCRs = True                    # Keep CR list?
         crs = ipUtils.cosmicRays.findCosmicRays(exposure, self.crRejectPolicy, defaultFwhm, keepCRs)
         self.log.log(Log.INFO, "Identified %d cosmic rays." % len(crs))
         return
 
-    def _detect(exposure, dataId, psf=None):
+    def _detect(self, exposure, dataId, psf=None):
         policy = self.policy.getPolicy("detect") # XXX needs work
         posSources, negSources = sourceDetection.detectSources(exposure, psf, policy)
         self.log.log(Log.INFO, "Detected %d positive and %d negative sources." % \
                      (len(posSources), len(negSources)))
         return posSources, negSources
 
-    def _measure(exposure, dataId, posSources, negSources, psf=None, wcs=None):
+    def _measure(self, exposure, dataId, posSources, negSources=None, psf=None, wcs=None):
         policy = self.policy.getPolicy("measure") # XXX needs work
         footprints = []                    # Footprints to measure
         if posSources:
@@ -285,14 +291,14 @@ class Crank(object):
 
         return sources
 
-    def _psfMeasurement(exposure, dataId, sources):
+    def _psfMeasurement(self, exposure, dataId, sources):
         policy = self.policy.getPolicy("psf") # XXX needs work
         sdqaRatings = sdqa.SdqaRatingSet()
         psf, cellSet = Psf.getPsf(exposure, sources, policy, sdqaRatings)
         # XXX Dropping cellSet on the floor
         return psf
 
-    def _astrometry(exposure, dataId, sources):
+    def _astrometry(self, exposure, dataId, sources):
         policy = self.policy.getPolicy("astrometry") # XXX needs work
         path=os.path.join(os.environ['ASTROMETRY_NET_DATA_DIR'], "metadata.paf")
         solver = astromNet.GlobalAstrometrySolution(path)
@@ -308,7 +314,7 @@ class Crank(object):
             exposure.getMetadata().set(k, v)
         return matches, wcs
 
-    def _photcal(exposure, dataId, matches):
+    def _photcal(self, exposure, dataId, matches):
         zp = photocal.calcPhotoCal(matches, log=self.log)
         exposure.getCalib().setFluxMag0(zp.getFlux(0))
         self.log.log(Log.INFO, "Flux of magnitude 0: %g" % zp.getFlux(0))

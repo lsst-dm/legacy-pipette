@@ -41,6 +41,14 @@ definitions: {
         dictionaryFile: "doDictionary.paf"
     }
 
+    bootstrap: {
+        type: Policy
+        description: "Policy for bootstrapping the PSF"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "bootstrapDictionary.paf"
+    }
+
 #    saturation: {
 #        type: Policy
 #        description: "Saturation masking policy"

@@ -2,12 +2,15 @@ setupRequired(pex_logging)
 setupRequired(pex_policy)
 
 setupRequired(ip_isr)
+setupRequired(ip_utils)
 setupRequired(meas_utils)
 setupRequired(meas_algorithms)
 setupRequired(meas_pipeline)
+setupRequired(sdqa)
 
 setupOptional(obs_subaru branches_price)
 
+setupRequired(ip_utils trunk)
 setupRequired(afw branches_price)
 setupRequired(daf_persistence branches_price)
 setupRequired(afw branches_price)

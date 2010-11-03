@@ -7,11 +7,23 @@ roots: {
 }
 
 do: {
-    overscan: true
     flat: true
+    defects: true
+    interpolate: true
+    saturation: true
+    overscan: true
     background: true
+    cr: true
     phot: true
 }
 
+detect: {
+    thresholdValue: 25.0
+    thresholdType: stdev
+}
 
 measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
+
+cr: {
+    nCrPixelMax: 100000
+}

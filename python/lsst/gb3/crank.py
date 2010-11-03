@@ -23,6 +23,7 @@
 
 import os
 import re
+import math
 
 import lsst.gb3.config as gb3Config
 
@@ -30,11 +31,15 @@ import lsst.pex.logging as pexLog
 import lsst.daf.persistence as dafPersist
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.afw.cameraGeom.utils as cameraGeomUtils
+import lsst.afw.math as afwMath
 import lsst.afw.image as afwImage
 import lsst.afw.image.utils as imageUtils
+import lsst.afw.detection as afwDet
 import lsst.ip.isr as ipIsr
+import lsst.ip.utils as ipUtils
 import lsst.meas.utils.sourceDetection as muDetection
 import lsst.meas.utils.sourceMeasurement as muMeasurement
+import lsst.meas.algorithms as measAlg
 import lsst.meas.algorithms.Psf as maPsf
 
 import lsst.sdqa as sdqa
@@ -133,17 +138,42 @@ class Crank(object):
         matches = None
         wcs = exposure.getWcs()
 
+        # Initial PSF
+        bootstrap = self.config['bootstrap']
+        model = bootstrap['model']
+        fwhm = bootstrap['fwhm'] / wcs.pixelScale()
+        size = bootstrap['size']
+        bsPsf = afwDet.createPsf(model, size, size, fwhm/(2*math.sqrt(2*math.log(2))))
+
         if self.do['defects']:
-            self._defects(exposure, dataId)
+            defects = self._defects(exposure, fwhm, dataId)
+        else:
+            defects = None
+        if self.do['interpolate']:
+            # Doing this in order to measure the PSF may not be necessary
+            self._interpolate(exposure, defects, bsPsf, dataId)
         if self.do['background']:
             bgSubExp = self._background(exposure, dataId)
-        else: bgSubExp = exposure
+        else:
+            bgSubExp = exposure
+
+        if self.do['cr']:
+            # Doing this in order to measure the PSF may not be necessary
+            self._cosmicray(bgSubExp, bsPsf, dataId, True)
+
         if self.do['phot']:
             posSources, negSources = self._detect(bgSubExp, dataId)
-            sources = self._measure(bgSubExp, dataId, posSources, negSources)
+            sources = self._measure(bgSubExp, dataId, posSources, negSources, psf=bsPsf, wcs=wcs)
             psf = self._psfMeasurement(bgSubExp, dataId, sources)
+            if self.do['interpolate']:
+                # Repeating this with the proper PSF may not be necessary
+                self._interpolate(exposure, defects, psf, dataId)
             if self.do['cr']:
-                self._cosmicray(bgSubExp, dataId)
+                # Repeating this with the proper PSF may not be necessary
+                mask = bgSubExp.getMaskedImage().getMask()
+                crBit = mask.getMaskPlane("CR")
+                mask.clearMaskPlane(crBit)
+                self._cosmicray(bgSubExp, psf, dataId, False)
             posSources, negSources = self._detect(bgSubExp, dataId, psf=psf)
             sources = self._measure(bgSubExp, dataId, posSources, negSources, psf=psf, wcs=wcs)
         if self.do['ast']:
@@ -160,7 +190,7 @@ class Crank(object):
         if psf is not None:
             self.butler.put(psf, 'psf', dataId)
         if sources is not None:
-            self.butler.put(lsst.afw.detection.PersistableSourceVector(sources), 'src', dataId)
+            self.butler.put(afwDet.PersistableSourceVector(sources), 'src', dataId)
         if matches is not None:
             self.butler.put(matches, 'matches', dataId)
         return
@@ -170,16 +200,21 @@ class Crank(object):
 # ISR methods
 ##############################################################################################################
 
-    def _saturation(self, expsure, dataId):
-        exposure = ipIsr.convertImageForIsr(exposure)
-        amp = cameraGeom.cast_Amp(exposure.getDetector())
-        saturation = amp.getElectronicParams().getSaturationLevel()
-        bboxes = ipIsr.saturationDetection(exposure, int(saturation), doMask = True)
-        self.log.log(self.log.INFO, "Found %d saturated regions." % len(bboxes))
+    def _saturation(self, exposure, dataId):
+        ccd = exposure.getDetector()
+        mi = exposure.getMaskedImage()
+        Exposure = type(exposure)
+        MaskedImage = type(mi)
+        for amp in cameraGeom.cast_Ccd(ccd):
+            saturation = amp.getElectronicParams().getSaturationLevel()
+            miAmp = MaskedImage(mi, amp.getDataSec())
+            expAmp = Exposure(miAmp)
+            bboxes = ipIsr.saturationDetection(expAmp, saturation, doMask = True)
+            self.log.log(self.log.INFO, "Masked %d saturated pixels on amp %s: %f" %
+                         (len(bboxes), amp.getId(), saturation))
         return
 
     def _overscan(self, exposure, dataId):
-        self.log.log(self.log.INFO, "Performing overscan correction...")
         fittype = "MEDIAN"                # XXX policy argument
         ccd = exposure.getDetector()
         for amp in cameraGeom.cast_Ccd(ccd):
@@ -208,6 +243,7 @@ class Crank(object):
 
     def _bias(self, exposure, dataId):
         bias = self.butler.get("bias", dataId)
+        self.log.log(self.log.INFO, "Debiasing image")
         ipIsr.biasCorrection(exposure, bias)
         return
 
@@ -228,6 +264,7 @@ class Crank(object):
         dark = self.butler.get("dark", dataId)
         expTime = float(exposure.getCalib().getExptime())
         darkTime = float(dark.getCalib().getExptime())
+        self.log.log(self.log.INFO, "Removing dark (%f sec vs %f sec)" % (expTime, darkTime))
         ipIsr.darkCorrection(exposure, dark, expTime, darkTime)
         return
 
@@ -237,6 +274,7 @@ class Crank(object):
         image = mi.getImage()
         variance = mi.getVariance()
         flatImage = flat.getMaskedImage().getImage()
+        self.log.log(self.log.INFO, "Flattening image")
         # XXX This looks awful because AFW doesn't define useful functions.  Need to fix this.
         image /= flatImage
         variance /= flatImage
@@ -269,28 +307,40 @@ class Crank(object):
 # Image characterisation methods
 ##############################################################################################################
 
-    def _defects(self, exposure, dataId):
+    def _defects(self, exposure, fwhm, dataId):
         defects = measAlg.DefectListT()
         statics = cameraGeom.cast_Ccd(exposure.getDetector()).getDefects() # Static defects
         for defect in statics:
             bbox = defect.getBBox()
             new = measAlg.Defect(bbox)
             defects.append(new)
-        fwhm = 3.0                        # XXX policy argument
         ipIsr.maskBadPixelsDef(exposure, defects, fwhm, interpolate=False, maskName='BAD')
         self.log.log(self.log.INFO, "Masked %d static defects." % len(statics))
 
         sat = ipIsr.defectListFromMask(exposure, growFootprints=1, maskName='SAT') # Saturated defects
+        self.log.log(self.log.INFO, "Added %d saturation defects." % len(sat))
         for defect in sat:
-            bbox = d.getBBox()
+            bbox = defect.getBBox()
             new = measAlg.Defect(bbox)
             defects.append(new)
-        ipIsr.interpolateDefectList(exposure, defects, fwhm)
-        self.log.log(self.log.INFO, "Interpolated over %d static+saturated defects." % len(defects))
 
-        nans = ipIsr.UnmaskedNanCounterF() # Search for unmasked NaNs
-        nans.apply(exposure.getMaskedImage())
-        self.log.log(self.log.INFO, "Fixed %d unmasked NaNs." % nans.getNpix())
+        exposure.getMaskedImage().getMask().addMaskPlane("UNMASKEDNAN")
+        nanMasker = ipIsr.UnmaskedNanCounterF()
+        nanMasker.apply(exposure.getMaskedImage())
+        nans = ipIsr.defectListFromMask(exposure, maskName='UNMASKEDNAN')
+        self.log.log(self.log.INFO, "Added %d unmasked NaNs." % nanMasker.getNpix())
+        for defect in nans:
+            bbox = defect.getBBox()
+            new = measAlg.Defect(bbox)
+            defects.append(new)
+
+        return defects
+
+    def _interpolate(self, exposure, defects, psf, dataId):
+        mi = exposure.getMaskedImage()
+        fallbackValue = afwMath.makeStatistics(mi.getImage(), afwMath.MEANCLIP).getValue()
+        measAlg.interpolateOverDefects(mi, psf, defects, fallbackValue)
+        self.log.log(self.log.INFO, "Interpolated over %d defects." % len(defects))
         return
 
     def _background(self, exposure, dataId):
@@ -299,11 +349,18 @@ class Crank(object):
         # XXX Dropping bg on the floor
         return subtracted
 
-    def _cosmicray(self, exposure, dataId):
-        fwhm = 1.0                        # XXX policy argument: seeing in arcsec
-        keepCRs = True                    # Keep CR list?
-        crs = ipUtils.cosmicRays.findCosmicRays(exposure, self.crRejectPolicy, defaultFwhm, keepCRs)
-        self.log.log(self.log.INFO, "Identified %d cosmic rays." % len(crs))
+    def _cosmicray(self, exposure, psf, dataId, keepCRs=True):
+        policy = self.config['cr'].getPolicy()
+        mi = exposure.getMaskedImage()
+        bg = afwMath.makeStatistics(mi, afwMath.MEDIAN).getValue()
+        crs = measAlg.findCosmicRays(mi, psf, bg, policy, keepCRs)
+        num = 0
+        if crs is not None:
+            mask = mi.getMask()
+            crBit = mask.getPlaneBitMask("CR")
+            afwDet.setMaskFromFootprintList(mask, crs, crBit)
+            num = len(crs)
+        self.log.log(self.log.INFO, "Identified %d cosmic rays." % num)
         return
 
     def _detect(self, exposure, dataId, psf=None):
@@ -329,7 +386,7 @@ class Crank(object):
         sources = muMeasurement.sourceMeasurement(exposure, psf, footprints, policy)
 
         if wcs is not None:
-            sourceMeasurement.computeSkyCoords(wcs, sources)
+            muMeasurement.computeSkyCoords(wcs, sources)
 
         return sources
 

@@ -47,7 +47,14 @@ definitions: {
     }
     defects: {
         type: boolean
-        description: "Mask static defects?"
+        description: "Mask defects?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    interpolate: {
+        type: boolean
+        description: "Interpolate over bad pixels?"
         minOccurs: 1
         maxOccurs: 1
         default: false

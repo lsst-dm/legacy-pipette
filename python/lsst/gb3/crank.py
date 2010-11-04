@@ -47,7 +47,7 @@ import lsst.meas.astrom.net as astromNet
 import lsst.meas.astrom.sip as astromSip
 import lsst.meas.astrom.verifyWcs as astromVerify
 
-import lsst.afw.display.ds9                 as ds9
+import lsst.afw.display.ds9 as ds9
 
 import lsst.sdqa as sdqa
 
@@ -101,6 +101,7 @@ class Crank(object):
         mImg = exposure.getMaskedImage()
         if isinstance(exposure, afwImage.ExposureU):
             exposure = exposure.convertF()
+        self._display("raw", exposure)
         return exposure
 
     def isr(self,
@@ -125,6 +126,7 @@ class Crank(object):
             self._flat(exposure, dataId)
         if self.do['fringe']:
             self._fringe(exposure, dataId)
+        self._display("isr", exposure)
         return
 
 
@@ -175,6 +177,7 @@ class Crank(object):
             bsThreshold = bootstrap['thresholdValue']
             posSources, negSources = self._detect(bgSubExp, dataId, threshold=bsThreshold)
             sources = self._measure(bgSubExp, dataId, posSources, negSources, psf=bsPsf, wcs=wcs)
+            self._display("bootstrap", bgSubExp, sources)
             psf = self._psfMeasurement(bgSubExp, dataId, sources)
             if self.do['interpolate']:
                 # Repeating this with the proper PSF may not be necessary
@@ -187,7 +190,8 @@ class Crank(object):
                 self._cosmicray(bgSubExp, psf, dataId, False)
             posSources, negSources = self._detect(bgSubExp, dataId, psf=psf)
             sources = self._measure(bgSubExp, dataId, posSources, negSources, psf=psf, wcs=wcs)
-        if self.do['ast']:
+            self._display("phot", bgSubExp, sources)
+        if self.do['ast'] and sources is not None:
             matches, wcs = self._astrometry(bgSubExp, dataId, sources)
         if self.do['cal'] and matches is not None and len(matches) > 0:
             self._photcal(bgSubExp, dataId, matches)
@@ -416,21 +420,28 @@ class Crank(object):
         return psf
 
     def _astrometry(self, exposure, dataId, sources):
-        policy = self.config['ast'].getPolicy()
+        policy = self.config['ast']
         path=os.path.join(os.environ['ASTROMETRY_NET_DATA_DIR'], "metadata.paf")
         solver = astromNet.GlobalAstrometrySolution(path)
         #solver.allowDistortion(self.policy.get('allowDistortion'))
         #solver.setMatchThreshold(self.policy.get('matchThreshold'))
         self.log.log(self.log.INFO, "Solving astrometry")
-        if self.display is not None:
-            frame = 1
-            mi = exposure.getMaskedImage()
-            ds9.mtv(mi, frame=frame, title="Exposure")
-            for source in sources:
-                xc, yc = source.getXAstrom() - mi.getX0(), source.getYAstrom() - mi.getY0()
-                ds9.dot("o", xc, yc, size=2, frame=frame)
 
-        matches, wcs = measAst.determineWcs(policy, exposure, sources, solver=solver, log=self.log)
+        if True:
+            solver.setMatchThreshold(policy['matchThreshold'])
+            solver.setStarlist(sources)
+            solver.setNumBrightObjects(min(policy['numBrightStars'], len(sources)))
+            solver.setImageSize(exposure.getWidth(), exposure.getHeight())
+            if not solver.solve(exposure.getWcs()):
+                raise RuntimeError("Unable to solve astrometry")
+            wcs = solver.getWcs()
+            matches = solver.getMatchedSources(policy['defaultFilterName'])
+            exposure.setWcs(wcs)
+        else:
+            matches, wcs = measAst.determineWcs(policy.getPolicy(), exposure, sources,
+                                                solver=solver, log=self.log)
+            if matches is not None or len(matches) == 0:
+                raise RuntimeError("Unable to find any matches")
 
         verify = dict()                    # Verification parameters
         verify.update(astromSip.sourceMatchStatistics(matches))
@@ -444,3 +455,30 @@ class Crank(object):
         exposure.getCalib().setFluxMag0(zp.getFlux(0))
         self.log.log(self.log.INFO, "Flux of magnitude 0: %g" % zp.getFlux(0))
         return
+
+
+    def _display(self, name, exposure=None, sources=None):
+        if not self.display.has_key(name) or self.display[name] <= 0:
+            return
+        frame = self.display[name]
+
+        if exposure:
+            mi = exposure.getMaskedImage()
+            ds9.mtv(mi, frame=frame, title=name)
+            x0, y0 = mi.getX0(), mi.getY0()
+        else:
+            x0, y0 = 0, 0
+
+        if sources:
+            for source in sources:
+                xc, yc = source.getXAstrom() - x0, source.getYAstrom() - y0
+                ds9.dot("o", xc, yc, size=4, frame=frame)
+                #try:
+                #    mag = 25-2.5*math.log10(source.getPsfFlux())
+                #    if mag > 15: continue
+                #except: continue
+                #ds9.dot("%.1f" % mag, xc, yc, frame=frame, ctype="red")
+
+        #raw_input("Press [ENTER] when ready....")
+        return
+

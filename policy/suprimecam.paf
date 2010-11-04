@@ -31,7 +31,7 @@ defects: {
 }
 
 cr: {
-    nCrPixelMax: 100000
+    nCrPixelMax: 200000
 }
 
 ast: {

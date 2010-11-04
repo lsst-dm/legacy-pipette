@@ -31,4 +31,5 @@ cr: {
 
 ast: {
     defaultFilterName: MAG_R
+    numBrightStars: 100
 }

@@ -32,4 +32,11 @@ definitions: {
         maxOccurs: 1
         default: 15
     }
+    thresholdValue: {
+        type: double
+        description: "Threshold (stdev) for PSF stars"
+        minOccurs: 1
+        maxOccurs: 1
+        default: 25.0
+    }
 }

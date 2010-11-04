@@ -15,10 +15,11 @@ do: {
     background: true
     cr: true
     phot: true
+    ast: true
 }
 
 detect: {
-    thresholdValue: 25.0
+    thresholdValue: 5.0
     thresholdType: stdev
 }
 
@@ -26,4 +27,8 @@ measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
 
 cr: {
     nCrPixelMax: 100000
+}
+
+ast: {
+    defaultFilterName: MAG_R
 }

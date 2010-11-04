@@ -27,6 +27,7 @@ import math
 
 import lsst.gb3.config as gb3Config
 
+import lsstDebug
 import lsst.pex.logging as pexLog
 import lsst.daf.persistence as dafPersist
 import lsst.afw.cameraGeom as cameraGeom
@@ -41,6 +42,12 @@ import lsst.meas.utils.sourceDetection as muDetection
 import lsst.meas.utils.sourceMeasurement as muMeasurement
 import lsst.meas.algorithms as measAlg
 import lsst.meas.algorithms.Psf as maPsf
+import lsst.meas.astrom as measAst
+import lsst.meas.astrom.net as astromNet
+import lsst.meas.astrom.sip as astromSip
+import lsst.meas.astrom.verifyWcs as astromVerify
+
+import lsst.afw.display.ds9                 as ds9
 
 import lsst.sdqa as sdqa
 
@@ -70,6 +77,9 @@ class Crank(object):
         self.butler = self.bf.create()
 
         self.do = self.config['do']
+
+        self.display = lsstDebug.Info(__name__).display
+
         return
 
     def turn(self,
@@ -162,7 +172,8 @@ class Crank(object):
             self._cosmicray(bgSubExp, bsPsf, dataId, True)
 
         if self.do['phot']:
-            posSources, negSources = self._detect(bgSubExp, dataId)
+            bsThreshold = bootstrap['thresholdValue']
+            posSources, negSources = self._detect(bgSubExp, dataId, threshold=bsThreshold)
             sources = self._measure(bgSubExp, dataId, posSources, negSources, psf=bsPsf, wcs=wcs)
             psf = self._psfMeasurement(bgSubExp, dataId, sources)
             if self.do['interpolate']:
@@ -191,8 +202,8 @@ class Crank(object):
             self.butler.put(psf, 'psf', dataId)
         if sources is not None:
             self.butler.put(afwDet.PersistableSourceVector(sources), 'src', dataId)
-        if matches is not None:
-            self.butler.put(matches, 'matches', dataId)
+        #if matches is not None:
+        #    self.butler.put(matches, 'matches', dataId)
         return
 
 
@@ -363,12 +374,18 @@ class Crank(object):
         self.log.log(self.log.INFO, "Identified %d cosmic rays." % num)
         return
 
-    def _detect(self, exposure, dataId, psf=None):
-        policy = self.config['detect'].getPolicy()
-        posSources, negSources = muDetection.detectSources(exposure, psf, policy)
+    def _detect(self, exposure, dataId, psf=None, threshold=None):
+        policy = self.config['detect']
+        if threshold is not None:
+            oldThreshold = policy['thresholdValue']
+            policy['thresholdValue'] = threshold
+        posSources, negSources = muDetection.detectSources(exposure, psf, policy.getPolicy())
         numPos = len(posSources.getFootprints()) if posSources is not None else 0
         numNeg = len(negSources.getFootprints()) if negSources is not None else 0
-        self.log.log(self.log.INFO, "Detected %d positive and %d negative sources." % (numPos, numNeg))
+        self.log.log(self.log.INFO, "Detected %d positive and %d negative sources to %f." %
+                     (numPos, numNeg, policy['thresholdValue']))
+        if threshold is not None:
+            policy['thresholdValue'] = oldThreshold
         return posSources, negSources
 
     def _measure(self, exposure, dataId, posSources, negSources=None, psf=None, wcs=None):
@@ -393,23 +410,32 @@ class Crank(object):
     def _psfMeasurement(self, exposure, dataId, sources):
         policy = self.config['psf'].getPolicy()
         sdqaRatings = sdqa.SdqaRatingSet()
+        self.log.log(self.log.INFO, "Measuring PSF")
         psf, cellSet = maPsf.getPsf(exposure, sources, policy, sdqaRatings)
         # XXX Dropping cellSet on the floor
         return psf
 
     def _astrometry(self, exposure, dataId, sources):
-        policy = self.policy.getPolicy("astrometry") # XXX needs work
+        policy = self.config['ast'].getPolicy()
         path=os.path.join(os.environ['ASTROMETRY_NET_DATA_DIR'], "metadata.paf")
         solver = astromNet.GlobalAstrometrySolution(path)
-        # solver.allowDistortion(self.policy.get('allowDistortion'))
-        solver.setMatchThreshold(self.policy.get('matchThreshold'))
-        matches, wcs = measAstrom.determineWcs(policy, exposure, sources, solver=solver, log=self.log)
+        #solver.allowDistortion(self.policy.get('allowDistortion'))
+        #solver.setMatchThreshold(self.policy.get('matchThreshold'))
+        self.log.log(self.log.INFO, "Solving astrometry")
+        if self.display is not None:
+            frame = 1
+            mi = exposure.getMaskedImage()
+            ds9.mtv(mi, frame=frame, title="Exposure")
+            for source in sources:
+                xc, yc = source.getXAstrom() - mi.getX0(), source.getYAstrom() - mi.getY0()
+                ds9.dot("o", xc, yc, size=2, frame=frame)
+
+        matches, wcs = measAst.determineWcs(policy, exposure, sources, solver=solver, log=self.log)
 
         verify = dict()                    # Verification parameters
-        verify.update(sip.sourceMatchStatistics(matches))
-        verify.update(verifyWcs.checkMatches(matches, exposure, self.log))
-        self.log.log(self.log.DEBUG, "cells nobj min = %(minObjectsPerCell)s max = %(maxObjectsPerCell)s mean = %(meanObjectsPerCell)s std = %(stdObjectsPerCell)s" % verify)
-        for k, v in outputDict.items():
+        verify.update(astromSip.sourceMatchStatistics(matches))
+        verify.update(astromVerify.checkMatches(matches, exposure, self.log))
+        for k, v in verify.items():
             exposure.getMetadata().set(k, v)
         return matches, wcs
 

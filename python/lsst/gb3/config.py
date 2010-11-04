@@ -21,8 +21,6 @@
 # see <http://www.lsstcorp.org/LegalNotices/>.
 #
 
-import sys
-import optparse
 import lsst.pex.policy as pexPolicy
 
 """This module defines the configuration for LSST Algorithms testing (Green Blob 3)."""
@@ -132,46 +130,9 @@ class DefaultConfig(Config):
         Config.__init__(self, dictPolicy)
         return
 
-def optConfigDefinition(option, opt, value, parser):
-    key, val = value
-    parser.values.config[key] = val
-    return
 
-def optConfigOverride(option, opt, value, parser):
-    override = Config(value)
-    parser.values.config.merge(override)
-    return
-
-def optConfigRoot(option, opt, value, parser):
-    if not parser.values.config.has_key('roots'):
-        parser.values.config['roots'] = Config()
-    root = parser.values.config['roots']
-    root[option.dest] = value
-    return
-
-
-class OptionParser(optparse.OptionParser):
-    """OptionParser is an optparse.OptionParser that
-    provides some standard arguments.  These are used to
-    populate the 'config' attribute as a lsst.gb3.Config
-    """
-    def __init__(self, *args, **kwargs):
-        optparse.OptionParser.__init__(self, *args, **kwargs)
-        self.add_option("-D", "--define", type="string", nargs=2,
-                        action="callback", callback=optConfigDefinition,
-                        help="Configuration definition (single value)")
-        self.add_option("-O", "--override", type="string", action="callback", callback=optConfigOverride,
-                        help="Configuration override file")
-        self.add_option("--data", dest="data", type="string", action="callback", callback=optConfigRoot,
-                        help="Data root directory")
-        self.add_option("--calib", dest="calib", type="string", action="callback", callback=optConfigRoot,
-                        help="Calibration root directory")
-
-        self.set_default('config', Config())
-        return
-
-
-def configuration(*overrides            # List of particlar configuration(s) to override the defaults
+def configuration(parser,               # Option parser
+                  *overrides            # List of particlar configuration(s) to override the defaults
                   ):
     """Set up configuration for LSST Algorithms testing (Green Blob 3)."""
     # XXX This is bass-ackwards because of the way Policy is done....
@@ -182,6 +143,12 @@ def configuration(*overrides            # List of particlar configuration(s) to 
             newConfig = override if isinstance(override, Config) else Config(override)
             config.merge(newConfig)
         defaults.merge(config)
+    if parser is not None:
+        opts, args = parser.parse_args()
+        defaults.merge(opts.config)
+    else:
+        opts = None
+        args = None
 
-    return defaults
+    return defaults, opts, args
 

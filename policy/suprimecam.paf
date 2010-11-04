@@ -25,6 +25,10 @@ detect: {
 
 measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
 
+defects: {
+    grow: 2
+}
+
 cr: {
     nCrPixelMax: 100000
 }

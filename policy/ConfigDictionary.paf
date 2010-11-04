@@ -49,61 +49,14 @@ definitions: {
         dictionaryFile: "bootstrapDictionary.paf"
     }
 
-#    saturation: {
-#        type: Policy
-#        description: "Saturation masking policy"
-#        minOccurs: 0
-#        maxOccurs: 1
-#        dictionary: {
-#        }
-#    }
-#    overscan: {
-#        type: Policy
-#        description: "Overscan correction policy"
-#        minOccurs: 0
-#        maxOccurs: 1
-#        dictionary: {
-#        }
-#    }
-#    bias: {
-#        type: Policy
-#        description: "Bias correction policy"
-#        minOccurs: 0
-#        maxOccurs: 1
-#        dictionary: {
-#        }
-#    }
-#    dark: {
-#        type: Policy
-#        description: "Dark correction policy"
-#        minOccurs: 0
-#        maxOccurs: 1
-#        dictionary: {
-#        }
-#    }
-#    flat: {
-#        type: Policy
-#        description: "Perform flat correction?"
-#        minOccurs: 0
-#        maxOccurs: 1
-#        dictionary: {
-#        }
-#    }
-#    fringe: {
-#        type: Policy
-#        description: "Perform fringe correction?"
-#        minOccurs: 0
-#        maxOccurs: 1
-#        dictionary: {
-#        }
-#    }
-#    defects: {
-#        type: Policy
-#        description: "Mask static defects?"
-#        minOccurs: 0
-#        maxOccurs: 1
-#        dictionary: @@meas_algorithms:policy:BadPixels.paf
-#    }
+    defects: {
+        type: Policy
+        description: "Policy for handling defects"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "defectsDictionary.paf"
+    }
+
     background: {
         type: Policy
         description: "Background subtraction policy"

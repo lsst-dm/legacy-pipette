@@ -323,6 +323,7 @@ class Crank(object):
 ##############################################################################################################
 
     def _defects(self, exposure, fwhm, dataId):
+        policy = self.config['defects']
         defects = measAlg.DefectListT()
         statics = cameraGeom.cast_Ccd(exposure.getDetector()).getDefects() # Static defects
         for defect in statics:
@@ -332,7 +333,8 @@ class Crank(object):
         ipIsr.maskBadPixelsDef(exposure, defects, fwhm, interpolate=False, maskName='BAD')
         self.log.log(self.log.INFO, "Masked %d static defects." % len(statics))
 
-        sat = ipIsr.defectListFromMask(exposure, growFootprints=1, maskName='SAT') # Saturated defects
+        grow = policy['grow']
+        sat = ipIsr.defectListFromMask(exposure, growFootprints=grow, maskName='SAT') # Saturated defects
         self.log.log(self.log.INFO, "Added %d saturation defects." % len(sat))
         for defect in sat:
             bbox = defect.getBBox()
@@ -436,6 +438,8 @@ class Crank(object):
                 raise RuntimeError("Unable to solve astrometry")
             wcs = solver.getWcs()
             matches = solver.getMatchedSources(policy['defaultFilterName'])
+            sipFitter = astromSip.CreateWcsWithSip(matches, wcs, policy['sipOrder'])
+            wcs = sipFitter.getNewWcs()
             exposure.setWcs(wcs)
         else:
             matches, wcs = measAst.determineWcs(policy.getPolicy(), exposure, sources,

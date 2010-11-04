@@ -46,6 +46,7 @@ import lsst.meas.astrom as measAst
 import lsst.meas.astrom.net as astromNet
 import lsst.meas.astrom.sip as astromSip
 import lsst.meas.astrom.verifyWcs as astromVerify
+import lsst.meas.photocal as photocal
 
 import lsst.afw.display.ds9 as ds9
 
@@ -455,9 +456,9 @@ class Crank(object):
         return matches, wcs
 
     def _photcal(self, exposure, dataId, matches):
-        zp = photocal.calcPhotoCal(matches, log=self.log)
+        zp = photocal.calcPhotoCal(matches, log=self.log, goodFlagValue=0)
+        self.log.log(self.log.INFO, "Photometric zero-point: %f" % zp.getMag(1))
         exposure.getCalib().setFluxMag0(zp.getFlux(0))
-        self.log.log(self.log.INFO, "Flux of magnitude 0: %g" % zp.getFlux(0))
         return
 
 

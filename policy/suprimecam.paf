@@ -16,6 +16,7 @@ do: {
     cr: true
     phot: true
     ast: true
+    cal: true
 }
 
 detect: {

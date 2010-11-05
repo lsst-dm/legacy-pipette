@@ -42,7 +42,7 @@ class OptionParser(optparse.OptionParser):
                         help="Data root directory")
         self.add_option("--calib", dest="calib", type="string", action="callback", callback=optConfigRoot,
                         help="Calibration root directory")
-        self.add_option("--debug", dest="debug", action="callback", callback=optConfigDebug,
+        self.add_option("--debug", dest="debug", default=False, action="callback", callback=optConfigDebug,
                         help="Debugging output?")
 
         self.set_default('config', config.Config())
@@ -68,7 +68,9 @@ def optConfigRoot(option, opt, value, parser):
 def optConfigDebug(option, opt, value, parser):
     try:
         import debug
+        parser.values.debug = True
     except ImportError:
         print "No 'debug' module found"
+        parser.values.debug = False
     return
 

@@ -100,7 +100,7 @@ class Config(object):
         """List of items"""
         itemList = []
         for key in self.keys():
-            itemList.append(self.__getitem__(key))
+            itemList.append((key, self.__getitem__(key)))
         return itemList
 
     def has_key(self, key):
@@ -117,6 +117,20 @@ class Config(object):
     def getPolicy(self):
         """Return Policy object"""
         return self._policy
+
+    def __getstate__(self):
+        state = dict()
+        for key, val in self.items():
+            if isinstance(val, Config):
+                state[key] = val.__getstate__()
+            else:
+                state[key] = val
+        return state
+
+    def __setstate__(self, state):
+        self._policy = pexPolicy.Policy()
+        for key, val in state.items():
+            self.__setitem__(key, val)
 
 
 class DefaultConfig(Config):

@@ -38,6 +38,8 @@ class OptionParser(optparse.OptionParser):
                         help="Configuration definition (single value)")
         self.add_option("-O", "--override", type="string", action="callback", callback=optConfigOverride,
                         help="Configuration override file")
+        self.add_option("--output", dest="output", type="string", action="callback", callback=optConfigRoot,
+                        help="Output root directory")
         self.add_option("--data", dest="data", type="string", action="callback", callback=optConfigRoot,
                         help="Data root directory")
         self.add_option("--calib", dest="calib", type="string", action="callback", callback=optConfigRoot,

@@ -119,19 +119,18 @@ class Config(object):
         return self._policy
 
     def __getstate__(self):
+        """Return state for pickling"""
         state = dict()
         for key, val in self.items():
-            if isinstance(val, Config):
-                state[key] = val.__getstate__()
-            else:
-                state[key] = val
+            state[key] = val
         return state
 
     def __setstate__(self, state):
+        """Initialise object from state for unpickling"""
         self._policy = pexPolicy.Policy()
         for key, val in state.items():
             self.__setitem__(key, val)
-
+        return
 
 class DefaultConfig(Config):
     """DefaultConfig is a configuration class for LSST Algorithms testing (Green Blob 3).

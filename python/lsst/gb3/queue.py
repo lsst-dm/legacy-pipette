@@ -4,6 +4,8 @@ import pickle
 import subprocess
 import shlex
 
+import lsst.pex.logging as pexLog
+
 class Queue(object):
     def __init__(self, script, importList=None, command="qsub -V", resourceList=None, queue=None):
         self.script = script
@@ -11,12 +13,13 @@ class Queue(object):
         self.command = command
         self.resourceList = resourceList
         self.queue = queue
+        self.log = pexLog.Log(pexLog.getDefaultLog(), "Queue")
         return
 
     def sub(self, name, **kwargs):
         filename = name + ".py"
         fp = open(filename, 'w')
-        fp.write("#/usr/bin/env python\n")
+        fp.write("#!/usr/bin/env python\n")
         fp.write("import pickle\n")
         for imp in self.importList:
             if not isinstance(imp, str) and getattr(imp, '__iter__', None) is not None:
@@ -41,5 +44,5 @@ class Queue(object):
         if self.queue is not None:
             command += " -q %s" % self.queue
         command += " " + filename
-        print command
-        #subprocess.call(shlex.split(command))
+        self.log.log(self.log.INFO, "Executing: %s" % command)
+        subprocess.call(shlex.split(command))

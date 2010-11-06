@@ -65,7 +65,7 @@ class Crank(object):
 
     def __init__(self,                  # Crank
                  name,                  # Base name for outputs
-                 mapperClass,           # Mapper class to use
+                 mapper,                # Mapper or mapper class to use
                  config=None,           # Configuration
                  ):
         self.name = name
@@ -73,7 +73,13 @@ class Crank(object):
 
         self.config = gb3Config.configuration() if config is None else config
         roots = self.config['roots']
-        self.mapper = mapperClass(root=roots['data'], calibRoot=roots['calib'])
+        if issubclass(mapper, dafPersist.Mapper):
+            # It's a class that we're to instantiate
+            self.mapper = mapper(root=roots['data'], calibRoot=roots['calib'])
+        elif isinstance(mapper, dafPersist.Mapper):
+            self.mapper = mapper
+        else:
+            raise RuntimeError("Unable to interpret provided mapper.")
         self.bf = dafPersist.ButlerFactory(mapper=self.mapper)
         self.butler = self.bf.create()
 
@@ -457,13 +463,13 @@ class Crank(object):
 
     def _photcal(self, exposure, dataId, matches):
         zp = photocal.calcPhotoCal(matches, log=self.log, goodFlagValue=0)
-        self.log.log(self.log.INFO, "Photometric zero-point: %f" % zp.getMag(1))
+        self.log.log(self.log.INFO, "Photometric zero-point: %f" % zp.getMag(1.0))
         exposure.getCalib().setFluxMag0(zp.getFlux(0))
         return
 
 
     def _display(self, name, exposure=None, sources=None):
-        if not self.display.has_key(name) or self.display[name] <= 0:
+        if not self.display or not self.display.has_key(name) or self.display[name] <= 0:
             return
         frame = self.display[name]
 

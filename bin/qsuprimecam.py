@@ -20,7 +20,7 @@ def run(rerun,                          # Rerun name
                 ]
     script = "gb3Crank.Crank(basename, suprime.SuprimeMapper, config=config).turn(dataId)"
 
-    queue = gb3Queue.Queue(script, importList=imports, resourceList="walltime=300")
+    queue = gb3Queue.PbsQueue(script, importList=imports, resourceList="walltime=300")
     roots = config['roots']
     for frame in frameList:
         for ccd in ccdList:

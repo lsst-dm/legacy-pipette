@@ -6,14 +6,14 @@ import shlex
 
 import lsst.pex.logging as pexLog
 
-class Queue(object):
+class PbsQueue(object):
     def __init__(self, script, importList=None, command="qsub -V", resourceList=None, queue=None):
         self.script = script
         self.importList = importList
         self.command = command
         self.resourceList = resourceList
         self.queue = queue
-        self.log = pexLog.Log(pexLog.getDefaultLog(), "Queue")
+        self.log = pexLog.Log(pexLog.getDefaultLog(), "PbsQueue")
         return
 
     def sub(self, name, **kwargs):

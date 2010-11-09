@@ -26,7 +26,7 @@
 import unittest
 import lsst.utils.tests as utilsTests
 
-import lsst.gb3.config as cfg
+import lsst.gb3.engine.config as cfg
 
 
 def compare(config,                     # Configuration being tested
@@ -46,7 +46,7 @@ class ConfigTestCase(unittest.TestCase):
     """A test case for configuration"""
 
     def setUp(self):
-        self.config = cfg.Config("test_config.paf")
+        self.config = cfg.Config("tests/test_config.paf")
         self.truth = { 'integer': 1,
                        'float': 3.21,
                        'truth': True,

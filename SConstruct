@@ -5,20 +5,11 @@
 import glob, os.path, re
 import lsst.SConsUtils as scons
 
-dependencies = "boost python daf_base afw pex_logging pex_exceptions pex_policy".split()
+dependencies = "boost python utils daf_base afw pex_logging pex_exceptions pex_policy".split()
 
-env = scons.makeEnv("daf_persistence",
+env = scons.makeEnv("gb3_engine",
                     r"$HeadURL: svn+ssh://svn.lsstcorp.org/DMS/daf/persistence/branches/price/SConstruct $",
                     [
-                     ["boost", "boost/regex.hpp", "boost_regex:C++"],
-                     ["boost", "boost/serialization/serialization.hpp", "boost_serialization:C++"],
-                     ["boost", "boost/version.hpp", "boost_system:C++"],
-                     ["python", "Python.h"],
-                     ["pex_exceptions", "lsst/pex/exceptions.h", "pex_exceptions:C++"],
-                     ["daf_base", "lsst/daf/base.h", "daf_base:C++"],
-                     ["afw", "lsst/afw.h", "afw:C++"],
-                     ["pex_logging", "lsst/pex/logging/Trace.h", "pex_logging:C++"],
-                     ["pex_policy", "lsst/pex/policy/Policy.h", "pex_policy:C++"]
                     ])
 env.Help("""
 LSST Green Blob 3 (Algorithms Testing) Engine package

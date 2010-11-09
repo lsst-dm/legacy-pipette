@@ -25,7 +25,7 @@ import os
 import re
 import math
 
-import lsst.gb3.config as gb3Config
+import lsst.gb3.engine.config as engConfig
 
 import lsstDebug
 import lsst.pex.logging as pexLog
@@ -71,7 +71,7 @@ class Crank(object):
         self.name = name
         self.log = pexLog.Log(pexLog.getDefaultLog(), "Crank")
 
-        self.config = gb3Config.configuration() if config is None else config
+        self.config = engConfig.configuration() if config is None else config
         roots = self.config['roots']
         if issubclass(mapper, dafPersist.Mapper):
             # It's a class that we're to instantiate

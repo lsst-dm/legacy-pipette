@@ -25,7 +25,7 @@ import lsst.pex.policy as pexPolicy
 
 """This module defines the configuration for LSST Algorithms testing (Green Blob 3)."""
 
-class Config(object):
+class Config(dict):
     """Config is a configuration class for LSST Algorithms testing (Green Blob 3).
 
     It quacks like a Python dictionary.
@@ -35,15 +35,21 @@ class Config(object):
                  policy=None            # Filename/file/policy for configuration
                  ):
         if policy is None:
-            policy = pexPolicy.Policy()
-        if isinstance(policy, str):
-            policy = pexPolicy.PolicyFile(policy)
-        if isinstance(policy, pexPolicy.PolicyFile):
-            policy = pexPolicy.Policy.createPolicy(policy)
-        if not isinstance(policy, pexPolicy.Policy):
-            raise RuntimeError, "Can't interpret provided policy"
-
-        self._policy = policy
+            self._policy = pexPolicy.Policy()
+        elif isinstance(policy, pexPolicy.Policy):
+            self._policy = policy
+        elif isinstance(policy, str):
+            self._policy = pexPolicy.Policy.createPolicy(pexPolicy.PolicyFile(policy))
+        elif isinstance(policy, pexPolicy.PolicyFile):
+            self._policy = pexPolicy.Policy.createPolicy(policy)
+        elif isinstance(policy, dict):
+            self._policy = pexPolicy.Policy()
+            for key, value in policy.items():
+                if isinstance(value, dict):
+                    value = Config(value)._policy
+                self._policy.add(key, value)
+        else:
+            raise RuntimeError, "Can't interpret provided policy: %s" % (policy)
         return
 
     def __str__(self):
@@ -142,3 +148,15 @@ class DefaultConfig(Config):
         dictPolicy = pexPolicy.Policy.createPolicy(dictFile, dictFile.getRepositoryPath()) # Dictionary
         Config.__init__(self, dictPolicy)
         return
+
+def configuration(*overrides            # List of particlar configuration(s) to override the defaults
+                  ):
+    # XXX This is bass-ackwards because of the way Policy is done....
+    defaults = DefaultConfig()
+    if overrides is not None:
+        config = Config()
+        for override in overrides:
+            newConfig = override if isinstance(override, Config) else Config(override)
+            config.merge(newConfig)
+        defaults.merge(config)
+    return defaults

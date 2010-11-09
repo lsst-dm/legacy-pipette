@@ -142,26 +142,3 @@ class DefaultConfig(Config):
         dictPolicy = pexPolicy.Policy.createPolicy(dictFile, dictFile.getRepositoryPath()) # Dictionary
         Config.__init__(self, dictPolicy)
         return
-
-
-def configuration(parser,               # Option parser
-                  *overrides            # List of particlar configuration(s) to override the defaults
-                  ):
-    """Set up configuration for LSST Algorithms testing (Green Blob 3)."""
-    # XXX This is bass-ackwards because of the way Policy is done....
-    defaults = DefaultConfig()
-    if overrides is not None:
-        config = Config()
-        for override in overrides:
-            newConfig = override if isinstance(override, Config) else Config(override)
-            config.merge(newConfig)
-        defaults.merge(config)
-    if parser is not None:
-        opts, args = parser.parse_args()
-        defaults.merge(opts.config)
-    else:
-        opts = None
-        args = None
-
-    return defaults, opts, args
-

@@ -1,5 +1,6 @@
 #/usr/bin/env python
 
+import re
 import pickle
 import subprocess
 import shlex
@@ -8,6 +9,29 @@ import lsst.pex.logging as pexLog
 
 class PbsQueue(object):
     def __init__(self, script, importList=None, command="qsub -V", resourceList=None, queue=None):
+
+        # Remove common indentation
+        lines = re.split("\n", script)
+        exemplar = None                 # First non-blank line
+        for line in lines:
+            if re.search("\S", line):
+                exemplar = line
+                break
+        if exemplar is None:
+            raise RuntimeError("Empty script provided.")
+        match = re.match("(\s+)", exemplar)
+        if match:
+            indent = match.group(0)     # Indentation used
+            newLines = []
+            for line in lines:
+                if not re.search("\S", line):
+                    continue
+                newLine = re.sub("^" + indent, "", line)
+                if newLine is None:
+                    raise RuntimeError("Inconsistent indentation in script: " + script)
+                newLines.append(newLine)
+            script = "\n".join(newLines)
+
         self.script = script
         self.importList = importList
         self.command = command

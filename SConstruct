@@ -8,7 +8,7 @@ import lsst.SConsUtils as scons
 dependencies = "boost python utils daf_base afw pex_logging pex_exceptions pex_policy".split()
 
 env = scons.makeEnv("gb3_engine",
-                    r"$HeadURL: svn+ssh://svn.lsstcorp.org/DMS/daf/persistence/branches/price/SConstruct $",
+                    r"$HeadURL$",
                     [
                     ])
 env.Help("""

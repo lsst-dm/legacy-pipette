@@ -29,9 +29,7 @@ import lsst.gb3.engine.config as engConfig
 
 import lsstDebug
 import lsst.pex.logging as pexLog
-import lsst.daf.persistence as dafPersist
 import lsst.afw.cameraGeom as cameraGeom
-import lsst.afw.cameraGeom.utils as cameraGeomUtils
 import lsst.afw.math as afwMath
 import lsst.afw.image as afwImage
 import lsst.afw.image.utils as imageUtils
@@ -65,86 +63,57 @@ class Crank(object):
 
     def __init__(self,                  # Crank
                  name,                  # Base name for outputs
-                 mapper,                # Mapper or mapper class to use
                  config=None,           # Configuration
                  ):
         self.name = name
         self.log = pexLog.Log(pexLog.getDefaultLog(), "Crank")
-
         self.config = engConfig.configuration() if config is None else config
-        roots = self.config['roots']
-        if issubclass(mapper, dafPersist.Mapper):
-            # It's a class that we're to instantiate
-            self.mapper = mapper(root=roots['data'], calibRoot=roots['calib'])
-        elif isinstance(mapper, dafPersist.Mapper):
-            self.mapper = mapper
-        else:
-            raise RuntimeError("Unable to interpret provided mapper.")
-        self.bf = dafPersist.ButlerFactory(mapper=self.mapper)
-        self.butler = self.bf.create()
-
         self.do = self.config['do']
-
         self.display = lsstDebug.Info(__name__).display
-
         return
 
-    def turn(self,
-             dataId                     # Data identifier
-             ):
-        exposure = self.read(dataId)
-        self.isr(exposure, dataId)
-        exposure = self.ccdAssembly(exposure, dataId)
-        exposure, psf, sources, matches, wcs = self.imageChar(exposure, dataId)
-        self.write(exposure, dataId, psf, sources, matches)
-        return
-
-    def read(self,
-             dataId                     # Data identifier
-             ):
-        """Read raw data."""
-        self.log.log(self.log.INFO, "Reading: %s" % (dataId))
-        exposure = self.butler.get('raw', dataId)
-        mImg = exposure.getMaskedImage()
-        if isinstance(exposure, afwImage.ExposureU):
-            exposure = exposure.convertF()
-        self._display("raw", exposure)
-        return exposure
+    def turn(self, exposure, ccd, detrends):
+        self.isr(exposure, ccd, detrends)
+        exposure = self.ccdAssembly(exposure)
+        exposure, psf, sources, matches, wcs = self.imageChar(exposure)
+        return exposure, psf, sources, matches, wcs
 
     def isr(self,
             exposure,                   # Exposure to correct
-            dataId                      # Data identifier
+            ccd,                        # Ccd from camera
+            detrends,                   # Dict of detrends
             ):
         """Instrument signature removal: generate mask and variance;
         subtract overscan, bias, dark; divide by flat-field;
         subtract fringes.
         """
+        self._display("raw", exposure)
         if self.do['saturation']:
-            self._saturation(exposure, dataId)
+            self._saturation(exposure)
         if self.do['overscan']:
-            self._overscan(exposure, dataId)
-        self._trim(exposure, dataId)
+            self._overscan(exposure)
+        self._trim(exposure, ccd)
         if self.do['bias']:
-            self._bias(exposure, dataId)
-        self._variance(exposure, dataId)
+            self._bias(exposure, detrends)
+        self._variance(exposure)
         if self.do['dark']:
-            self._dark(exposure, dataId)
+            self._dark(exposure, detrends)
         if self.do['flat']:
-            self._flat(exposure, dataId)
+            self._flat(exposure, detrends)
         if self.do['fringe']:
-            self._fringe(exposure, dataId)
+            self._fringe(exposure, detrends)
         self._display("isr", exposure)
         return
 
 
-    def ccdAssembly(self, exposureList, dataId):
+    def ccdAssembly(self, exposureList):
         """Assembly of amplifiers into CCDs.
         Also applies defects (static mask)."""
-        exposure = self._assembly(exposureList, dataId)
+        exposure = self._assembly(exposureList)
         return exposure
 
 
-    def imageChar(self, exposure, dataId):
+    def imageChar(self, exposure):
         """Image characterisation: background subtraction,
         cosmic-ray rejection, source detection and measurement,
         PSF determination, and photometric and astrometric
@@ -165,64 +134,54 @@ class Crank(object):
         bsPsf = afwDet.createPsf(model, size, size, fwhm/(2*math.sqrt(2*math.log(2))))
 
         if self.do['defects']:
-            defects = self._defects(exposure, fwhm, dataId)
+            defects = self._defects(exposure, fwhm)
         else:
             defects = None
         if self.do['interpolate']:
             # Doing this in order to measure the PSF may not be necessary
-            self._interpolate(exposure, defects, bsPsf, dataId)
+            self._interpolate(exposure, defects, bsPsf)
         if self.do['background']:
-            bgSubExp = self._background(exposure, dataId)
+            bgSubExp = self._background(exposure)
         else:
             bgSubExp = exposure
 
         if self.do['cr']:
             # Doing this in order to measure the PSF may not be necessary
-            self._cosmicray(bgSubExp, bsPsf, dataId, True)
+            self._cosmicray(bgSubExp, bsPsf, True)
 
         if self.do['phot']:
             bsThreshold = bootstrap['thresholdValue']
-            posSources, negSources = self._detect(bgSubExp, dataId, threshold=bsThreshold)
-            sources = self._measure(bgSubExp, dataId, posSources, negSources, psf=bsPsf, wcs=wcs)
+            posSources, negSources = self._detect(bgSubExp, threshold=bsThreshold)
+            sources = self._measure(bgSubExp, posSources, negSources, psf=bsPsf, wcs=wcs)
             self._display("bootstrap", bgSubExp, sources)
-            psf = self._psfMeasurement(bgSubExp, dataId, sources)
+            psf = self._psfMeasurement(bgSubExp, sources)
             if self.do['interpolate']:
                 # Repeating this with the proper PSF may not be necessary
-                self._interpolate(exposure, defects, psf, dataId)
+                self._interpolate(exposure, defects, psf)
             if self.do['cr']:
                 # Repeating this with the proper PSF may not be necessary
                 mask = bgSubExp.getMaskedImage().getMask()
                 crBit = mask.getMaskPlane("CR")
                 mask.clearMaskPlane(crBit)
-                self._cosmicray(bgSubExp, psf, dataId, False)
-            posSources, negSources = self._detect(bgSubExp, dataId, psf=psf)
-            sources = self._measure(bgSubExp, dataId, posSources, negSources, psf=psf, wcs=wcs)
+                self._cosmicray(bgSubExp, psf, False)
+            posSources, negSources = self._detect(bgSubExp, psf=psf)
+            sources = self._measure(bgSubExp, posSources, negSources, psf=psf, wcs=wcs)
             self._display("phot", bgSubExp, sources)
         if self.do['ast'] and sources is not None:
-            matches, wcs = self._astrometry(bgSubExp, dataId, sources)
+            matches, wcs = self._astrometry(bgSubExp, sources)
         if self.do['cal'] and matches is not None and len(matches) > 0:
-            self._photcal(bgSubExp, dataId, matches)
+            self._photcal(bgSubExp, matches)
 
         return bgSubExp, psf, sources, matches, wcs
 
 
-    def write(self, exposure, dataId, psf, sources, matches):
-        """Write processed data."""
-        self.butler.put(exposure, 'postISRCCD', dataId)
-        if psf is not None:
-            self.butler.put(psf, 'psf', dataId)
-        if sources is not None:
-            self.butler.put(afwDet.PersistableSourceVector(sources), 'src', dataId)
-        #if matches is not None:
-        #    self.butler.put(matches, 'matches', dataId)
-        return
 
 
 ##############################################################################################################
 # ISR methods
 ##############################################################################################################
 
-    def _saturation(self, exposure, dataId):
+    def _saturation(self, exposure):
         ccd = exposure.getDetector()
         mi = exposure.getMaskedImage()
         Exposure = type(exposure)
@@ -236,7 +195,7 @@ class Crank(object):
                          (len(bboxes), amp.getId(), saturation))
         return
 
-    def _overscan(self, exposure, dataId):
+    def _overscan(self, exposure):
         fittype = "MEDIAN"                # XXX policy argument
         ccd = exposure.getDetector()
         for amp in cameraGeom.cast_Ccd(ccd):
@@ -245,8 +204,7 @@ class Crank(object):
             ipIsr.overscanCorrection(exposure, biassec, fittype)
         return
 
-    def _trim(self, exposure, dataId):
-        ccd = cameraGeomUtils.findCcd(self.mapper.camera, cameraGeom.Id(dataId['ccd']))
+    def _trim(self, exposure, ccd):
         miBefore = exposure.getMaskedImage()
         MaskedImage = type(miBefore)
         miAfter = MaskedImage(ccd.getAllPixels(True).getDimensions())
@@ -263,13 +221,13 @@ class Crank(object):
         return
 
 
-    def _bias(self, exposure, dataId):
-        bias = self.butler.get("bias", dataId)
+    def _bias(self, exposure, detrends):
+        bias = detrends['bias']
         self.log.log(self.log.INFO, "Debiasing image")
         ipIsr.biasCorrection(exposure, bias)
         return
 
-    def _variance(self, exposure, dataId):
+    def _variance(self, exposure):
         ccd = exposure.getDetector()
         mi = exposure.getMaskedImage()
         MaskedImage = type(mi)
@@ -282,16 +240,16 @@ class Crank(object):
             variance /= gain
         return
 
-    def _dark(self, exposure, dataId):
-        dark = self.butler.get("dark", dataId)
+    def _dark(self, exposure, detrends):
+        dark = detrends['dark']
         expTime = float(exposure.getCalib().getExptime())
         darkTime = float(dark.getCalib().getExptime())
         self.log.log(self.log.INFO, "Removing dark (%f sec vs %f sec)" % (expTime, darkTime))
         ipIsr.darkCorrection(exposure, dark, expTime, darkTime)
         return
 
-    def _flat(self, exposure, dataId):
-        flat = self.butler.get("flat", dataId)
+    def _flat(self, exposure, detrends):
+        flat = detrends['flat']
         mi = exposure.getMaskedImage()
         image = mi.getImage()
         variance = mi.getVariance()
@@ -306,15 +264,15 @@ class Crank(object):
         #ipIsr.flatCorrection(exposure, flat, "USER", 1.0)
         return
 
-    def _fringe(self, exposure, dataId):
-        flat = self.butler.get("fringe", dataId)
+    def _fringe(self, exposure, detrends):
+        fringe = detrends['fringe']
         raise NotimplementedError, "Fringe subtraction is not yet implemented."
 
 ##############################################################################################################
 # CCD assembly method
 ##############################################################################################################
 
-    def _assembly(self, exposureList, dataid):
+    def _assembly(self, exposureList):
         if not hasattr(exposureList, "__getitem__"):
             # This is not a list; presumably it's a single item needing no assembly
             return exposureList
@@ -329,7 +287,7 @@ class Crank(object):
 # Image characterisation methods
 ##############################################################################################################
 
-    def _defects(self, exposure, fwhm, dataId):
+    def _defects(self, exposure, fwhm):
         policy = self.config['defects']
         defects = measAlg.DefectListT()
         statics = cameraGeom.cast_Ccd(exposure.getDetector()).getDefects() # Static defects
@@ -360,20 +318,20 @@ class Crank(object):
 
         return defects
 
-    def _interpolate(self, exposure, defects, psf, dataId):
+    def _interpolate(self, exposure, defects, psf):
         mi = exposure.getMaskedImage()
         fallbackValue = afwMath.makeStatistics(mi.getImage(), afwMath.MEANCLIP).getValue()
         measAlg.interpolateOverDefects(mi, psf, defects, fallbackValue)
         self.log.log(self.log.INFO, "Interpolated over %d defects." % len(defects))
         return
 
-    def _background(self, exposure, dataId):
+    def _background(self, exposure):
         policy = self.config['background'].getPolicy()
         bg, subtracted = muDetection.estimateBackground(exposure, policy, subtract=True)
         # XXX Dropping bg on the floor
         return subtracted
 
-    def _cosmicray(self, exposure, psf, dataId, keepCRs=True):
+    def _cosmicray(self, exposure, psf, keepCRs=True):
         policy = self.config['cr'].getPolicy()
         mi = exposure.getMaskedImage()
         bg = afwMath.makeStatistics(mi, afwMath.MEDIAN).getValue()
@@ -387,7 +345,7 @@ class Crank(object):
         self.log.log(self.log.INFO, "Identified %d cosmic rays." % num)
         return
 
-    def _detect(self, exposure, dataId, psf=None, threshold=None):
+    def _detect(self, exposure, psf=None, threshold=None):
         policy = self.config['detect']
         if threshold is not None:
             oldThreshold = policy['thresholdValue']
@@ -401,7 +359,7 @@ class Crank(object):
             policy['thresholdValue'] = oldThreshold
         return posSources, negSources
 
-    def _measure(self, exposure, dataId, posSources, negSources=None, psf=None, wcs=None):
+    def _measure(self, exposure, posSources, negSources=None, psf=None, wcs=None):
         policy = self.config['measure'].getPolicy()
         footprints = []                    # Footprints to measure
         if posSources:
@@ -420,7 +378,7 @@ class Crank(object):
 
         return sources
 
-    def _psfMeasurement(self, exposure, dataId, sources):
+    def _psfMeasurement(self, exposure, sources):
         policy = self.config['psf'].getPolicy()
         sdqaRatings = sdqa.SdqaRatingSet()
         self.log.log(self.log.INFO, "Measuring PSF")
@@ -428,7 +386,7 @@ class Crank(object):
         # XXX Dropping cellSet on the floor
         return psf
 
-    def _astrometry(self, exposure, dataId, sources):
+    def _astrometry(self, exposure, sources):
         policy = self.config['ast']
         path=os.path.join(os.environ['ASTROMETRY_NET_DATA_DIR'], "metadata.paf")
         solver = astromNet.GlobalAstrometrySolution(path)
@@ -461,7 +419,7 @@ class Crank(object):
             exposure.getMetadata().set(k, v)
         return matches, wcs
 
-    def _photcal(self, exposure, dataId, matches):
+    def _photcal(self, exposure, matches):
         zp = photocal.calcPhotoCal(matches, log=self.log, goodFlagValue=0)
         self.log.log(self.log.INFO, "Photometric zero-point: %f" % zp.getMag(1.0))
         exposure.getCalib().setFluxMag0(zp.getFlux(0))

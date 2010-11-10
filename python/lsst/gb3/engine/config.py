@@ -151,7 +151,11 @@ class DefaultConfig(Config):
 
 def configuration(*overrides            # List of particlar configuration(s) to override the defaults
                   ):
-    # XXX This is bass-ackwards because of the way Policy is done....
+    """Generate configuration from defaults and overrides
+
+    @param *overrides Configurations to override the defaults
+    @returns Configuration
+    """
     defaults = DefaultConfig()
     if overrides is not None:
         config = Config()

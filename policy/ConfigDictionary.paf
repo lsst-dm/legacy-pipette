@@ -80,21 +80,46 @@ definitions: {
     }
     psf: {
         type: Policy
-        description: "Source measurement policy"
+        description: "PSF determination policies"
         minOccurs: 0
         maxOccurs: 1
-        dictionary: @@meas_pipeline:policy:PsfDeterminationDictionary.paf
+        dictionary: {
+            target: Config
+            definitions: {
+                select: {
+                    type: Policy
+                    description: "PSF star selection policy"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    dictionary: @@meas_algorithms:policy:PsfSelectionRhlDictionary.paf
+                }
+                algorithm: {
+                    type: Policy
+                    description: "PSF measurement policy"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    dictionary: @@meas_algorithms:policy:PsfAlgorithmRhlDictionary.paf
+                }
+            }
+        }
+    }
+    apcorr: {
+        type: Policy
+        description: "Aperture correction policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_algorithms:policy:ApertureCorrectionDictionary.paf
     }
     cr: {
         type: Policy
-        description: "Mask cosmic rays?"
+        description: "Cosmic rays masking policy"
         minOccurs: 0
         maxOccurs: 1
         dictionary: @@meas_algorithms:policy:CrRejectDictionary.paf
     }
     ast: {
         type: Policy
-        description: "Perform astrometric calibration?"
+        description: "Astrometric calibration policy"
         minOccurs: 0
         maxOccurs: 1
         dictionary: @@meas_pipeline:policy:WcsDeterminationStageDictionary.paf

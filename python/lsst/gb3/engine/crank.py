@@ -39,7 +39,9 @@ import lsst.ip.utils as ipUtils
 import lsst.meas.utils.sourceDetection as muDetection
 import lsst.meas.utils.sourceMeasurement as muMeasurement
 import lsst.meas.algorithms as measAlg
-import lsst.meas.algorithms.Psf as maPsf
+import lsst.meas.algorithms.psfSelectionRhl as maPsfSel
+import lsst.meas.algorithms.psfAlgorithmRhl as maPsfAlg
+import lsst.meas.algorithms.ApertureCorrection as maApCorr
 import lsst.meas.astrom as measAst
 import lsst.meas.astrom.net as astromNet
 import lsst.meas.astrom.sip as astromSip
@@ -122,6 +124,7 @@ class Crank(object):
         # Default return values
         bgSubExp = None
         psf = None
+        apCorr = None
         sources = None
         matches = None
         wcs = exposure.getWcs()
@@ -152,9 +155,10 @@ class Crank(object):
         if self.do['phot']:
             bsThreshold = bootstrap['thresholdValue']
             posSources, negSources = self._detect(bgSubExp, threshold=bsThreshold)
-            sources = self._measure(bgSubExp, posSources, negSources, psf=bsPsf, wcs=wcs)
+            sources = self._measure(bgSubExp, posSources, negSources, psf=bsPsf, wcs=wcs, apCorr=apCorr)
             self._display("bootstrap", bgSubExp, sources)
-            psf = self._psfMeasurement(bgSubExp, sources)
+            psf, cellSet = self._psfMeasurement(bgSubExp, sources)
+            apCorr = self._apCorr(bgSubExp, cellSet)
             if self.do['interpolate']:
                 # Repeating this with the proper PSF may not be necessary
                 self._interpolate(exposure, defects, psf)
@@ -165,7 +169,7 @@ class Crank(object):
                 mask.clearMaskPlane(crBit)
                 self._cosmicray(bgSubExp, psf, False)
             posSources, negSources = self._detect(bgSubExp, psf=psf)
-            sources = self._measure(bgSubExp, posSources, negSources, psf=psf, wcs=wcs)
+            sources = self._measure(bgSubExp, posSources, negSources, psf=psf, wcs=wcs, apCorr=apCorr)
             self._display("phot", bgSubExp, sources)
         if self.do['ast'] and sources is not None:
             matches, wcs = self._astrometry(bgSubExp, sources)
@@ -359,7 +363,7 @@ class Crank(object):
             policy['thresholdValue'] = oldThreshold
         return posSources, negSources
 
-    def _measure(self, exposure, posSources, negSources=None, psf=None, wcs=None):
+    def _measure(self, exposure, posSources, negSources=None, psf=None, wcs=None, apCorr=None):
         policy = self.config['measure'].getPolicy()
         footprints = []                    # Footprints to measure
         if posSources:
@@ -376,15 +380,40 @@ class Crank(object):
         if wcs is not None:
             muMeasurement.computeSkyCoords(wcs, sources)
 
+        if apCorr is not None:
+            for source in sources:
+                x, y = source.getXAstrom(), source.getYAstrom()
+                flux = source.getPsfFlux()
+                fluxErr = source.getPsfFluxErr()
+                corr, corrErr = apCorr.computeAt(x, y)
+                source.setPsfFlux(flux * corr)
+                source.setPsfFluxErr(math.sqrt(corr**2 * fluxErr**2 + corrErr**2 * flux**2))
+
         return sources
 
     def _psfMeasurement(self, exposure, sources):
-        policy = self.config['psf'].getPolicy()
+        psfPolicy = self.config['psf']
+        selPolicy = psfPolicy['select'].getPolicy()
+        algPolicy = psfPolicy['algorithm'].getPolicy()
         sdqaRatings = sdqa.SdqaRatingSet()
         self.log.log(self.log.INFO, "Measuring PSF")
-        psf, cellSet = maPsf.getPsf(exposure, sources, policy, sdqaRatings)
-        # XXX Dropping cellSet on the floor
-        return psf
+        psfStars, cellSet = maPsfSel.selectPsfSources(exposure, sources, selPolicy)
+        psf, cellSet, psfStars = maPsfAlg.getPsf(exposure, psfStars, cellSet, algPolicy, sdqaRatings)
+        return psf, cellSet
+
+    def _apCorr(self, exposure, cellSet):
+        policy = self.config['apcorr'].getPolicy()
+        control = maApCorr.ApertureCorrectionControl(policy)
+        sdqaRatings = sdqa.SdqaRatingSet()
+        corr = maApCorr.ApertureCorrection(exposure, cellSet, sdqaRatings, control, self.log)
+        sdqaRatings = dict(zip([r.getName() for r in sdqaRatings], [r for r in sdqaRatings]))
+        x, y = exposure.getWidth() / 2.0, exposure.getHeight() / 2.0
+        value, error = corr.computeAt(x, y)
+        self.log.log(self.log.INFO, "Aperture correction using %d/%d stars: %f +/- %f" %
+                     (sdqaRatings["phot.apCorr.numAvailStars"].getValue(),
+                      sdqaRatings["phot.apCorr.numGoodStars"].getValue(),
+                      value, error))
+        return corr
 
     def _astrometry(self, exposure, sources):
         policy = self.config['ast']

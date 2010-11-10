@@ -63,7 +63,7 @@ class Crank(object):
     """
 
     def __init__(self,                  # Crank
-                 name,                  # Base name for outputs
+                 name=None,             # Base name for outputs
                  config=None,           # Configuration
                  ):
         self.name = name

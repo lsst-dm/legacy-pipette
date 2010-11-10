@@ -25,9 +25,8 @@ import os
 import re
 import math
 
-import lsst.gb3.engine.config as engConfig
-
 import lsstDebug
+import lsst.gb3.engine.config as engConfig
 import lsst.pex.logging as pexLog
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.afw.math as afwMath
@@ -94,9 +93,6 @@ class Crank(object):
         if self.do['overscan']:
             self._overscan(exposure)
         self._trim(exposure)
-
-        exposure = self._assembly(exposure)
-
         if self.do['bias']:
             self._bias(exposure, detrends)
         self._variance(exposure)
@@ -216,24 +212,30 @@ class Crank(object):
         return
 
     def _trim(self, exposure):
-        ccd = getCcd(exposure)
-        dim = ccd.getAllPixels(True).getDimensions()
-        miBefore = exposure.getMaskedImage()
-        MaskedImage = type(miBefore)
-        miAfter = MaskedImage(dim)
-        for amp in ccd:
-            if not haveAmp(exposure, amp):
-                continue
-            datasecBefore = amp.getDiskDataSec()
-            datasecAfter = amp.getDataSec(True)
-            self.log.log(self.log.INFO, "Trimming amp %s: %s --> %s" %
-                         (amp.getId(), datasecBefore, datasecAfter))
-            trimAmp = MaskedImage(miBefore, datasecBefore)
-            trimImage = MaskedImage(miAfter, datasecAfter)
-            trimImage <<= trimAmp
-            amp.setTrimmed(True)
-        exposure.setMaskedImage(miAfter)
+        mi = exposure.getMaskedImage()
+        MaskedImage = type(mi)
+        if detectorIsCcd(exposure):
+            ccd = getCcd(exposure)
+            miTrim = MaskedImage(ccd.getAllPixels(True).getDimensions())
+            for amp in ccd:
+                self._trimAmp(miTrim, mi, amp, amp.getDataSec(True))
+        else:
+            amp = cameraGeom.cast_Amp(exposure.getDetector())
+            trimDatasec = amp.getDataSec(True)
+            trimDatasec.shift(-trimDatasec.getX0(), -trimDatasec.getY0())
+            miTrim = MaskedImage(trimDatasec.getDimensions())
+            self._trimAmp(miTrim, mi, amp, trimDatasec)
+        exposure.setMaskedImage(miTrim)
         return
+
+    def _trimAmp(self, miTo, miFrom, amp, toDatasec):
+        MaskedImage = type(miTo)
+        fromDatasec = amp.getDiskDataSec()
+        self.log.log(self.log.INFO, "Trimming amp %s: %s --> %s" % (amp.getId(), fromDatasec, toDatasec))
+        trimAmp = MaskedImage(miFrom, fromDatasec)
+        trimImage = MaskedImage(miTo, toDatasec)
+        trimImage <<= trimAmp
+        amp.setTrimmed(True)
 
     def _checkDimensions(self, exposure, detrend, name):
         if detrend.getMaskedImage().getDimensions() == exposure.getMaskedImage().getDimensions():

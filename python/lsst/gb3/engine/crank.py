@@ -197,7 +197,7 @@ class Crank(object):
             if not haveAmp(exposure, amp):
                 continue
             saturation = amp.getElectronicParams().getSaturationLevel()
-            miAmp = MaskedImage(mi, amp.getDataSec())
+            miAmp = MaskedImage(mi, amp.getDiskDataSec())
             expAmp = Exposure(miAmp)
             bboxes = ipIsr.saturationDetection(expAmp, saturation, doMask = True)
             self.log.log(self.log.INFO, "Masked %d saturated pixels on amp %s: %f" %
@@ -216,16 +216,15 @@ class Crank(object):
         return
 
     def _trim(self, exposure):
-        det = exposure.getDetector()
-        dim = det.getAllPixels(True).getDimensions()
         ccd = getCcd(exposure)
+        dim = ccd.getAllPixels(True).getDimensions()
         miBefore = exposure.getMaskedImage()
         MaskedImage = type(miBefore)
         miAfter = MaskedImage(dim)
         for amp in ccd:
             if not haveAmp(exposure, amp):
                 continue
-            datasecBefore = amp.getDataSec(False)
+            datasecBefore = amp.getDiskDataSec()
             datasecAfter = amp.getDataSec(True)
             self.log.log(self.log.INFO, "Trimming amp %s: %s --> %s" %
                          (amp.getId(), datasecBefore, datasecAfter))

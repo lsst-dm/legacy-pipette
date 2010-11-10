@@ -74,6 +74,12 @@ class Crank(object):
         return
 
     def turn(self, exposure, detrends):
+        """Turn the crank: executes ISR, CCD assembly and image characterisation
+
+        @param exposure  Exposure to process
+        @param detrends  Dict with detrends to apply (bias,dark,flat,fringe)
+        @returns Exposure, PSF, sources detected, sources matched, WCS
+        """
         self.isr(exposure, detrends)
         exposure = self.ccdAssembly(exposure)
         exposure, psf, sources, matches, wcs = self.imageChar(exposure)
@@ -86,6 +92,9 @@ class Crank(object):
         """Instrument signature removal: generate mask and variance;
         subtract overscan, bias, dark; divide by flat-field;
         subtract fringes.
+
+        @param exposure Exposure to process
+        @param detrends Dict with detrends to apply (bias,dark,flat,fringe)
         """
         self._display("raw", exposure)
         if self.do['saturation']:
@@ -108,7 +117,11 @@ class Crank(object):
 
     def ccdAssembly(self, exposureList):
         """Assembly of amplifiers into CCDs.
-        Also applies defects (static mask)."""
+        Also applies defects (static mask).
+
+        @param exposureList List of exposure to assemble
+        @returns Assembled exposure
+        """
         exposure = self._assembly(exposureList)
         return exposure
 
@@ -117,9 +130,14 @@ class Crank(object):
         """Image characterisation: background subtraction,
         cosmic-ray rejection, source detection and measurement,
         PSF determination, and photometric and astrometric
-        calibration."""
+        calibration.
 
-        # Default return values
+        @param exposure Exposure to characterise
+        @returns Exposure, PSF, sources detected, sources matched, WCS
+        """
+
+        # Default return valuese
+        defects = None
         bgSubExp = None
         psf = None
         apCorr = None
@@ -134,10 +152,9 @@ class Crank(object):
         size = bootstrap['size']
         bsPsf = afwDet.createPsf(model, size, size, fwhm/(2*math.sqrt(2*math.log(2))))
 
+        # 'Bootstrap' stage: masking/interpolation with an approximate PSF
         if self.do['defects']:
             defects = self._defects(exposure, fwhm)
-        else:
-            defects = None
         if self.do['interpolate']:
             # Doing this in order to measure the PSF may not be necessary
             self._interpolate(exposure, defects, bsPsf)
@@ -145,11 +162,11 @@ class Crank(object):
             bgSubExp = self._background(exposure)
         else:
             bgSubExp = exposure
-
         if self.do['cr']:
             # Doing this in order to measure the PSF may not be necessary
             self._cosmicray(bgSubExp, bsPsf, True)
 
+        # Photometry and masking/interpolation with the actual PSF
         if self.do['phot']:
             bsThreshold = bootstrap['thresholdValue']
             posSources, negSources = self._detect(bgSubExp, threshold=bsThreshold)
@@ -169,6 +186,8 @@ class Crank(object):
             posSources, negSources = self._detect(bgSubExp, psf=psf)
             sources = self._measure(bgSubExp, posSources, negSources, psf=psf, wcs=wcs, apCorr=apCorr)
             self._display("phot", bgSubExp, sources)
+
+        # Astrometry and calibration
         if self.do['ast'] and sources is not None:
             matches, wcs = self._astrometry(bgSubExp, sources)
         if self.do['cal'] and matches is not None and len(matches) > 0:
@@ -185,6 +204,10 @@ class Crank(object):
 
 
     def _saturation(self, exposure):
+        """Mask saturated pixels
+
+        @param exposure Exposure to process
+        """
         ccd = getCcd(exposure)
         mi = exposure.getMaskedImage()
         Exposure = type(exposure)
@@ -201,6 +224,10 @@ class Crank(object):
         return
 
     def _overscan(self, exposure):
+        """Overscan subtraction
+
+        @param exposure Exposure to process
+        """
         fittype = "MEDIAN"                # XXX policy argument
         ccd = getCcd(exposure)
         for amp in ccd:
@@ -212,6 +239,10 @@ class Crank(object):
         return
 
     def _trim(self, exposure):
+        """Trim overscan out of exposure
+
+        @param exposure Exposure to process
+        """
         mi = exposure.getMaskedImage()
         MaskedImage = type(mi)
         if detectorIsCcd(exposure):
@@ -229,6 +260,13 @@ class Crank(object):
         return
 
     def _trimAmp(self, miTo, miFrom, amp, toDatasec):
+        """Trim overscan from amplifier
+
+        @param miTo Target MaskedImage
+        @param miFrom Source MaskedImage
+        @param amp Amplifier being trimmed
+        @param toDatasec Data section on target
+        """
         MaskedImage = type(miTo)
         fromDatasec = amp.getDiskDataSec()
         self.log.log(self.log.INFO, "Trimming amp %s: %s --> %s" % (amp.getId(), fromDatasec, toDatasec))
@@ -236,8 +274,17 @@ class Crank(object):
         trimImage = MaskedImage(miTo, toDatasec)
         trimImage <<= trimAmp
         amp.setTrimmed(True)
+        return
 
     def _checkDimensions(self, exposure, detrend, name):
+        """Check that dimensions of detrend matches that of exposure
+        of interest; trim if necessary.
+
+        @param exposure Exposure being processed
+        @param detrend Detrend exposure to check
+        @param name Name of detrend (for log messages)
+        @returns Exposure with matching dimensions
+        """
         if detrend.getMaskedImage().getDimensions() == exposure.getMaskedImage().getDimensions():
             return detrend
         self.log.log(self.log.INFO, "Trimming %s to match dimensions" % name)
@@ -249,12 +296,21 @@ class Crank(object):
         return detrend
 
     def _bias(self, exposure, detrends):
+        """Bias subtraction
+
+        @param exposure Exposure to process
+        @param detrends Dict with detrends to apply (bias,dark,flat,fringe)
+        """
         bias = self._checkDimensions(exposure, detrends['bias'], "bias")
         self.log.log(self.log.INFO, "Debiasing image")
         ipIsr.biasCorrection(exposure, bias)
         return
 
     def _variance(self, exposure):
+        """Set variance from gain
+
+        @param exposure Exposure to process
+        """
         ccd = getCcd(exposure)
         mi = exposure.getMaskedImage()
         MaskedImage = type(mi)
@@ -270,6 +326,11 @@ class Crank(object):
         return
 
     def _dark(self, exposure, detrends):
+        """Dark subtraction
+
+        @param exposure Exposure to process
+        @param detrends Dict with detrends to apply (bias,dark,flat,fringe)
+        """
         dark = self._checkDimensions(exposure, detrends['dark'], "dark")
         expTime = float(exposure.getCalib().getExptime())
         darkTime = float(dark.getCalib().getExptime())
@@ -278,6 +339,11 @@ class Crank(object):
         return
 
     def _flat(self, exposure, detrends):
+        """Flat-fielding
+
+        @param exposure Exposure to process
+        @param detrends Dict with detrends to apply (bias,dark,flat,fringe)
+        """
         flat = self._checkDimensions(exposure, detrends['flat'], "flat")
         mi = exposure.getMaskedImage()
         image = mi.getImage()
@@ -294,6 +360,11 @@ class Crank(object):
         return
 
     def _fringe(self, exposure, detrends):
+        """Fringe subtraction
+
+        @param exposure Exposure to process
+        @param detrends Dict with detrends to apply (bias,dark,flat,fringe)
+        """
         fringe = detrends['fringe']
         raise NotimplementedError, "Fringe subtraction is not yet implemented."
 
@@ -302,6 +373,11 @@ class Crank(object):
 ##############################################################################################################
 
     def _assembly(self, exposureList):
+        """Assembly of amplifiers into a CCD
+
+        @param exposureList List of exposures to be assembled
+        @returns Assembled exposure
+        """
         if not hasattr(exposureList, "__getitem__"):
             # This is not a list; presumably it's a single item needing no assembly
             return exposureList
@@ -316,6 +392,12 @@ class Crank(object):
 ##############################################################################################################
 
     def _defects(self, exposure, fwhm):
+        """Mask defects
+
+        @param exposure Exposure to process
+        @param fwhm Guess seeing FWHM
+        @returns Defect list
+        """
         policy = self.config['defects']
         defects = measAlg.DefectListT()
         ccd = getCcd(exposure)
@@ -348,6 +430,12 @@ class Crank(object):
         return defects
 
     def _interpolate(self, exposure, defects, psf):
+        """Interpolate over defects
+
+        @param exposure Exposure to process
+        @param defects Defect list
+        @param psf PSF for interpolation
+        """
         mi = exposure.getMaskedImage()
         fallbackValue = afwMath.makeStatistics(mi.getImage(), afwMath.MEANCLIP).getValue()
         measAlg.interpolateOverDefects(mi, psf, defects, fallbackValue)
@@ -355,12 +443,23 @@ class Crank(object):
         return
 
     def _background(self, exposure):
+        """Background subtraction
+
+        @param exposure Exposure to process
+        @returns Subtracted exposure
+        """
         policy = self.config['background'].getPolicy()
         bg, subtracted = muDetection.estimateBackground(exposure, policy, subtract=True)
         # XXX Dropping bg on the floor
         return subtracted
 
     def _cosmicray(self, exposure, psf, keepCRs=True):
+        """Cosmic ray masking
+
+        @param exposure Exposure to process
+        @param psf PSF
+        @param keepCRs Keep CRs on image?
+        """
         policy = self.config['cr'].getPolicy()
         mi = exposure.getMaskedImage()
         bg = afwMath.makeStatistics(mi, afwMath.MEDIAN).getValue()
@@ -375,6 +474,13 @@ class Crank(object):
         return
 
     def _detect(self, exposure, psf=None, threshold=None):
+        """Detect sources
+
+        @param exposure Exposure to process
+        @param psf PSF for detection
+        @param threshold Detection threshold
+        @returns Tuple with positive and negative sources
+        """
         policy = self.config['detect']
         if threshold is not None:
             oldThreshold = policy['thresholdValue']
@@ -389,6 +495,16 @@ class Crank(object):
         return posSources, negSources
 
     def _measure(self, exposure, posSources, negSources=None, psf=None, wcs=None, apCorr=None):
+        """Measure sources
+
+        @param exposure Exposure to process
+        @param posSources Positive sources
+        @param negSources Negative sources
+        @param psf PSF for measurement
+        @param wcs WCS to apply
+        @param apCorr Aperture correction to apply
+        @returns Source list
+        """
         policy = self.config['measure'].getPolicy()
         footprints = []                    # Footprints to measure
         if posSources:
@@ -417,6 +533,12 @@ class Crank(object):
         return sources
 
     def _psfMeasurement(self, exposure, sources):
+        """Measure the PSF
+
+        @param exposure Exposure to process
+        @param sources Measured sources on exposure
+        @returns Tuple with PSF and cellSet
+        """
         psfPolicy = self.config['psf']
         selPolicy = psfPolicy['select'].getPolicy()
         algPolicy = psfPolicy['algorithm'].getPolicy()
@@ -427,6 +549,12 @@ class Crank(object):
         return psf, cellSet
 
     def _apCorr(self, exposure, cellSet):
+        """Measure aperture correction
+
+        @param exposure Exposure to process
+        @param cellSet cellSet of PSF stars
+        @returns Aperture correction
+        """
         policy = self.config['apcorr'].getPolicy()
         control = maApCorr.ApertureCorrectionControl(policy)
         sdqaRatings = sdqa.SdqaRatingSet()
@@ -441,6 +569,12 @@ class Crank(object):
         return corr
 
     def _astrometry(self, exposure, sources):
+        """Solve WCS
+
+        @param exposure Exposure to process
+        @param sources Sources with positions and PSF fluxes
+        @returns Tuple with matched sources and WCS
+        """
         policy = self.config['ast']
         path=os.path.join(os.environ['ASTROMETRY_NET_DATA_DIR'], "metadata.paf")
         solver = astromNet.GlobalAstrometrySolution(path)
@@ -474,6 +608,11 @@ class Crank(object):
         return matches, wcs
 
     def _photcal(self, exposure, matches):
+        """Photometry calibration
+
+        @param exposure Exposure to process
+        @param matches Matched sources
+        """
         zp = photocal.calcPhotoCal(matches, log=self.log, goodFlagValue=0)
         self.log.log(self.log.INFO, "Photometric zero-point: %f" % zp.getMag(1.0))
         exposure.getCalib().setFluxMag0(zp.getFlux(0))
@@ -481,6 +620,12 @@ class Crank(object):
 
 
     def _display(self, name, exposure=None, sources=None):
+        """Display image and/or sources
+
+        @param name Name for display dict
+        @param exposure Exposure to display, or None
+        @param sources Sources to display, or None
+        """
         if not self.display or not self.display.has_key(name) or self.display[name] <= 0:
             return
         frame = self.display[name]
@@ -507,16 +652,31 @@ class Crank(object):
 
 
 def detectorIsCcd(exposure):
+    """Is the detector referred to by the exposure a Ccd?
+
+    @param exposure Exposure to inspect
+    @returns True if exposure's detector is a Ccd
+    """
     det = exposure.getDetector()
     ccd = cameraGeom.cast_Ccd(det)
     return False if ccd is None else True
 
 def detectorIsAmp(exposure):
+    """Is the detector referred to by the exposure an Amp?
+
+    @param exposure Exposure to inspect
+    @returns True if exposure's detector is an Amp
+    """
     det = exposure.getDetector()
     amp = cameraGeom.cast_Amp(det)
     return False if amp is None else True
 
 def getCcd(exposure):
+    """Get the Ccd referred to by an exposure
+
+    @param exposure Exposure to inspect
+    @returns Ccd
+    """
     det = exposure.getDetector()
     ccd = cameraGeom.cast_Ccd(det)
     if ccd is not None:
@@ -529,11 +689,22 @@ def getCcd(exposure):
     raise RuntimeError("Can't find Ccd from detector.")
 
 def getAmp(exposure):
+    """Get the Amp referred to by an exposure
+
+    @param exposure Exposure to inspect
+    @returns Amp
+    """
     det = exposure.getDetector()
     amp = cameraGeom.cast_Amp(det)      # None if detector is not an Amp
     return amp
 
 def haveAmp(exposure, amp):
+    """Does the detector referred to by the exposure contain this particular amp?
+
+    @param exposure Exposure to inspect
+    @param amp Amp for comparison
+    @returns True if exposure contains this amp
+    """
     det = exposure.getDetector()
     testAmp = cameraGeom.cast_Amp(det)
     if testAmp is None:

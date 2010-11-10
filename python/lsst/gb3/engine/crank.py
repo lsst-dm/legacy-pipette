@@ -74,15 +74,14 @@ class Crank(object):
         self.display = lsstDebug.Info(__name__).display
         return
 
-    def turn(self, exposure, ccd, detrends):
-        self.isr(exposure, ccd, detrends)
+    def turn(self, exposure, detrends):
+        self.isr(exposure, detrends)
         exposure = self.ccdAssembly(exposure)
         exposure, psf, sources, matches, wcs = self.imageChar(exposure)
         return exposure, psf, sources, matches, wcs
 
     def isr(self,
             exposure,                   # Exposure to correct
-            ccd,                        # Ccd from camera
             detrends,                   # Dict of detrends
             ):
         """Instrument signature removal: generate mask and variance;
@@ -94,7 +93,10 @@ class Crank(object):
             self._saturation(exposure)
         if self.do['overscan']:
             self._overscan(exposure)
-        self._trim(exposure, ccd)
+        self._trim(exposure)
+
+        exposure = self._assembly(exposure)
+
         if self.do['bias']:
             self._bias(exposure, detrends)
         self._variance(exposure)
@@ -185,12 +187,15 @@ class Crank(object):
 # ISR methods
 ##############################################################################################################
 
+
     def _saturation(self, exposure):
-        ccd = exposure.getDetector()
+        ccd = getCcd(exposure)
         mi = exposure.getMaskedImage()
         Exposure = type(exposure)
         MaskedImage = type(mi)
-        for amp in cameraGeom.cast_Ccd(ccd):
+        for amp in ccd:
+            if not haveAmp(exposure, amp):
+                continue
             saturation = amp.getElectronicParams().getSaturationLevel()
             miAmp = MaskedImage(mi, amp.getDataSec())
             expAmp = Exposure(miAmp)
@@ -201,18 +206,25 @@ class Crank(object):
 
     def _overscan(self, exposure):
         fittype = "MEDIAN"                # XXX policy argument
-        ccd = exposure.getDetector()
-        for amp in cameraGeom.cast_Ccd(ccd):
+        ccd = getCcd(exposure)
+        for amp in ccd:
+            if not haveAmp(exposure, amp):
+                continue
             biassec = amp.getDiskBiasSec()
             self.log.log(self.log.INFO, "Doing overscan correction on amp %s: %s" % (amp.getId(), biassec))
             ipIsr.overscanCorrection(exposure, biassec, fittype)
         return
 
-    def _trim(self, exposure, ccd):
+    def _trim(self, exposure):
+        det = exposure.getDetector()
+        dim = det.getAllPixels(True).getDimensions()
+        ccd = getCcd(exposure)
         miBefore = exposure.getMaskedImage()
         MaskedImage = type(miBefore)
-        miAfter = MaskedImage(ccd.getAllPixels(True).getDimensions())
+        miAfter = MaskedImage(dim)
         for amp in ccd:
+            if not haveAmp(exposure, amp):
+                continue
             datasecBefore = amp.getDataSec(False)
             datasecAfter = amp.getDataSec(True)
             self.log.log(self.log.INFO, "Trimming amp %s: %s --> %s" %
@@ -224,18 +236,30 @@ class Crank(object):
         exposure.setMaskedImage(miAfter)
         return
 
+    def _checkDimensions(self, exposure, detrend, name):
+        if detrend.getMaskedImage().getDimensions() == exposure.getMaskedImage().getDimensions():
+            return detrend
+        self.log.log(self.log.INFO, "Trimming %s to match dimensions" % name)
+        self._trim(detrend)
+        if detrend.getMaskedImage().getDimensions() != exposure.getMaskedImage().getDimensions():
+            raise RuntimeError("Detrend %s is of wrong size: %s vs %s" %
+                               (name, detrend.getMaskedImage().getDimensions(),
+                                exposure.getMaskedImage().getDimensions()))
+        return detrend
 
     def _bias(self, exposure, detrends):
-        bias = detrends['bias']
+        bias = self._checkDimensions(exposure, detrends['bias'], "bias")
         self.log.log(self.log.INFO, "Debiasing image")
         ipIsr.biasCorrection(exposure, bias)
         return
 
     def _variance(self, exposure):
-        ccd = exposure.getDetector()
+        ccd = getCcd(exposure)
         mi = exposure.getMaskedImage()
         MaskedImage = type(mi)
-        for amp in cameraGeom.cast_Ccd(ccd):
+        for amp in ccd:
+            if not haveAmp(exposure, amp):
+                continue
             gain = amp.getElectronicParams().getGain()
             self.log.log(self.log.INFO, "Setting variance for amp %s: %f" % (amp.getId(), gain))
             miAmp = MaskedImage(mi, amp.getDataSec())
@@ -245,7 +269,7 @@ class Crank(object):
         return
 
     def _dark(self, exposure, detrends):
-        dark = detrends['dark']
+        dark = self._checkDimensions(exposure, detrends['dark'], "dark")
         expTime = float(exposure.getCalib().getExptime())
         darkTime = float(dark.getCalib().getExptime())
         self.log.log(self.log.INFO, "Removing dark (%f sec vs %f sec)" % (expTime, darkTime))
@@ -253,7 +277,7 @@ class Crank(object):
         return
 
     def _flat(self, exposure, detrends):
-        flat = detrends['flat']
+        flat = self._checkDimensions(exposure, detrends['flat'], "flat")
         mi = exposure.getMaskedImage()
         image = mi.getImage()
         variance = mi.getVariance()
@@ -282,8 +306,7 @@ class Crank(object):
             return exposureList
         rmKeys = ["CCDID", "AMPID", "E2AOCHI", "E2AOFILE",
                   "DC3BPATH", "GAIN", "BIASSEC", "DATASEC"]    # XXX policy argument
-        amp = cameraGeom.cast_Amp(exposureList[0].getDetector())
-        ccd = cameraGeom.cast_Ccd(amp.getParent())
+        ccd = getCcd(exposureList[0])
         exposure = ipIsr.ccdAssemble.assembleCcd(exposureList, ccd, keysToRemove=rmKeys)
         return exposure
 
@@ -294,7 +317,8 @@ class Crank(object):
     def _defects(self, exposure, fwhm):
         policy = self.config['defects']
         defects = measAlg.DefectListT()
-        statics = cameraGeom.cast_Ccd(exposure.getDetector()).getDefects() # Static defects
+        ccd = getCcd(exposure)
+        statics = ccd.getDefects() # Static defects
         for defect in statics:
             bbox = defect.getBBox()
             new = measAlg.Defect(bbox)
@@ -479,4 +503,40 @@ class Crank(object):
 
         #raw_input("Press [ENTER] when ready....")
         return
+
+
+def detectorIsCcd(exposure):
+    det = exposure.getDetector()
+    ccd = cameraGeom.cast_Ccd(det)
+    return False if ccd is None else True
+
+def detectorIsAmp(exposure):
+    det = exposure.getDetector()
+    amp = cameraGeom.cast_Amp(det)
+    return False if amp is None else True
+
+def getCcd(exposure):
+    det = exposure.getDetector()
+    ccd = cameraGeom.cast_Ccd(det)
+    if ccd is not None:
+        return ccd
+    amp = cameraGeom.cast_Amp(det)
+    if amp is not None:
+        det = amp.getParent()
+        ccd = cameraGeom.cast_Ccd(det)
+        return ccd
+    raise RuntimeError("Can't find Ccd from detector.")
+
+def getAmp(exposure):
+    det = exposure.getDetector()
+    amp = cameraGeom.cast_Amp(det)      # None if detector is not an Amp
+    return amp
+
+def haveAmp(exposure, amp):
+    det = exposure.getDetector()
+    testAmp = cameraGeom.cast_Amp(det)
+    if testAmp is None:
+        # Exposure contains a CCD, which contains all its amps
+        return True
+    return True if testAmp.getId() == amp.getId() else False
 

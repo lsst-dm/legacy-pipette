@@ -7,8 +7,24 @@ import shlex
 
 import lsst.pex.logging as pexLog
 
+"""This module provides a mechanism for queuing a common Python script with different inputs."""
+
 class PbsQueue(object):
+
+    """PbsQueue is for queuing Python scripts via PBS (or Open-PBS or Torque, etc).
+    A common script is defined which may be queued with different inputs.
+    Inputs must be picklable.
+    """
+
     def __init__(self, script, importList=None, command="qsub -V", resourceList=None, queue=None):
+        """Initialisation
+
+        @param script Text of script to execute
+        @param importList List of imports; may be specified as a 2-tuple for 'import X as Y'
+        @param command Command to run to submit to queue
+        @param resourceList List of resources for PBS
+        @param queue Name of queue
+        """
 
         # Remove common indentation
         lines = re.split("\n", script)
@@ -41,7 +57,12 @@ class PbsQueue(object):
         return
 
     def sub(self, name, **kwargs):
-        filename = name + ".py"
+        """Submit to queue
+
+        @param name Filename for python script
+        @param **kwargs Variables to set before calling the script
+        """
+        filename = (name + ".py") if not re.search(r"\.py$", name) else name
         fp = open(filename, 'w')
         fp.write("#!/usr/bin/env python\n")
         fp.write("import pickle\n")
@@ -70,3 +91,4 @@ class PbsQueue(object):
         command += " " + filename
         self.log.log(self.log.INFO, "Executing: %s" % command)
         subprocess.call(shlex.split(command))
+        return

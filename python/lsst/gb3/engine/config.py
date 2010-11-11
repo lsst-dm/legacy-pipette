@@ -71,6 +71,11 @@ class Config(dict):
         """Set a value; adds if doesn't exist"""
         if isinstance(value, Config):
             value = value._policy
+        elif isinstance(value, str):
+            if value.lower() == "false":
+                value = False
+            elif value.lower() == "true":
+                value = True
         if self._policy.exists(key): self._policy.set(key, value)
         else: self._policy.add(key, value)
         return value

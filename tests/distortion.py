@@ -33,6 +33,7 @@ import lsst.afw.detection as afwDet
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.afw.cameraGeom.utils as cameraGeomUtils
 import lsst.gb3.engine.distortion as distortion
+import lsst.gb3.engine.config as engConfig
 
 REVERSE_TOL = 0.01                      # Tolerance for difference after reversing, pixels
 ABSOLUTE_TOL = 2.0                      # Tolerance for difference with 'correct' version, pixels
@@ -73,21 +74,26 @@ class ConfigTestCase(unittest.TestCase):
         policy = pexPolicy.Policy("tests/SuprimeCam_Geom.paf")
         geomPolicy = cameraGeomUtils.getGeomPolicy(policy)
         self.camera = cameraGeomUtils.makeCamera(geomPolicy)
-        self.coeffs = list(COEFFS)
-        self.coeffs.reverse()           # NumPy's poly1d wants coeffs in descending order of powers
-        self.coeffs.append(0.0)         # NumPy's poly1d goes all the way down to zeroth power
+        coeffs = list(COEFFS)
+        coeffs.reverse()           # NumPy's poly1d wants coeffs in descending order of powers
+        coeffs.append(0.0)         # NumPy's poly1d goes all the way down to zeroth power
+        self.config = engConfig.Config()
+        distConfig = engConfig.Config()
+        distConfig['coeffs'] = coeffs
+        distConfig['step'] = 10.0
+        self.config['radial'] = distConfig
 
     def tearDown(self):
         del self.camera
-        del self.coeffs
+        del self.config
 
     def testRadialDistortion(self):
         for raft in self.camera:
             for ccdIndex, ccd in enumerate(cameraGeom.cast_Raft(raft)):
-                dist = distortion.RadialDistortion(self.coeffs, ccd)
+                dist = distortion.createDistortion(ccd, self.config)
                 size = ccd.getSize()
                 height, width = size.getX(), size.getY()
-                for x, y in ((0,0), (0, height), (0, width), (height, width), (height/2.0,width/2.0)):
+                for x, y in ((0.0,0.0), (0.0, height), (0.0, width), (height, width), (height/2.0,width/2.0)):
                     src = afwDet.Source()
                     src.setXAstrom(x)
                     src.setYAstrom(y)
@@ -96,10 +102,14 @@ class ConfigTestCase(unittest.TestCase):
                     trueForward = bickDistortion(x, y, ccdIndex)
 
                     self.assertTrue(compare(backward.getXAstrom(), backward.getYAstrom(), x, y, REVERSE_TOL),
-                                    "Undistorted distorted position is original")
+                                    "Undistorted distorted position is not original: %f,%f vs %f,%f for %d" %
+                                    (backward.getXAstrom(), backward.getYAstrom(), x, y, ccdIndex))
                     self.assertTrue(compare(forward.getXAstrom(), forward.getYAstrom(),
                                             trueForward[0], trueForward[1], ABSOLUTE_TOL),
-                                    "Distorted position is correct")
+                                    "Distorted position is not correct: %f,%f vs %f,%f for %d %f,%f" %
+                                    (forward.getXAstrom(), forward.getYAstrom(),
+                                     trueForward[0], trueForward[1],
+                                     ccdIndex, x, y))
 
 def suite():
     utilsTests.init()

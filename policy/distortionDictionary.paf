@@ -1,0 +1,29 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    radial: {
+        type: Policy
+        description: "Radial distortion configuration"
+        minOccurs: 1
+        maxOccurs: 1
+        dictionary: {
+            target: Config
+            definitions: {
+                coeffs: {
+                    type: double
+                    description: "Radial distortion polynomial coefficients, from highest power down to constant"
+                    minOccurs: 1
+                }
+                step: {
+                    type: double
+                    description: "Step size for lookup table (pixels)"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    default: 10.0
+                }
+            }
+        }
+    }
+}

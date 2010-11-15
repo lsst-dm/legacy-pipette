@@ -57,16 +57,22 @@ class NullDistortion(CameraDistortion):
         """
         return afwDet.Source(source)
 
+def createDistortion(ccd, distConfig):
+    if distConfig.has_key('radial'):
+        return RadialDistortion(ccd, distConfig['radial'])
+    else:
+        return NullDistortion()
+
 
 class RadialDistortion(CameraDistortion):
-    def __init__(self, coeffs, ccd, step=10.0):
+    def __init__(self, ccd, config):
         """Constructor
 
-        @param coeffs Polynomial coefficients, from highest power to constant
         @param ccd Ccd for distortion (sets position relative to center)
-        @param step Step size (pixels) for distortion lookup table
+        @param config Configuration for distortion
         """
-        self.coeffs = coeffs
+        self.coeffs = config['coeffs']
+        self.step = config['step']
 
         position = ccd.getCenter()        # Centre of CCD on focal plane
         center = ccd.getSize() / ccd.getPixelSize() / 2.0 # Central pixel
@@ -82,9 +88,8 @@ class RadialDistortion(CameraDistortion):
         cornerRadii = list()
         for c in corners:
             cornerRadii.append(math.hypot(c[0] + self.x0, c[1] + self.y0))
-        self.minRadius = min(min(cornerRadii) - step, 0)
-        self.maxRadius = max(cornerRadii) + step
-        self.step = step
+        self.minRadius = min(min(cornerRadii) - self.step, 0)
+        self.maxRadius = max(cornerRadii) + self.step
 
         self._init()
         return

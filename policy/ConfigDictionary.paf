@@ -117,6 +117,13 @@ definitions: {
         maxOccurs: 1
         dictionary: @@meas_algorithms:policy:CrRejectDictionary.paf
     }
+    distortion: {
+        type: Policy
+        description: "Distortion configuration"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "distortionDictionary.paf"
+    }
     ast: {
         type: Policy
         description: "Astrometric calibration policy"

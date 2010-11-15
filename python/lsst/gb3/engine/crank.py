@@ -31,6 +31,7 @@ import lsst.gb3.engine.distortion as engDist
 import lsst.pex.logging as pexLog
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.afw.math as afwMath
+import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.image.utils as imageUtils
 import lsst.afw.detection as afwDet
@@ -143,6 +144,7 @@ class Crank(object):
         psf = None
         apCorr = None
         sources = None
+        size = None
         matches = None
         wcs = exposure.getWcs()
 
@@ -190,12 +192,12 @@ class Crank(object):
 
         # Astrometry and calibration
         if self.do['distortion'] and sources is not None:
-            distSources = self._distortion(bgSubExp, sources)
+            distSources, size = self._distortion(bgSubExp, sources)
             self._display("dist", bgSubExp, distSources)
         else:
             distSources = sources
         if self.do['ast'] and distSources is not None:
-            matches, wcs = self._astrometry(bgSubExp, distSources)
+            matches, wcs = self._astrometry(bgSubExp, distSources, size=size)
             self._display("ast", bgSubExp, distSources, matches)
         if self.do['cal'] and matches is not None and len(matches) > 0:
             self._photcal(bgSubExp, matches)
@@ -579,17 +581,41 @@ class Crank(object):
         """Apply optical distortion to sources
 
         @param sources Sources with positions
-        @returns Distorted sources list
+        @returns Distorted sources list and size of distorted image
         """
         ccd = getCcd(exposure)
         dist = engDist.createDistortion(ccd, self.config['distortion'])
-        return dist.measuredToDistorted(sources)
+        self.log.log(self.log.INFO, "Applying distortion correction.")
 
-    def _astrometry(self, exposure, sources):
+        distSources = dist.actualToIdeal(sources)
+
+        xMin, xMax, yMin, yMax = 0, exposure.getWidth(), 0, exposure.getHeight()
+        for x, y in ((0.0, 0.0), (0.0, exposure.getHeight()), (exposure.getWidth(), 0.0),
+                     (exposure.getHeight(), exposure.getWidth())):
+            point = afwGeom.makePointD(x, y)
+            x, y = point.getX(), point.getY()
+            if x < xMin: xMin = x
+            if x > xMax: xMax = x
+            if y < yMin: yMin = y
+            if y > yMax: yMax = y
+        xMin = int(xMin)
+        yMin = int(yMin)
+
+        for source in distSources:
+            x, y = source.getXAstrom(), source.getYAstrom()
+            source.setXAstrom(x - xMin)
+            source.setYAstrom(y - yMin)
+
+        size = afwGeom.makePointI(int(xMax - xMin + 0.5), int(yMax - yMin + 0.5))
+
+        return distSources, size
+
+    def _astrometry(self, exposure, sources, size=None):
         """Solve WCS
 
         @param exposure Exposure to process
         @param sources Sources with positions and PSF fluxes
+        @param size Size (Point2I) of image
         @returns Tuple with matched sources and WCS
         """
         policy = self.config['ast']
@@ -599,41 +625,14 @@ class Crank(object):
         #solver.setMatchThreshold(self.policy.get('matchThreshold'))
         self.log.log(self.log.INFO, "Solving astrometry")
 
-        xMin, xMax, yMin, yMax = 0, exposure.getWidth(), 0, exposure.getHeight()
-        goodSources = afwDet.SourceSet()
-        badFlags = measAlg.Flags.BAD | \
-                   measAlg.Flags.EDGE | \
-                   measAlg.Flags.SHAPE_SHIFT | \
-                   measAlg.Flags.SHAPE_MAXITER | \
-                   measAlg.Flags.SHAPE_UNWEIGHTED | \
-                   measAlg.Flags.SHAPE_UNWEIGHTED_PSF | \
-                   measAlg.Flags.SHAPE_UNWEIGHTED_BAD | \
-                   measAlg.Flags.PEAKCENTER | \
-                   measAlg.Flags.DETECT_NEGATIVE
-                   #measAlg.Flags.INTERP | \
-                   #measAlg.Flags.INTERP_CENTER | \
-                   #measAlg.Flags.SATUR | \
-                   #measAlg.Flags.SATUR_CENTER | \
-        for source in sources:
-            if not source.getFlagForDetection() & badFlags:
-            #if True:
-                goodSources.append(source)
-                x, y = source.getXAstrom(), source.getYAstrom()
-                if x < xMin: xMin = x
-                if x > xMax: xMax = x
-                if y < yMin: yMin = y
-                if y > yMax: yMax = y
-        sources = goodSources
-        for source in sources:
-            source.setXAstrom(source.getXAstrom() - xMin)
-            source.setYAstrom(source.getYAstrom() - yMin)
+        if size is None:
+            size = afwGeom.makePointI(exposure.getWidth(), exposure.getHeight())
 
         if True:
             solver.setMatchThreshold(policy['matchThreshold'])
             solver.setStarlist(sources)
             solver.setNumBrightObjects(min(policy['numBrightStars'], len(sources)))
-            #solver.setImageSize(exposure.getWidth(), exposure.getHeight())
-            solver.setImageSize(int(xMax + 0.5), int(yMax + 0.5))
+            solver.setImageSize(size.getX(), size.getY())
             if not solver.solve(exposure.getWcs()):
                 raise RuntimeError("Unable to solve astrometry")
             wcs = solver.getWcs()
@@ -698,10 +697,10 @@ class Crank(object):
             for match in matches:
                 first = match.first
                 x1, y1 = first.getXAstrom() - x0, first.getYAstrom() - y0
-                ds9.dot("+", x1, y1, size=4, frame=frame)
+                ds9.dot("+", x1, y1, size=8, frame=frame, ctype="yellow")
                 second = match.second
                 x2, y2 = second.getXAstrom() - x0, second.getYAstrom() - y0
-                ds9.dot("+", x2, y2, size=4, frame=frame, ctype="blue")
+                ds9.dot("x", x2, y2, size=8, frame=frame, ctype="red")
 
         if pause:
             raw_input("Press [ENTER] when ready....")

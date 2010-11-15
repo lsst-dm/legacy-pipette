@@ -80,6 +80,7 @@ class ConfigTestCase(unittest.TestCase):
         self.config = engConfig.Config()
         distConfig = engConfig.Config()
         distConfig['coeffs'] = coeffs
+        distConfig['actualToIdeal'] = True
         distConfig['step'] = 10.0
         self.config['radial'] = distConfig
 
@@ -97,8 +98,8 @@ class ConfigTestCase(unittest.TestCase):
                     src = afwDet.Source()
                     src.setXAstrom(x)
                     src.setYAstrom(y)
-                    forward = dist.measuredToDistorted(src)
-                    backward = dist.distortedToMeasured(forward)
+                    forward = dist.actualToIdeal(src)
+                    backward = dist.idealToActual(forward)
                     trueForward = bickDistortion(x, y, ccdIndex)
 
                     self.assertTrue(compare(backward.getXAstrom(), backward.getYAstrom(), x, y, REVERSE_TOL),

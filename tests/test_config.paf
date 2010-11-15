@@ -10,3 +10,4 @@ string: this is a string        # String
 policy: {
         subpolicy: true
 }
+array: 1 2 3 4 5                # Array

@@ -32,14 +32,17 @@ import lsst.gb3.engine.config as cfg
 def compare(config,                     # Configuration being tested
             truth                       # dict with same entries
             ):
-    for key in config:
+    for key in truth.keys():
         value = config[key]
-        truth = config[key]
-        if isinstance(value, cfg.Config):
-            if not compare(value, truth): return False
+        trueValue = truth[key]
+        #print "%s: %s vs %s" % (key, str(value), str(trueValue))
+        if isinstance(trueValue, dict):
+            if not compare(value, trueValue): return False
+        elif isinstance(trueValue, list):
+            for index, entry in enumerate(trueValue):
+                if value[index] != entry: return False
         else:
-            #print "%s: %s vs %s" % (key, str(value), str(truth))
-            if value != truth: return False
+            if value != trueValue: return False
     return True
 
 class ConfigTestCase(unittest.TestCase):
@@ -53,6 +56,7 @@ class ConfigTestCase(unittest.TestCase):
                        'falsehood': False,
                        'string': 'this is a string',
                        'policy': { 'subpolicy': True },
+                       'array': [1, 2, 3, 4, 5, ],
                        }
 
     def tearDown(self):
@@ -80,6 +84,9 @@ class ConfigTestCase(unittest.TestCase):
         self.config['new'] = "this is new!"
         self.truth['new'] = "this is new!"
         self.assertTrue(compare(self.config, self.truth), "Entries match truth after addition")
+        self.config['new_array'] = [ 1, 2, 3, 4, 5, ]
+        self.truth['new_array'] = [ 1, 2, 3, 4, 5, ]
+        self.assertTrue(compare(self.config, self.truth), "Entries match truth after array addition")
 
     def testSet(self):
         self.config['integer'] = 42

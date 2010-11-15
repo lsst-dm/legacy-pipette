@@ -38,7 +38,7 @@ class Config(dict):
             self._policy = pexPolicy.Policy()
         elif isinstance(policy, pexPolicy.Policy):
             self._policy = policy
-        elif isinstance(policy, str):
+        elif isinstance(policy, basestring):
             self._policy = pexPolicy.Policy.createPolicy(pexPolicy.PolicyFile(policy))
         elif isinstance(policy, pexPolicy.PolicyFile):
             self._policy = pexPolicy.Policy.createPolicy(policy)
@@ -64,18 +64,28 @@ class Config(dict):
         """Retrieve a value"""
         if not self._policy.exists(key):
             raise KeyError, "Policy doesn't contain entry: %s" % key
-        value = self._policy.get(key)
-        return value if not isinstance(value, pexPolicy.Policy) else Config(value)
+        if self._policy.isArray(key):
+            array = list()
+            value = self._policy.getArray(key)
+        else:
+            value = self._policy.get(key)
+            if isinstance(value, pexPolicy.Policy):
+                value = Config(value)
+        return value
 
     def __setitem__(self, key, value):
         """Set a value; adds if doesn't exist"""
         if isinstance(value, Config):
             value = value._policy
-        elif isinstance(value, str):
+        elif isinstance(value, basestring):
             if value.lower() == "false":
                 value = False
             elif value.lower() == "true":
                 value = True
+        elif not isinstance(value, basestring) and hasattr(value, '__iter__'): # Iterable array
+            for entry in value:
+                self._policy.add(key, entry)
+            return value
         if self._policy.exists(key): self._policy.set(key, value)
         else: self._policy.add(key, value)
         return value

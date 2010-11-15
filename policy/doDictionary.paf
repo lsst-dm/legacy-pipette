@@ -80,6 +80,13 @@ definitions: {
         maxOccurs: 1
         default: false
     }
+    distortion: {
+        type: boolean
+        description: "Apply optical distortion?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
     ast: {
         type: boolean
         description: "Perform astrometric calibration?"

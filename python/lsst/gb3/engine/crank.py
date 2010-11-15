@@ -27,6 +27,7 @@ import math
 
 import lsstDebug
 import lsst.gb3.engine.config as engConfig
+import lsst.gb3.engine.distortion as engDist
 import lsst.pex.logging as pexLog
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.afw.math as afwMath
@@ -188,8 +189,14 @@ class Crank(object):
             self._display("phot", bgSubExp, sources)
 
         # Astrometry and calibration
-        if self.do['ast'] and sources is not None:
-            matches, wcs = self._astrometry(bgSubExp, sources)
+        if self.do['distortion'] and sources is not None:
+            distSources = self._distortion(bgSubExp, sources)
+            self._display("dist", bgSubExp, distSources)
+        else:
+            distSources = sources
+        if self.do['ast'] and distSources is not None:
+            matches, wcs = self._astrometry(bgSubExp, distSources)
+            self._display("ast", bgSubExp, distSources, matches)
         if self.do['cal'] and matches is not None and len(matches) > 0:
             self._photcal(bgSubExp, matches)
 
@@ -568,6 +575,16 @@ class Crank(object):
                       value, error))
         return corr
 
+    def _distortion(self, exposure, sources):
+        """Apply optical distortion to sources
+
+        @param sources Sources with positions
+        @returns Distorted sources list
+        """
+        ccd = getCcd(exposure)
+        dist = engDist.createDistortion(ccd, self.config['distortion'])
+        return dist.measuredToDistorted(sources)
+
     def _astrometry(self, exposure, sources):
         """Solve WCS
 
@@ -582,11 +599,41 @@ class Crank(object):
         #solver.setMatchThreshold(self.policy.get('matchThreshold'))
         self.log.log(self.log.INFO, "Solving astrometry")
 
+        xMin, xMax, yMin, yMax = 0, exposure.getWidth(), 0, exposure.getHeight()
+        goodSources = afwDet.SourceSet()
+        badFlags = measAlg.Flags.BAD | \
+                   measAlg.Flags.EDGE | \
+                   measAlg.Flags.SHAPE_SHIFT | \
+                   measAlg.Flags.SHAPE_MAXITER | \
+                   measAlg.Flags.SHAPE_UNWEIGHTED | \
+                   measAlg.Flags.SHAPE_UNWEIGHTED_PSF | \
+                   measAlg.Flags.SHAPE_UNWEIGHTED_BAD | \
+                   measAlg.Flags.PEAKCENTER | \
+                   measAlg.Flags.DETECT_NEGATIVE
+                   #measAlg.Flags.INTERP | \
+                   #measAlg.Flags.INTERP_CENTER | \
+                   #measAlg.Flags.SATUR | \
+                   #measAlg.Flags.SATUR_CENTER | \
+        for source in sources:
+            if not source.getFlagForDetection() & badFlags:
+            #if True:
+                goodSources.append(source)
+                x, y = source.getXAstrom(), source.getYAstrom()
+                if x < xMin: xMin = x
+                if x > xMax: xMax = x
+                if y < yMin: yMin = y
+                if y > yMax: yMax = y
+        sources = goodSources
+        for source in sources:
+            source.setXAstrom(source.getXAstrom() - xMin)
+            source.setYAstrom(source.getYAstrom() - yMin)
+
         if True:
             solver.setMatchThreshold(policy['matchThreshold'])
             solver.setStarlist(sources)
             solver.setNumBrightObjects(min(policy['numBrightStars'], len(sources)))
-            solver.setImageSize(exposure.getWidth(), exposure.getHeight())
+            #solver.setImageSize(exposure.getWidth(), exposure.getHeight())
+            solver.setImageSize(int(xMax + 0.5), int(yMax + 0.5))
             if not solver.solve(exposure.getWcs()):
                 raise RuntimeError("Unable to solve astrometry")
             wcs = solver.getWcs()
@@ -619,7 +666,7 @@ class Crank(object):
         return
 
 
-    def _display(self, name, exposure=None, sources=None):
+    def _display(self, name, exposure=None, sources=None, matches=None, pause=False):
         """Display image and/or sources
 
         @param name Name for display dict
@@ -647,7 +694,17 @@ class Crank(object):
                 #except: continue
                 #ds9.dot("%.1f" % mag, xc, yc, frame=frame, ctype="red")
 
-        #raw_input("Press [ENTER] when ready....")
+        if matches:
+            for match in matches:
+                first = match.first
+                x1, y1 = first.getXAstrom() - x0, first.getYAstrom() - y0
+                ds9.dot("+", x1, y1, size=4, frame=frame)
+                second = match.second
+                x2, y2 = second.getXAstrom() - x0, second.getYAstrom() - y0
+                ds9.dot("+", x2, y2, size=4, frame=frame, ctype="blue")
+
+        if pause:
+            raw_input("Press [ENTER] when ready....")
         return
 
 

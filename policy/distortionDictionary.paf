@@ -15,7 +15,6 @@ definitions: {
                     type: double
                     description: "Radial distortion polynomial coefficients, from highest power down to constant (typically ending as 1.0, 0.0)"
                     minOccurs: 0
-                    maxOccurs: 1
                 }
                 actualToIdeal: {
                     type: bool

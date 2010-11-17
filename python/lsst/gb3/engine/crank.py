@@ -75,15 +75,22 @@ class Crank(object):
         self.display = lsstDebug.Info(__name__).display
         return
 
-    def turn(self, exposure, detrends):
+    def turn(self, exposureList, detrendList):
         """Turn the crank: executes ISR, CCD assembly and image characterisation
 
         @param exposure  Exposure to process
         @param detrends  Dict with detrends to apply (bias,dark,flat,fringe)
         @returns Exposure, PSF, sources detected, sources matched, WCS
         """
-        self.isr(exposure, detrends)
-        exposure = self.ccdAssembly(exposure)
+        if hasattr(exposureList, "__iter__"):
+            for index, exp in enumerate(exposureList):
+                detrends = detrendList[index]
+                self.isr(exp, detrends)
+        elif isinstance(exposureList, afwImage.ExposureF) or isinstance(exposureList, afwImage.ExposureU):
+            self.isr(exposureList, detrendList)
+        else:
+            raise TypeError("Cannot interpret input exposure(s): %s" % str(type(exposureList)))
+        exposure = self.ccdAssembly(exposureList)
         exposure, psf, sources, matches, wcs = self.imageChar(exposure)
         return exposure, psf, sources, matches, wcs
 
@@ -98,6 +105,9 @@ class Crank(object):
         @param exposure Exposure to process
         @param detrends Dict with detrends to apply (bias,dark,flat,fringe)
         """
+        assert isinstance(exposure, afwImage.ExposureF) or isinstance(exposure, afwImage.ExposureU)
+        assert isinstance(detrends, dict)
+
         self._display("raw", exposure)
         if self.do['saturation']:
             self._saturation(exposure)
@@ -255,17 +265,30 @@ class Crank(object):
         mi = exposure.getMaskedImage()
         MaskedImage = type(mi)
         if detectorIsCcd(exposure):
+            # Effectively doing CCD assembly since we have all amplifiers
             ccd = getCcd(exposure)
-            miTrim = MaskedImage(ccd.getAllPixels(True).getDimensions())
+            miCcd = MaskedImage(ccd.getAllPixels(True).getDimensions())
             for amp in ccd:
-                self._trimAmp(miTrim, mi, amp, amp.getDataSec(True))
+                diskDataSec = amp.getDiskDataSec()
+                trimDataSec = amp.getDataSec(True)
+                miTrim = MaskedImage(mi, diskDataSec)
+                miTrim = MaskedImage(amp.prepareAmpData(miTrim.getImage()),
+                                     amp.prepareAmpData(miTrim.getMask()),
+                                     amp.prepareAmpData(miTrim.getVariance()))
+                miAmp = MaskedImage(miCcd, trimDataSec)
+                self.log.log(self.log.INFO, "Trimming amp %s: %s --> %s" %
+                             (amp.getId(), diskDataSec, trimDataSec))
+                miAmp <<= miTrim
+                amp.setTrimmed(True)
+            exposure.setMaskedImage(miCcd)
         else:
+            # AFW doesn't provide a useful target datasec, so we just make an image that has the useful pixels
             amp = cameraGeom.cast_Amp(exposure.getDetector())
-            trimDatasec = amp.getDataSec(True)
-            trimDatasec.shift(-trimDatasec.getX0(), -trimDatasec.getY0())
-            miTrim = MaskedImage(trimDatasec.getDimensions())
-            self._trimAmp(miTrim, mi, amp, trimDatasec)
-        exposure.setMaskedImage(miTrim)
+            diskDataSec = amp.getDiskDataSec()
+            self.log.log(self.log.INFO, "Trimming amp %s: %s" % (amp.getId(), diskDataSec))
+            miAmp = MaskedImage(mi, diskDataSec)
+            amp.setTrimmed(True)
+            exposure.setMaskedImage(miAmp)
         return
 
     def _trimAmp(self, miTo, miFrom, amp, toDatasec):
@@ -279,7 +302,7 @@ class Crank(object):
         MaskedImage = type(miTo)
         fromDatasec = amp.getDiskDataSec()
         self.log.log(self.log.INFO, "Trimming amp %s: %s --> %s" % (amp.getId(), fromDatasec, toDatasec))
-        trimAmp = MaskedImage(miFrom, fromDatasec)
+        trimAmp = amp.prepareAmpData(MaskedImage(miFrom, fromDatasec))
         trimImage = MaskedImage(miTo, toDatasec)
         trimImage <<= trimAmp
         amp.setTrimmed(True)
@@ -320,18 +343,29 @@ class Crank(object):
 
         @param exposure Exposure to process
         """
-        ccd = getCcd(exposure)
         mi = exposure.getMaskedImage()
-        MaskedImage = type(mi)
-        for amp in ccd:
-            if not haveAmp(exposure, amp):
-                continue
-            gain = amp.getElectronicParams().getGain()
-            self.log.log(self.log.INFO, "Setting variance for amp %s: %f" % (amp.getId(), gain))
-            miAmp = MaskedImage(mi, amp.getDataSec())
-            variance = miAmp.getVariance()
-            variance <<= miAmp.getImage()
-            variance /= gain
+        if detectorIsCcd(exposure):
+            ccd = getCcd(exposure)
+            MaskedImage = type(mi)
+            for amp in ccd:
+                miAmp = MaskedImage(mi, amp.getDataSec(True))
+                self._varianceAmp(miAmp, amp)
+        else:
+            amp = cameraGeom.cast_Amp(exposure.getDetector())
+            self._varianceAmp(mi, amp)
+        return
+
+    def _varianceAmp(self, mi, amp):
+        """Set variance from gain for an amplifier
+
+        @param mi Masked image for amplifier
+        @param amp Amplifier of interest
+        """
+        gain = amp.getElectronicParams().getGain()
+        self.log.log(self.log.INFO, "Setting variance for amp %s: %f" % (amp.getId(), gain))
+        variance = mi.getVariance()
+        variance <<= mi.getImage()
+        variance /= gain
         return
 
     def _dark(self, exposure, detrends):
@@ -387,13 +421,30 @@ class Crank(object):
         @param exposureList List of exposures to be assembled
         @returns Assembled exposure
         """
-        if not hasattr(exposureList, "__getitem__"):
+        if not hasattr(exposureList, "__iter__"):
             # This is not a list; presumably it's a single item needing no assembly
             return exposureList
-        rmKeys = ["CCDID", "AMPID", "E2AOCHI", "E2AOFILE",
-                  "DC3BPATH", "GAIN", "BIASSEC", "DATASEC"]    # XXX policy argument
-        ccd = getCcd(exposureList[0])
-        exposure = ipIsr.ccdAssemble.assembleCcd(exposureList, ccd, keysToRemove=rmKeys)
+        if len(exposureList) == 1:
+            return exposureList[0]
+        egExp = exposureList[0]         # The (assumed) model for exposures
+        egMi = egExp.getMaskedImage()   # The (assumed) model for masked images
+        Exposure = type(egExp)
+        MaskedImage = type(egMi)
+        ccd = getCcd(egExp)
+        miCcd = MaskedImage(ccd.getAllPixels(True).getDimensions())
+        for exp in exposureList:
+            amp = getAmp(exp)
+            mi = exp.getMaskedImage()
+            miAmp = MaskedImage(miCcd, amp.getDataSec(True))
+            miAmp <<= mi
+        exposure = afwImage.makeExposure(miCcd, egExp.getWcs())
+        exposure.setWcs(egExp.getWcs())
+        exposure.setMetadata(egExp.getMetadata())
+        exposure.setFilter(egExp.getFilter())
+        exposure.setDetector(ccd)
+        exposure.getCalib().setExptime(egExp.getCalib().getExptime())
+        exposure.getCalib().setMidTime(egExp.getCalib().getMidTime())
+
         return exposure
 
 ##############################################################################################################
@@ -767,4 +818,3 @@ def haveAmp(exposure, amp):
         # Exposure contains a CCD, which contains all its amps
         return True
     return True if testAmp.getId() == amp.getId() else False
-

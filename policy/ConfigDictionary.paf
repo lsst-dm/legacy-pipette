@@ -131,6 +131,12 @@ definitions: {
         maxOccurs: 1
         dictionary: @@meas_pipeline:policy:WcsDeterminationStageDictionary.paf
     }
+    filters: {
+        type: Policy
+        description: "Filter translation table: data --> catalog"
+        minOccurs: 0
+        maxOccurs: 1
+    }
 #    cal: {
 #        type: Policy
 #        description: "Perform photometric calibration?"

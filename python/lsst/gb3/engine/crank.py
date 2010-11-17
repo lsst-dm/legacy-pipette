@@ -105,9 +105,6 @@ class Crank(object):
         @param exposure Exposure to process
         @param detrends Dict with detrends to apply (bias,dark,flat,fringe)
         """
-        assert isinstance(exposure, afwImage.ExposureF) or isinstance(exposure, afwImage.ExposureU)
-        assert isinstance(detrends, dict)
-
         self._display("raw", exposure)
         if self.do['saturation']:
             self._saturation(exposure)
@@ -676,6 +673,15 @@ class Crank(object):
         #solver.setMatchThreshold(self.policy.get('matchThreshold'))
         self.log.log(self.log.INFO, "Solving astrometry")
 
+        try:
+            menu = self.config['filters']
+            filterName = menu[exposure.getFilter().getName()]
+        except:
+            self.log.log(self.log.WARN, "Unable to determine catalog filter from lookup table using %s" %
+                         exposure.getFilter().getName())
+            filterName = policy['defaultFilterName']
+        self.log.log(self.log.INFO, "Using catalog filter: %s" % filterName)
+
         if size is None:
             size = afwGeom.makePointI(exposure.getWidth(), exposure.getHeight())
 
@@ -687,7 +693,7 @@ class Crank(object):
             if not solver.solve(exposure.getWcs()):
                 raise RuntimeError("Unable to solve astrometry")
             wcs = solver.getWcs()
-            matches = solver.getMatchedSources(policy['defaultFilterName'])
+            matches = solver.getMatchedSources(filterName)
             sipFitter = astromSip.CreateWcsWithSip(matches, wcs, policy['sipOrder'])
             wcs = sipFitter.getNewWcs()
             exposure.setWcs(wcs)

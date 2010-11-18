@@ -153,6 +153,7 @@ class Crank(object):
         sources = None
         size = None
         matches = None
+        distortion = None
         wcs = exposure.getWcs()
 
         # Initial PSF
@@ -198,14 +199,11 @@ class Crank(object):
             self._display("phot", bgSubExp, sources)
 
         # Astrometry and calibration
-        if self.do['distortion'] and sources is not None:
-            distSources, size = self._distortion(bgSubExp, sources)
-            self._display("dist", bgSubExp, distSources)
-        else:
-            distSources = sources
-        if self.do['ast'] and distSources is not None:
-            matches, wcs = self._astrometry(bgSubExp, distSources, size=size)
-            self._display("ast", bgSubExp, distSources, matches)
+        if self.do['distortion']:
+            distortion = self._distortion(bgSubExp)
+        if self.do['ast']:
+            matches, wcs = self._astrometry(bgSubExp, sources, distortion)
+            self._display("ast", bgSubExp, sources, matches)
         if self.do['cal'] and matches is not None and len(matches) > 0:
             self._photcal(bgSubExp, matches)
 
@@ -625,52 +623,27 @@ class Crank(object):
                       value, error))
         return corr
 
-    def _distortion(self, exposure, sources):
-        """Apply optical distortion to sources
+    def _distortion(self, exposure):
+        """Generate appropriate optical distortion
 
-        @param sources Sources with positions
-        @returns Distorted sources list and size of distorted image
+        @param exposure Exposure from which to get CCD
+        @returns Distortion to be applied
         """
         ccd = getCcd(exposure)
-        dist = engDist.createDistortion(ccd, self.config['distortion'])
-        self.log.log(self.log.INFO, "Applying distortion correction.")
+        return engDist.createDistortion(ccd, self.config['distortion'])
 
-        distSources = dist.actualToIdeal(sources)
-
-        xMin, xMax, yMin, yMax = 0, exposure.getWidth(), 0, exposure.getHeight()
-        for x, y in ((0.0, 0.0), (0.0, exposure.getHeight()), (exposure.getWidth(), 0.0),
-                     (exposure.getHeight(), exposure.getWidth())):
-            point = afwGeom.makePointD(x, y)
-            x, y = point.getX(), point.getY()
-            if x < xMin: xMin = x
-            if x > xMax: xMax = x
-            if y < yMin: yMin = y
-            if y > yMax: yMax = y
-        xMin = int(xMin)
-        yMin = int(yMin)
-
-        for source in distSources:
-            x, y = source.getXAstrom(), source.getYAstrom()
-            source.setXAstrom(x - xMin)
-            source.setYAstrom(y - yMin)
-
-        size = afwGeom.makePointI(int(xMax - xMin + 0.5), int(yMax - yMin + 0.5))
-
-        return distSources, size
-
-    def _astrometry(self, exposure, sources, size=None):
+    def _astrometry(self, exposure, sources, distortion=None):
         """Solve WCS
 
         @param exposure Exposure to process
-        @param sources Sources with positions and PSF fluxes
-        @param size Size (Point2I) of image
-        @returns Tuple with matched sources and WCS
+        @param sources Sources with undistorted (actual) positions
+        @param distortion Distortion to apply
+        @returns Tuple with matched distSources and WCS
         """
         policy = self.config['ast']
         path=os.path.join(os.environ['ASTROMETRY_NET_DATA_DIR'], "metadata.paf")
         solver = astromNet.GlobalAstrometrySolution(path)
         #solver.allowDistortion(self.policy.get('allowDistortion'))
-        #solver.setMatchThreshold(self.policy.get('matchThreshold'))
         self.log.log(self.log.INFO, "Solving astrometry")
 
         try:
@@ -682,13 +655,37 @@ class Crank(object):
             filterName = policy['defaultFilterName']
         self.log.log(self.log.INFO, "Using catalog filter: %s" % filterName)
 
-        if size is None:
+
+        if distortion is not None:
+            self.log.log(self.log.INFO, "Applying distortion correction.")
+            distSources = distortion.actualToIdeal(sources)
+
+            # Get distorted image size, and remove offset
+            xMin, xMax, yMin, yMax = 0, exposure.getWidth(), 0, exposure.getHeight()
+            for x, y in ((0.0, 0.0), (0.0, exposure.getHeight()), (exposure.getWidth(), 0.0),
+                         (exposure.getHeight(), exposure.getWidth())):
+                point = afwGeom.makePointD(x, y)
+                x, y = point.getX(), point.getY()
+                if x < xMin: xMin = x
+                if x > xMax: xMax = x
+                if y < yMin: yMin = y
+                if y > yMax: yMax = y
+            xMin = int(xMin)
+            yMin = int(yMin)
+            for source in distSources:
+                x, y = source.getXAstrom(), source.getYAstrom()
+                source.setXAstrom(x - xMin)
+                source.setYAstrom(y - yMin)
+
+            size = afwGeom.makePointI(int(xMax - xMin + 0.5), int(yMax - yMin + 0.5))
+        else:
+            distSources = sources
             size = afwGeom.makePointI(exposure.getWidth(), exposure.getHeight())
 
         if True:
             solver.setMatchThreshold(policy['matchThreshold'])
-            solver.setStarlist(sources)
-            solver.setNumBrightObjects(min(policy['numBrightStars'], len(sources)))
+            solver.setStarlist(distSources)
+            solver.setNumBrightObjects(min(policy['numBrightStars'], len(distSources)))
             solver.setImageSize(size.getX(), size.getY())
             if not solver.solve(exposure.getWcs()):
                 raise RuntimeError("Unable to solve astrometry")
@@ -696,12 +693,20 @@ class Crank(object):
             matches = solver.getMatchedSources(filterName)
             sipFitter = astromSip.CreateWcsWithSip(matches, wcs, policy['sipOrder'])
             wcs = sipFitter.getNewWcs()
-            exposure.setWcs(wcs)
+            scatter = sipFitter.getScatterInArcsec()
+            self.log.log(self.log.INFO, "Astrometric scatter: %f" % scatter)
         else:
-            matches, wcs = measAst.determineWcs(policy.getPolicy(), exposure, sources,
+            matches, wcs = measAst.determineWcs(policy.getPolicy(), exposure, distSources,
                                                 solver=solver, log=self.log)
             if matches is not None or len(matches) == 0:
                 raise RuntimeError("Unable to find any matches")
+
+        exposure.setWcs(wcs)
+        for index, source in enumerate(sources):
+            distSource = distSources[index]
+            sky = wcs.pixelToSky(distSource.getXAstrom(), distSource.getYAstrom())
+            source.setRa(sky[0])
+            source.setDec(sky[1])
 
         verify = dict()                    # Verification parameters
         verify.update(astromSip.sourceMatchStatistics(matches))

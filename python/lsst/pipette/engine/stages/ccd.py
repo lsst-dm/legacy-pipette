@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from lsst.pipette.engine.stage import MultiStage
-from lsst.pipette.engine.stageFactory import StageFactory
+from lsst.pipette.engine.stageFactory import StageFactory, StageDict
 
 from lsst.pipette.engine.stages.isr import Isr
 from lsst.pipette.engine.stages.bootstrap import Bootstrap
@@ -15,6 +15,7 @@ class CcdStageFactory(StageFactory):
                    'phot': Phot,
                    'char': Characterize,
                    })
+    stages = StageDict(stages)
 
 class CcdProcessing(MultiStage):
     def __init__(self, name='ccd', *args, **kwargs):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from lsst.pipette.engine.stage import MultiStage, IgnoredStage
-from lsst.pipette.engine.stageFactory import StageFactory
+from lsst.pipette.engine.stageFactory import StageFactory, StageDict
 from lsst.pipette.engine.stages.cr import Cr
 from lsst.pipette.engine.stages.detect import Detect
 from lsst.pipette.engine.stages.phot import Phot
@@ -19,6 +19,7 @@ class BootstrapStageFactory(StageFactory):
     stages['cr'] = BootstrapCr
     stages['detect'] = BootstrapDetect
     stages['phot'] = Phot
+    stages = StageDict(stages)
 
 class Bootstrap(MultiStage):
     def __init__(self, name='bootstrap', factory=BootstrapStageFactory, *args, **kwargs):

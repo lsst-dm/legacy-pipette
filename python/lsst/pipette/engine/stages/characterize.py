@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
 from lsst.pipette.engine.stage import MultiStage
-from lsst.pipette.engine.stageFactory import StageFactory
+from lsst.pipette.engine.stageFactory import StageFactory, StageDict
 from lsst.pipette.engine.stages.phot import Phot
 
 class CharacterizeStageFactory(StageFactory):
     stages = StageFactory.stages.copy()
     stages['phot'] = Phot
+    stages = StageDict(stages)
     
 
 class Characterize(MultiStage):

@@ -4,6 +4,7 @@ from lsst.pipette.engine.stage import BaseStage
 from lsst.pipette.engine.stages.trim import Trim
 
 class Detrend(BaseStage):
+    """A base class for stages that apply a detrend image."""
     def __init__(self, *args, **kwargs):
         super(Detrend, self).__init__(requires=['exposure', 'detrends'], provides='exposure', *args, **kwargs)
         return

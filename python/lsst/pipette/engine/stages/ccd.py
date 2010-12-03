@@ -9,6 +9,7 @@ from lsst.pipette.engine.stages.phot import Phot
 from lsst.pipette.engine.stages.characterize import Characterize
 
 class CcdStageFactory(StageFactory):
+    """Factory for CCD processing stages."""
     stages = StageFactory.stages.copy()
     stages.update({'isr': Isr,
                    'bootstrap': Bootstrap,
@@ -18,6 +19,7 @@ class CcdStageFactory(StageFactory):
     stages = StageDict(stages)
 
 class CcdProcessing(MultiStage):
+    """Processing of a single CCD."""
     def __init__(self, name='ccd', *args, **kwargs):
         stages = CcdStageFactory.create(['isr',
                                          'bootstrap',

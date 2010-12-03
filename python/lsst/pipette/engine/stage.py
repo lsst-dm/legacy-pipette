@@ -2,8 +2,29 @@
 
 import lsst.pex.logging as pexLog
 
+"""This module defines various types of stages that can be executed."""
+
 class BaseStage(object):
+    """BaseStage is the base class for stages.
+    Users should subclass BaseStage and override the __init__ and run methods.
+
+    Data flows through stages in the form of a 'clipboard' (a regular Python dict).
+    We find it convenient to pass this as **clipboard, so that methods can pick
+    out components they're interested in using the function definition, e.g.,
+    def run(exposure=None, **clipboard) will pick the exposure out of the clipboard.
+    The checkRequire() method can be used to ensure that these will exist, but the
+    user is encouraged to assert on them as well.
+    """
+    
     def __init__(self, name, config=None, log=None, requires=None, provides=None):
+        """Constructor
+
+        @param name Name of the stage; used for logging
+        @param config Configuration
+        @param log Logger
+        @param requires Set of required data on clipboard
+        @param provides Set of provided data on clipboard
+        """
         self.name = name
         self.config = config
         if log is None: log = pexLog.getDefaultLog()
@@ -17,23 +38,49 @@ class BaseStage(object):
     def __str__(self):
         return "%s: (%s) --> (%s)" % (self.name, ','.join(self.requires), ','.join(self.provides))
 
-    def check(self, **clipboard):
-        if self.requires is None:
-            self.log.log(self.log.DEBUG, "Stage %s has no dependencies" % self.name)
+    def _check(self, check, which, clipboard):
+        """Check that stage dependencies or provisions are met by the clipboard
+
+        @param check Set to check
+        @param which Which set is being checked (for log messages)
+        @param clipboard Clipboard dict
+        """
+        if check is None:
+            self.log.log(self.log.DEBUG, "Stage %s has no %s" % (self.name, which))
             return True
-        for dep in self.requires:
-            if clipboard is None or not clipboard.has_key(dep):
-                self.log.log(self.log.WARN, "Not performing stage %s because dependency not satisfied: %s" %
-                             (self.name, dep))
+        for key in check:
+            if clipboard is None or not clipboard.has_key(key):
+                self.log.log(self.log.WARN, "Stage %s %s not satisfied: %s" %
+                             (self.name, which, key))
                 return False
-        self.log.log(self.log.DEBUG, "Stage %s satisfies dependencies" % self.name)
+        self.log.log(self.log.DEBUG, "Stage %s satisfies %s" % (self.name, which))
         return True
 
+
+    def checkRequire(self, **clipboard):
+        """Check that stage dependencies are met by the clipboard
+
+        @param **clipboard Clipboard dict
+        """
+        return self._check(self.requires, "requirements", clipboard)
+
+    def checkProvide(self, **clipboard):
+        """Check that stage provisions are met by the clipboard
+
+        @param **clipboard Clipboard dict
+        """
+        return self._check(self.provides, "provisions", clipboard)
+
     def run(self, **clipboard):
+        """Run the stage.  This method needs to be overridden by inheriting classes.
+
+        @param **clipboard Clipboard dict
+        """
         raise NotImplementedError("This method needs to be overridden by inheriting classes")
 
 
 class IgnoredStage(BaseStage):
+    """A stage that has been ignored for processing.  It does nothing except exist."""
     def __init__(self, *args, **kwargs):
         super(IgnoredStage, self).__init__(*args, **kwargs)
         self.requires = set()
@@ -48,7 +95,18 @@ class IgnoredStage(BaseStage):
         return "%s: IGNORED" % (self.name)
 
 class MultiStage(BaseStage):
+    """A stage consisting of multiple stages.  The stages are executed in turn."""    
     def __init__(self, name, stages, factory=None, *args, **kwargs):
+        """Constructor.
+
+        Note that we can work out the requirements and provisions using the
+        components, so there's no need to provide those.
+        If a factory is provided, it is used to create each of the stages.
+
+        @param name Name of the stage; used for logging
+        @param stages Stages to run
+        @param factory Factory to create stages, or None
+        """               
         super(MultiStage, self).__init__(name, *args, **kwargs)
         if factory is None:
             self._stages = stages
@@ -80,29 +138,49 @@ class MultiStage(BaseStage):
                                            ','.join(self.requires), ','.join(self.provides))
 
     def run(self, **clipboard):
-        if not self.check(**clipboard):
-            raise RuntimeError("Stage %s dependencies not met" % self.name)
+        """Run the stage.  Each stage is executed in turn.
+
+        @param **clipboard Clipboard dict
+        """
+        if not self.checkRequire(**clipboard):
+            raise RuntimeError("Stage %s requirements not met" % self.name)
         for stage in self._stages:
-            assert stage.check(**clipboard), \
-                   "Stage %s dependencies not met within %s" % (stage.name, self.name)
+            assert stage.checkRequire(**clipboard), \
+                   "Stage %s requirements not met within %s" % (stage.name, self.name)
             ret = stage.run(**clipboard)
             if ret is not None:
+                assert stage.checkProvide(**ret), \
+                       "Stage %s provisions not met within %s" % (stage.name, self.name, )
                 clipboard.update(ret)
         return clipboard
 
 
 class IterateStage(BaseStage):
+    """A stage that runs on a list of components."""
     def __init__(self, name, iterate, *args, **kwargs):
+        """Constructor
+
+        @param name Name of the stage; used for logging
+        @param iterate Component or list of components to iterate over
+        """
         super(IterateStage, self).__init__(name, *args, **kwargs)
         self.iterate = iterate
         return
 
     def run(self, **clipboard):
+        """Run the stage.  The stage is executed for each of the components.
+
+        The components nominated for iteration must be passed in as lists.
+
+        @param **clipboard Clipboard dict
+        """
+        assert self.checkRequire(**clipboard), "Stage %s requirements not met" % self.name
         iterate = dict()                # List of lists to iterate over
         # Pull out things we're iterating over
         length = None                   # Length of iteration
         for name in self.iterate:
             array = clipboard[name]
+            assert hasattr(array, "__iter__"), "Component %s is not iterable: %s" % (name, array)
             if length is None:
                 length = len(array)
             elif len(array) != length:
@@ -121,9 +199,18 @@ class IterateStage(BaseStage):
             for name in self.iterate:
                 array = iterate[name]
                 array[index] = clip[name]
+        assert self.checkProvide(**clipboard), "Stage %s provisions not met" % self.name
         return clipboard
 
 class IterateMultiStage(IterateStage, MultiStage):
+    """A stage that runs multiple stages on a list of components
+
+    Note that, by virtue of the order of the multiple inheritance, the
+    constructor is __init__(self, name, iterate, stages, config, ...)
+    and the behaviour of run(self, **clipboard) should be like:
+        for each iteration component set:
+            for each stage:
+                run stage with component set
+    """
     # Multiple inheritance should automagically do everything we desire
-    # Note that the init is __init__(self, name, iterate, stages, config, ...)
     pass

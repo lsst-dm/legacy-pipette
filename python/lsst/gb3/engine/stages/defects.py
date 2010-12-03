@@ -2,8 +2,8 @@
 
 import lsst.ip.isr as ipIsr
 import lsst.meas.algorithms as measAlg
-import lsst.gb3.engine.util as engUtil
-from lsst.gb3.engine.stage import BaseStage
+import lsst.pipette.engine.util as engUtil
+from lsst.pipette.engine.stage import BaseStage
 
 class Defects(BaseStage):
     def __init__(self, *args, **kwargs):

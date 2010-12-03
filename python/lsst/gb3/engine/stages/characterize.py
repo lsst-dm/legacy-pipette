@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from lsst.gb3.engine.stage import MultiStage
-from lsst.gb3.engine.stageFactory import StageFactory
-from lsst.gb3.engine.stages.phot import Phot
+from lsst.pipette.engine.stage import MultiStage
+from lsst.pipette.engine.stageFactory import StageFactory
+from lsst.pipette.engine.stages.phot import Phot
 
 class CharacterizeStageFactory(StageFactory):
     stages = StageFactory.stages.copy()

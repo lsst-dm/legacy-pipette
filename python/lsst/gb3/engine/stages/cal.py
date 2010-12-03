@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import lsst.meas.photocal as photocal
-from lsst.gb3.engine.stage import BaseStage
+from lsst.pipette.engine.stage import BaseStage
 
 class Cal(BaseStage):
     def __init__(self, *args, **kwargs):

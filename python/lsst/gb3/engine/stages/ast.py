@@ -6,7 +6,7 @@ import lsst.meas.astrom as measAst
 import lsst.meas.astrom.net as astromNet
 import lsst.meas.astrom.sip as astromSip
 import lsst.meas.astrom.verifyWcs as astromVerify
-from lsst.gb3.engine.stage import BaseStage
+from lsst.pipette.engine.stage import BaseStage
 
 class Ast(BaseStage):
     def __init__(self, *args, **kwargs):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from lsst.gb3.engine.stage import BaseStage
-from lsst.gb3.engine.stages.trim import Trim
+from lsst.pipette.engine.stage import BaseStage
+from lsst.pipette.engine.stages.trim import Trim
 
 class Detrend(BaseStage):
     def __init__(self, *args, **kwargs):

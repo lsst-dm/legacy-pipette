@@ -2,7 +2,7 @@
 
 import math
 import lsst.afw.detection as afwDet
-from lsst.gb3.engine.stage import BaseStage
+from lsst.pipette.engine.stage import BaseStage
 
 class FakePsf(BaseStage):
     def __init__(self, *args, **kwargs):

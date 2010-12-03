@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import lsst.gb3.engine.util as engUtil
-from lsst.gb3.engine.stage import BaseStage
+import lsst.pipette.engine.util as engUtil
+from lsst.pipette.engine.stage import BaseStage
 
 class Assembly(BaseStage):
     def __init__(self, *args, **kwargs):

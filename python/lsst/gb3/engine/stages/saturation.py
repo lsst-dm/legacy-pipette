@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import lsst.ip.isr as ipIsr
-import lsst.gb3.engine.util as engUtil
-from lsst.gb3.engine.stage import BaseStage
+import lsst.pipette.engine.util as engUtil
+from lsst.pipette.engine.stage import BaseStage
 
 class Saturation(BaseStage):
     def __init__(self, *args, **kwargs):

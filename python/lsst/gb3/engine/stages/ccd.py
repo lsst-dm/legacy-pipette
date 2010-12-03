@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-from lsst.gb3.engine.stage import MultiStage
-from lsst.gb3.engine.stageFactory import StageFactory
+from lsst.pipette.engine.stage import MultiStage
+from lsst.pipette.engine.stageFactory import StageFactory
 
-from lsst.gb3.engine.stages.isr import Isr
-from lsst.gb3.engine.stages.bootstrap import Bootstrap
-from lsst.gb3.engine.stages.phot import Phot
-from lsst.gb3.engine.stages.characterize import Characterize
+from lsst.pipette.engine.stages.isr import Isr
+from lsst.pipette.engine.stages.bootstrap import Bootstrap
+from lsst.pipette.engine.stages.phot import Phot
+from lsst.pipette.engine.stages.characterize import Characterize
 
 class CcdStageFactory(StageFactory):
     stages = StageFactory.stages.copy()

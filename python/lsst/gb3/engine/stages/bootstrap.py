@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-from lsst.gb3.engine.stage import MultiStage, IgnoredStage
-from lsst.gb3.engine.stageFactory import StageFactory
-from lsst.gb3.engine.stages.cr import Cr
-from lsst.gb3.engine.stages.detect import Detect
-from lsst.gb3.engine.stages.phot import Phot
+from lsst.pipette.engine.stage import MultiStage, IgnoredStage
+from lsst.pipette.engine.stageFactory import StageFactory
+from lsst.pipette.engine.stages.cr import Cr
+from lsst.pipette.engine.stages.detect import Detect
+from lsst.pipette.engine.stages.phot import Phot
 
 class BootstrapCr(Cr):
     def run(self, **kwargs):

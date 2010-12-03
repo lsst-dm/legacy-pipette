@@ -1,29 +1,29 @@
 #!/usr/bin/env python
 
-from lsst.gb3.engine.stage import IgnoredStage
+from lsst.pipette.engine.stage import IgnoredStage
 
-import lsst.gb3.engine.stages.apcorr as apcorr
-import lsst.gb3.engine.stages.assembly as assembly
-import lsst.gb3.engine.stages.ast as ast
-import lsst.gb3.engine.stages.background as background
-import lsst.gb3.engine.stages.bias as bias
-import lsst.gb3.engine.stages.cal as cal
-import lsst.gb3.engine.stages.cr as cr
-import lsst.gb3.engine.stages.dark as dark
-import lsst.gb3.engine.stages.defects as defects
-import lsst.gb3.engine.stages.detect as detect
-import lsst.gb3.engine.stages.detrend as detrend
-import lsst.gb3.engine.stages.distortion as distortion
-import lsst.gb3.engine.stages.fakePsf as fakePsf
-import lsst.gb3.engine.stages.flat as flat
-import lsst.gb3.engine.stages.fringe as fringe
-import lsst.gb3.engine.stages.interpolate as interpolate
-import lsst.gb3.engine.stages.measure as measure
-import lsst.gb3.engine.stages.overscan as overscan
-import lsst.gb3.engine.stages.psf as psf
-import lsst.gb3.engine.stages.saturation as saturation
-import lsst.gb3.engine.stages.trim as trim
-import lsst.gb3.engine.stages.variance as variance
+import lsst.pipette.engine.stages.apcorr as apcorr
+import lsst.pipette.engine.stages.assembly as assembly
+import lsst.pipette.engine.stages.ast as ast
+import lsst.pipette.engine.stages.background as background
+import lsst.pipette.engine.stages.bias as bias
+import lsst.pipette.engine.stages.cal as cal
+import lsst.pipette.engine.stages.cr as cr
+import lsst.pipette.engine.stages.dark as dark
+import lsst.pipette.engine.stages.defects as defects
+import lsst.pipette.engine.stages.detect as detect
+import lsst.pipette.engine.stages.detrend as detrend
+import lsst.pipette.engine.stages.distortion as distortion
+import lsst.pipette.engine.stages.fakePsf as fakePsf
+import lsst.pipette.engine.stages.flat as flat
+import lsst.pipette.engine.stages.fringe as fringe
+import lsst.pipette.engine.stages.interpolate as interpolate
+import lsst.pipette.engine.stages.measure as measure
+import lsst.pipette.engine.stages.overscan as overscan
+import lsst.pipette.engine.stages.psf as psf
+import lsst.pipette.engine.stages.saturation as saturation
+import lsst.pipette.engine.stages.trim as trim
+import lsst.pipette.engine.stages.variance as variance
 
 
 class StageFactory(object):

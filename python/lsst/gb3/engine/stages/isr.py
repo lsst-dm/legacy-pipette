@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from lsst.gb3.engine.stage import IterateMultiStage
-from lsst.gb3.engine.stageFactory import StageFactory
+from lsst.pipette.engine.stage import IterateMultiStage
+from lsst.pipette.engine.stageFactory import StageFactory
 
 class Isr(IterateMultiStage):
     def __init__(self, name='isr', factory=StageFactory, *args, **kwargs):

@@ -14,11 +14,11 @@ import lsst.meas.astrom.sip as astromSip
 import lsst.meas.astrom.verifyWcs as astromVerify
 import lsst.meas.photocal as photocal
 
-import lsst.gb3.engine.util as engUtil
-import lsst.gb3.engine.distortion as engDist
-import lsst.gb3.engine.crank as engCrank
-from lsst.gb3.engine.photCrank import PhotCrank
-from lsst.gb3.engine.stage import Stage
+import lsst.pipette.engine.util as engUtil
+import lsst.pipette.engine.distortion as engDist
+import lsst.pipette.engine.crank as engCrank
+from lsst.pipette.engine.photCrank import PhotCrank
+from lsst.pipette.engine.stage import Stage
 
 class CharCrank(engCrank.Crank):
     def __init__(self, name=None, config=None, *args, **kwargs):

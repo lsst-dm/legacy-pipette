@@ -159,7 +159,7 @@ class DefaultConfig(Config):
     It contains the default configuration from the package dictionary, plus any merges.
     """
     def __init__(self):
-        dictFile = pexPolicy.DefaultPolicyFile("gb3_engine", "ConfigDictionary.paf", "policy")
+        dictFile = pexPolicy.DefaultPolicyFile("pipette_engine", "ConfigDictionary.paf", "policy")
         dictPolicy = pexPolicy.Policy.createPolicy(dictFile, dictFile.getRepositoryPath()) # Dictionary
         Config.__init__(self, dictPolicy)
         return

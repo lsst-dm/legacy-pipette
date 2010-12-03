@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from lsst.gb3.engine.stages.detrend import Detrend
+from lsst.pipette.engine.stages.detrend import Detrend
 
 class Fringe(Detrend):
     def run(self, exposure=None, detrends=None, **kwargs):

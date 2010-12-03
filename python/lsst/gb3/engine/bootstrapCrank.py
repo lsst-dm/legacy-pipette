@@ -7,9 +7,9 @@ import lsst.meas.algorithms.psfAlgorithmRhl as maPsfAlg
 import lsst.meas.algorithms.ApertureCorrection as maApCorr
 import lsst.sdqa as sdqa
 
-from lsst.gb3.engine.charCrank import CharCrank
-from lsst.gb3.engine.photCrank import PhotCrank
-from lsst.gb3.engine.stage import Stage
+from lsst.pipette.engine.charCrank import CharCrank
+from lsst.pipette.engine.photCrank import PhotCrank
+from lsst.pipette.engine.stage import Stage
 
 class BootstrapPhotCrank(PhotCrank):
     def _detect(self, **kwargs):

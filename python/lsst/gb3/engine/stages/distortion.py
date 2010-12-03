@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import lsst.gb3.engine.util as engUtil
-import lsst.gb3.engine.distortion as engDist
-from lsst.gb3.engine.stage import BaseStage
+import lsst.pipette.engine.util as engUtil
+import lsst.pipette.engine.distortion as engDist
+from lsst.pipette.engine.stage import BaseStage
 
 class Distortion(BaseStage):
     def __init__(self, *args, **kwargs):

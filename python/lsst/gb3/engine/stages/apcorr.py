@@ -2,7 +2,7 @@
 
 import lsst.sdqa as sdqa
 import lsst.meas.algorithms.ApertureCorrection as maApCorr
-from lsst.gb3.engine.stage import BaseStage
+from lsst.pipette.engine.stage import BaseStage
 
 class Apcorr(BaseStage):
     def __init__(self, *args, **kwargs):

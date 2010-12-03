@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from lsst.gb3.engine.stage import MultiStage
-from lsst.gb3.engine.stageFactory import StageFactory
+from lsst.pipette.engine.stage import MultiStage
+from lsst.pipette.engine.stageFactory import StageFactory
 
 class Phot(MultiStage):
      def __init__(self, name='phot', factory=StageFactory, *args, **kwargs):

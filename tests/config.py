@@ -26,7 +26,7 @@
 import unittest
 import lsst.utils.tests as utilsTests
 
-import lsst.gb3.engine.config as cfg
+import lsst.pipette.engine.config as cfg
 
 
 def compare(config,                     # Configuration being tested

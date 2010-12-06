@@ -32,8 +32,8 @@ import lsst.pex.policy as pexPolicy
 import lsst.afw.detection as afwDet
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.afw.cameraGeom.utils as cameraGeomUtils
-import lsst.gb3.engine.distortion as distortion
-import lsst.gb3.engine.config as engConfig
+import lsst.pipette.engine.distortion as distortion
+import lsst.pipette.engine.config as engConfig
 
 REVERSE_TOL = 0.01                      # Tolerance for difference after reversing, pixels
 ABSOLUTE_TOL = 2.0                      # Tolerance for difference with 'correct' version, pixels

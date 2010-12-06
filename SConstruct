@@ -7,7 +7,7 @@ import lsst.SConsUtils as scons
 
 dependencies = "boost python utils daf_base afw pex_logging pex_exceptions pex_policy".split()
 
-env = scons.makeEnv("gb3_engine",
+env = scons.makeEnv("pipette_engine",
                     r"$HeadURL$",
                     [
                     ])

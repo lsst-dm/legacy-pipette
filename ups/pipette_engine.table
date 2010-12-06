@@ -3,14 +3,14 @@ setupRequired(utils)
 setupRequired(pex_logging)
 setupRequired(pex_policy)
 
+setupRequired(afw)
+setupRequired(coadd_utils)
+setupRequired(coadd_psfmatched)
+setupRequired(ip_diffim)
 setupRequired(ip_isr)
-setupRequired(ip_utils)
 setupRequired(meas_utils)
 setupRequired(meas_algorithms)
 setupRequired(meas_pipeline)
 setupRequired(sdqa)
-
-setupRequired(ip_utils)
-setupRequired(afw)
 
 envAppend(PYTHONPATH, ${PRODUCT_DIR}/python)

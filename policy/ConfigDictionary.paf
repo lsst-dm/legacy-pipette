@@ -144,4 +144,25 @@ definitions: {
 #        maxOccurs: 1
 #        dictionary: {
 #        }
+    coadd: {
+        type: Policy
+        description: "Policy for Coadd stage"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@coadd_utils:policy:CoaddDictonary.paf
     }
+    psfMatchToImage: {
+        type: Policy
+        description: "Policy for PsfMatchToImage stage"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@coadd_psfmatched:policy:PsfMatchToImageDictonary.paf
+    }
+    warp: {
+        type: Policy
+        description: "Policy for Warp stage"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@coadd_utils:policy:WarpDictonary.paf
+    }
+}

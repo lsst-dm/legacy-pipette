@@ -40,11 +40,20 @@ class AddToCoadd(BaseStage):
         @param[in] exposure Exposure to add; must be background-subtracted,
             warped to match the coadd and otherwise preprocessed (e.g. psf-matched to a reference)
             
-        @return {"coaddWeight": coaddWeight} where coaddWeight is the weight with which this exposure
-            was added to the coadd; it is 1/clipped mean variance of the exposure
+        @return {
+            "coadd:", coadd
+            "coaddWeight": coaddWeight
+        }
+        where:
+        - coadd is the lsst.coadd.utils.Coadd object to which the exposure was added
+        - coaddWeight is the weight with which this exposure
+          was added to the coadd; it is 1/clipped mean variance of the exposure
         """
         weightFactor = self._coadd.addExposure(exposure)
-        return {"coaddWeight": coaddWeight}
+        return {
+            "coadd", self._coadd,
+            "coaddWeight": coaddWeight,
+        }
 
 class CoaddStageFactory(StageFactory):
     """StageFactory for the coadd stage
@@ -57,6 +66,16 @@ class CoaddStageFactory(StageFactory):
 
 class Coadd(MultiStage):
     """Coadd stage
+    
+    For each exposure: warp, psf match to image and add to coadd.
+
+    Unanswered questions:
+    - how to tie the stages together; in particular
+      - how to get dimensions, xy0 and wcs and referenceExposure into the first stage
+        (get them from the first exposure, which is the reference exposure)
+      - how to process a list of exposures, especially without having them
+        all in memory at the same time
+      - how to output the coadd at the very end
     """
     def __init__(self, name="coadd", factory=CoaddStageFactory, *args, **kwargs):
         stages = [factory.create([name], *args, **kwargs)

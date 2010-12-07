@@ -40,7 +40,7 @@ class Warp(BaseStage):
         @param[in] xy0 xy0 of resulting exposure
         @param[in] wcs wcs of resulting exposure
         
-        @return {"warpedExposure": warpedExposure}
+        @return {"exposure": warpedExposure}
         """
         warpedExposure = self._warper.warpExposure(dimensions, xy0, wcs, exposure)
-        return {"warpedExposure": warpedExposure}
+        return {"exposure": warpedExposure}

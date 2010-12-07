@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 
+import lsstDebug
 import lsst.pex.logging as pexLog
+import lsst.afw.detection as afwDet
+import lsst.afw.display.ds9 as ds9
+import lsst.ip.isr as ipIsr
+import lsst.pipette.engine.util as engUtil
 
 """This module defines various types of stages that can be executed."""
 
@@ -16,7 +21,9 @@ class BaseStage(object):
     user is encouraged to assert on them as well.
     """
     
-    def __init__(self, name, config=None, log=None, requires=None, provides=None):
+    def __init__(self, name, config=None, log=None, requires=None, provides=None, factory=None):
+        # XXX Should I use factory=None and then ignore it, or **kwargs?  Calling out factory
+        # explicitly seems to give more error-checking capability.
         """Constructor
 
         @param name Name of the stage; used for logging
@@ -24,6 +31,7 @@ class BaseStage(object):
         @param log Logger
         @param requires Set of required data on clipboard
         @param provides Set of provided data on clipboard
+        @param factory Ignored; present for children classes
         """
         self.name = name
         self.config = config
@@ -33,6 +41,8 @@ class BaseStage(object):
         if provides is not None and isinstance(provides, basestring): provides = [provides,]
         self.requires = set(requires) if requires is not None else set()
         self.provides = set(provides) if provides is not None else set()
+        display = lsstDebug.Info(__name__).display
+        self._display = display[self.name] if display and display.has_key(name) else None
         return
 
     def __str__(self):
@@ -78,6 +88,53 @@ class BaseStage(object):
         """
         raise NotImplementedError("This method needs to be overridden by inheriting classes")
 
+    def display(self, exposure=None, sources=None, matches=None, pause=None, **clipboard):
+        """Display image and/or sources
+
+        @param name Name for display dict
+        @param exposure Exposure to display, or None
+        @param sources Sources to display, or None
+        @param matches Matches to display, or None
+        @param pause Pause execution?
+        """
+        if not self._display or self._display <= 0:
+            return
+        frame = self._display
+
+        if exposure:
+            if isinstance(exposure, list):
+                if len(exposure) == 1:
+                    exposure = exposure[0]
+                else:
+                    exposure = ipIsr.assembleCcd(exposure, engUtil.getCcd(exposure[0]))
+            mi = exposure.getMaskedImage()
+            ds9.mtv(mi, frame=frame, title=self.name)
+            x0, y0 = mi.getX0(), mi.getY0()
+        else:
+            x0, y0 = 0, 0
+
+        if sources and isinstance(sources, afwDet.SourceSet) or isinstance(sources, list):
+            for source in sources:
+                xc, yc = source.getXAstrom() - x0, source.getYAstrom() - y0
+                ds9.dot("o", xc, yc, size=4, frame=frame)
+                #try:
+                #    mag = 25-2.5*math.log10(source.getPsfFlux())
+                #    if mag > 15: continue
+                #except: continue
+                #ds9.dot("%.1f" % mag, xc, yc, frame=frame, ctype="red")
+
+        if matches:
+            for match in matches:
+                first = match.first
+                x1, y1 = first.getXAstrom() - x0, first.getYAstrom() - y0
+                ds9.dot("+", x1, y1, size=8, frame=frame, ctype="yellow")
+                second = match.second
+                x2, y2 = second.getXAstrom() - x0, second.getYAstrom() - y0
+                ds9.dot("x", x2, y2, size=8, frame=frame, ctype="red")
+
+        if pause:
+            raw_input("Press [ENTER] when ready....")
+        return
 
 class IgnoredStage(BaseStage):
     """A stage that has been ignored for processing.  It does nothing except exist."""
@@ -152,6 +209,7 @@ class MultiStage(BaseStage):
                 assert stage.checkProvide(**ret), \
                        "Stage %s provisions not met within %s" % (stage.name, self.name, )
                 clipboard.update(ret)
+            stage.display(**clipboard)
         return clipboard
 
 

@@ -5,7 +5,8 @@ from lsst.pipette.engine.stageFactory import StageFactory
 
 class Isr(IterateMultiStage):
     """Instrumental Signature Removal stage."""
-    def __init__(self, name='isr', factory=StageFactory, *args, **kwargs):
+    def __init__(self, name='isr', factory=None, *args, **kwargs):
+        factory = StageFactory(factory)
         stages = factory.create(['saturation',
                                  'overscan',], *args, **kwargs)
         stages += factory.create(['trim',], always=True, *args, **kwargs)

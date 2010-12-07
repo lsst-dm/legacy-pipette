@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from lsst.pipette.engine.stage import MultiStage, IgnoredStage
-from lsst.pipette.engine.stageFactory import StageFactory, StageDict
+from lsst.pipette.engine.stageFactory import StageFactory
 from lsst.pipette.engine.stages.cr import Cr
 from lsst.pipette.engine.stages.detect import Detect
 from lsst.pipette.engine.stages.phot import Phot
@@ -18,28 +18,23 @@ class BootstrapDetect(Detect):
     This allows us to find bright sources for PSF estimation.
     """
     def run(self, **kwargs):
-        super(BootstrapDetect, self).run(thresold=self.config['bootstrap']['thresholdValue'], **kwargs)
-
-class BootstrapStageFactory(StageFactory):
-    """StageFactory for the bootstrap stage."""
-    stages = StageFactory.stages.copy()
-    stages['cr'] = BootstrapCr
-    stages['detect'] = BootstrapDetect
-    stages['phot'] = Phot
-    stages = StageDict(stages)
+        return super(BootstrapDetect, self).run(threshold=self.config['bootstrap']['thresholdValue'], **kwargs)
 
 class Bootstrap(MultiStage):
-    """Bootstrap stage involvesputting inputs together and measuring the PSF."""
-    def __init__(self, name='bootstrap', factory=BootstrapStageFactory, *args, **kwargs):
+    """Bootstrap stage involves putting inputs together and measuring the PSF."""
+    def __init__(self, name='bootstrap', factory=None, *args, **kwargs):
+        factory = StageFactory(factory, cr=BootstrapCr, detect=BootstrapDetect)
         stages = [factory.create('assembly', always=True, *args, **kwargs)]
         stages += factory.create(['defects',
                                   'background',], *args, **kwargs)
         stages += [factory.create('fakePsf', always=True, *args, **kwargs)]
         stages += factory.create(['interpolate',
-                                  'cr',
-                                  'phot',], *args, **kwargs)
-        if not isinstance(stages[-1], IgnoredStage):
+                                  'cr',], *args, **kwargs)
+        photStage = factory.create('phot', *args, **kwargs)
+        stages += [photStage]
+        if not isinstance(photStage, IgnoredStage):
             stages += factory.create(['psf',
-                                      'apcorr',], always=True, *args, **kwargs)
+                                      'apcorr',
+                                      ], always=True, *args, **kwargs)
         super(Bootstrap, self).__init__(name, stages, *args, **kwargs)
         return

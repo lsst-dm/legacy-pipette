@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import lsst.afw.image as afwImage
 import lsst.pipette.engine.util as engUtil
 from lsst.pipette.engine.stage import BaseStage
 
@@ -27,7 +28,7 @@ class Assembly(BaseStage):
         ccd = engUtil.getCcd(egExp)
         miCcd = MaskedImage(ccd.getAllPixels(True).getDimensions())
         for exp in exposure:
-            amp = getAmp(exp)
+            amp = engUtil.getAmp(exp)
             mi = exp.getMaskedImage()
             miAmp = MaskedImage(miCcd, amp.getDataSec(True))
             miAmp <<= mi

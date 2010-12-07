@@ -20,7 +20,7 @@ class Detrend(BaseStage):
         if detrend.getMaskedImage().getDimensions() == exposure.getMaskedImage().getDimensions():
             return detrend
         self.log.log(self.log.INFO, "Trimming %s to match dimensions" % self.name)
-        trim = Trim(log=self.log)
+        trim = Trim('detrend.trim', log=self.log)
         trim.run(exposure=detrend)
         if detrend.getMaskedImage().getDimensions() != exposure.getMaskedImage().getDimensions():
             raise RuntimeError("Detrend %s is of wrong size: %s vs %s" %

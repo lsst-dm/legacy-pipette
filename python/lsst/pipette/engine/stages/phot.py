@@ -9,8 +9,9 @@ class Phot(MultiStage):
      we want to refer to them collectively, and we never want one without
      the other.
      """
-     def __init__(self, name='phot', factory=StageFactory, *args, **kwargs):
-        stages = factory.create(['detect',
-                                 'measure',], always=True, *args, **kwargs)
-        super(Phot, self).__init__(name, stages, *args, **kwargs)
-        return
+     def __init__(self, name='phot', factory=None, *args, **kwargs):
+          factory = StageFactory(factory)
+          stages = factory.create(['detect',
+                                   'measure',], always=True, *args, **kwargs)
+          super(Phot, self).__init__(name, stages, *args, **kwargs)
+          return

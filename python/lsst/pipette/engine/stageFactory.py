@@ -25,71 +25,64 @@ import lsst.pipette.engine.stages.saturation as saturation
 import lsst.pipette.engine.stages.trim as trim
 import lsst.pipette.engine.stages.variance as variance
 
-class NaughtyException(Exception):
-    """Exception when code is being naughty."""
-    pass
-
-class StageDict(dict):
-    """Dict of stages that makes it more difficult for users to corrupt.
-
-    Look, but don't touch!
-    """
-    def __setitem__(self, *args, **kwargs):
-        raise NaughtyException, "You're not supposed to touch this!"
-
-    def __delitem__(self, *args, **kwargs):
-        raise NaughtyException, "You're not supposed to touch this!"
-
-    def clear(self, *args, **kwargs):
-        raise NaughtyException, "You're not supposed to touch this!"
-
-    def pop(self, *args, **kwargs):
-        raise NaughtyException, "You're not supposed to touch this!"
-
-    def popitem(self, *args, **kwargs):
-        raise NaughtyException, "You're not supposed to touch this!"
-
-    def setdefault(self, *args, **kwargs):
-        raise NaughtyException, "You're not supposed to touch this!"
-
-    def update(self, *args, **kwargs):
-        raise NaughtyException, "You're not supposed to touch this!"
-
 
 class StageFactory(object):
-    """A StageFactory creates Stages from a name.
+    """A StageFactory creates Stages from a name."""
 
-    The 'stages' attribute is a dict of Stages that the
-    factory can create.  Classes can inherit from StageFactory
-    to create more or different stages by copying and modifying
-    this attribute.
-    """
-    stages = StageDict({'apcorr': apcorr.Apcorr,
-                        'assembly': assembly.Assembly,
-                        'ast': ast.Ast,
-                        'background': background.Background,
-                        'bias': bias.Bias,
-                        'cal': cal.Cal,
-                        'cr': cr.Cr,
-                        'dark': dark.Dark,
-                        'defects': defects.Defects,
-                        'detect': detect.Detect,
-                        'detrend': detrend.Detrend,
-                        'distortion': distortion.Distortion,
-                        'fakePsf': fakePsf.FakePsf,
-                        'flat': flat.Flat,
-                        'fringe': fringe.Fringe,
-                        'interpolate': interpolate.Interpolate,
-                        'measure': measure.Measure,
-                        'overscan': overscan.Overscan,
-                        'psf': psf.Psf,
-                        'saturation': saturation.Saturation,
-                        'trim': trim.Trim,
-                        'variance': variance.Variance,
-                        })
+    def __init__(self, *args, **kwargs):
+        self._stages = None
+        if args is not None:
+            # Creating 
+            if len(args) > 1:
+                raise RuntimeError("Unable to interpret arguments")
+            source = args[0]
+            if source is not None:
+                assert isinstance(source, StageFactory), "Cannot construct from %s" % type(source)
+                self._stages = source._stages.copy()
 
-    @classmethod
-    def _create(cls, stage, always=False, name=None, config=None, *args, **kwargs):
+        if self._stages is None:
+            self._stages = {'apcorr': apcorr.Apcorr,
+                            'assembly': assembly.Assembly,
+                            'ast': ast.Ast,
+                            'background': background.Background,
+                            'bias': bias.Bias,
+                            'cal': cal.Cal,
+                            'cr': cr.Cr,
+                            'dark': dark.Dark,
+                            'defects': defects.Defects,
+                            'detect': detect.Detect,
+                            'detrend': detrend.Detrend,
+                            'distortion': distortion.Distortion,
+                            'fakePsf': fakePsf.FakePsf,
+                            'flat': flat.Flat,
+                            'fringe': fringe.Fringe,
+                            'interpolate': interpolate.Interpolate,
+                            'measure': measure.Measure,
+                            'overscan': overscan.Overscan,
+                            'psf': psf.Psf,
+                            'saturation': saturation.Saturation,
+                            'trim': trim.Trim,
+                            'variance': variance.Variance,
+                            }
+
+        self._stages.update(kwargs)
+        return
+
+    def add(self, **definitions):
+        self._stages.update(definitions)
+        return self
+
+    def copy(self):
+        return self.__new__(self.__class__, **self._stages)
+
+    def __getitem__(self, name):
+        return self._stages[name]
+
+    def __setitem__(self, name, value):
+        self._stages[name] = value
+        return
+
+    def _create(self, stage, always=False, name=None, config=None, *args, **kwargs):
         """Create a single stage
 
         @param stage Stage name
@@ -98,17 +91,18 @@ class StageFactory(object):
         @param config Configuration for stage
         @param *args,**kwargs Additional arguments passed to stage
         """
-        if not cls.stages.has_key(stage):
+        if not self._stages.has_key(stage):
             raise KeyError("Unknown stage name: %s" % stage)
         if name is None: name = stage
         if always or (config is not None and config['do'][name]):
-            stageType = cls.stages[stage]
+            stageType = self._stages[stage]
         else:
             stageType = IgnoredStage
+        if not 'factory' in kwargs:
+            kwargs['factory'] = self
         return stageType(name, config=config, *args, **kwargs)
 
-    @classmethod
-    def create(cls, stages, always=False, name=None, config=None, *args, **kwargs):
+    def create(self, stages, always=False, name=None, config=None, *args, **kwargs):
         """Create one or more stages
 
         @param stages Stage name or list of stage names
@@ -118,8 +112,8 @@ class StageFactory(object):
         @param *args,**kwargs Additional arguments passed to stage
         """
         if isinstance(stages, basestring):
-            return cls._create(stages, always=always, name=name, config=config, *args, **kwargs)
+            return self._create(stages, always=always, name=name, config=config, *args, **kwargs)
         stageList = list()
         for stage in stages:
-            stageList.append(cls._create(stage, always=always, config=config, *args, **kwargs))
+            stageList.append(self._create(stage, always=always, config=config, *args, **kwargs))
         return stageList

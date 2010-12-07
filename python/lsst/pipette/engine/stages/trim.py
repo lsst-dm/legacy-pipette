@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import lsst.afw.cameraGeom as cameraGeom
 import lsst.pipette.engine.util as engUtil
 from lsst.pipette.engine.stage import BaseStage
 

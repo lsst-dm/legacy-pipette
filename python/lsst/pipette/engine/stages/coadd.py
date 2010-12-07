@@ -27,44 +27,39 @@ import psfMatch
 
 class AddToCoadd(BaseStage):
     def __init__(self, *args, **kwargs):
-        BaseStage.__init__(self,
-            requires=["exposure"], *args, **kwargs)
+        BaseStage.__init__(self, requires=["exposure"], provides=["coadd"], *args, **kwargs)
 
-        policy = self.config["coadd"].getPolicy()
+        self._policy = self.config["coadd"].getPolicy()
 
         self._coadd = coaddUtils.Coadd.fromPolicy(policy)
 
-    def run(self, exposure, dimensions, xy0, wcs, **kwargs):
+    def run(self, exposure=None, coadd=None, **kwargs):
         """Add the exposure to a Coadd
-
+        
         @param[in] exposure Exposure to add; must be background-subtracted,
-            warped to match the coadd and otherwise preprocessed (e.g. psf-matched to a reference)
-            
+        warped to match the coadd and otherwise preprocessed (e.g. psf-matched to a reference)
+        
         @return {
-            "coadd:", coadd
-            "coaddWeight": coaddWeight
+        "coadd:", coadd
         }
         where:
         - coadd is the lsst.coadd.utils.Coadd object to which the exposure was added
         - coaddWeight is the weight with which this exposure
-          was added to the coadd; it is 1/clipped mean variance of the exposure
+        was added to the coadd; it is 1/clipped mean variance of the exposure
         """
-        weightFactor = self._coadd.addExposure(exposure)
+
+        assert exposure, "exposure not provided"
+        if not coadd:
+            coadd = coaddUtils.Coadd.fromPolicy(policy)
+
+        weight = coadd.addExposure(exposure)
+
+        # XXX dropping weight on the floor; how do we want to persist this???
         return {
-            "coadd", self._coadd,
-            "coaddWeight": coaddWeight,
+            "coadd": coadd,
         }
 
-class CoaddStageFactory(StageFactory):
-    """StageFactory for the coadd stage
-    """
-    stages = StageFactory.stages.copy()
-    stages["warp"] = warp.Warp
-    stages["psfMatchToImage"] = psfMatch.PsfMatchToImage
-    stages["addToCoadd"] = AddToCoadd
-    stages = StageDict(stages)
-
-class Coadd(MultiStage):
+class Coadd(IterateMultiStage):
     """Coadd stage
     
     For each exposure: warp, psf match to image and add to coadd.
@@ -77,7 +72,10 @@ class Coadd(MultiStage):
         all in memory at the same time
       - how to output the coadd at the very end
     """
-    def __init__(self, name="coadd", factory=CoaddStageFactory, *args, **kwargs):
-        stages = [factory.create([name], *args, **kwargs)
-            for name in ("warp", "psfMatchToImage", "addToCoadd")]
-        MultiStage.__init__(self, name, stages, *args, **kwargs)
+    def __init__(self, name="coadd", factory=None, *args, **kwargs):
+        factory = StageFactory(factory, warp=warp.Warp, psfMatchToImage=psfMatch.PsfMatchToImage,
+                               addToCoadd=AddToCoadd)
+        stages = factory.create(["warp",
+                                 "psfMatchToImage",
+                                 "addToCoadd"], *args, **kwargs)
+        super(Coadd, self).__init__(name, stages, iterate=['exposure'], *args, **kwargs)

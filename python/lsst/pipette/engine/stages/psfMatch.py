@@ -32,7 +32,7 @@ class PsfMatchToImage(BaseStage):
 
         self._matcher = coaddPsfMatch.PsfMatchToImage.fromPolicy(policy)
 
-    def run(self, exposure, **kwargs):
+    def run(self, exposure, referenceExposure, **kwargs):
         """PSF-match the exposure to a reference exposure in-place
 
         @param[in] exposure Exposure to add; must be warped to match referenceExposure

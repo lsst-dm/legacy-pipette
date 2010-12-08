@@ -28,20 +28,27 @@ import psfMatch
 class AddToCoadd(BaseStage):
     def __init__(self, *args, **kwargs):
         BaseStage.__init__(self,
-            requires=["exposure"],
+            requires=["exposure", "bbox", "wcs"],
             provides=["coadd", "coaddWeight"],
         *args, **kwargs)
 
         self._policy = self.config["coaddPolicy"].getPolicy()
 
-        self._coadd = coaddUtils.Coadd.fromPolicy(policy)
+        self._coadd = None
 
-    def run(self, exposure=None, coadd=None, **kwargs):
+    def run(self, exposure, bbox, wcs, **kwargs):
         """Add the exposure to a Coadd
         
-        @param[in] exposure Exposure to add; must be background-subtracted,
-        warped to match the coadd and otherwise preprocessed (e.g. psf-matched to a reference)
+        The coadd is created on the first call and accumulated indefinitely.
+        Create a new object to start a new coadd.
         
+        @param[in] exposure Exposure to add; must be background-subtracted, warped to match the coadd
+            and otherwise preprocessed (e.g. psf-matched to a reference)
+        @param[in] bbox bounding box for coadd (only used the first time);
+            coadd dimensions = bbox dimensions
+            coadd xy0 = bbox minimum position
+        @param[in] wcs wcs of coadd (only used the first time)
+          
         @return {
         "coadd:", coadd
         }
@@ -50,16 +57,17 @@ class AddToCoadd(BaseStage):
         - coaddWeight is the weight with which this exposure
         was added to the coadd; it is 1/clipped mean variance of the exposure
         """
+        if not self._coadd:
+            self._coadd = coaddUtils.Coadd(
+                bbox = bbox,
+                wcs = wcs,
+                allowedMaskPlanes = self.policy.getPolicy("coaddPolicy").get("allowedMaskPlanes"))
 
-        assert exposure, "exposure not provided"
-        if not coadd:
-            coadd = coaddUtils.Coadd.fromPolicy(policy)
-
-        weight = coadd.addExposure(exposure)
+        weight = self._coadd.addExposure(exposure)
 
         return {
-            "coadd": coadd,
-            "coaddWeight": coaddWeight,
+            "coadd": self._coadd,
+            "coaddWeight": weight,
         }
 
 class Coadd(IterateMultiStage):

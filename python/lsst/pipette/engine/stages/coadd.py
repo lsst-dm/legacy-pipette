@@ -27,9 +27,12 @@ import psfMatch
 
 class AddToCoadd(BaseStage):
     def __init__(self, *args, **kwargs):
-        BaseStage.__init__(self, requires=["exposure"], provides=["coadd"], *args, **kwargs)
+        BaseStage.__init__(self,
+            requires=["exposure"],
+            provides=["coadd", "coaddWeight"],
+        *args, **kwargs)
 
-        self._policy = self.config["coadd"].getPolicy()
+        self._policy = self.config["coaddPolicy"].getPolicy()
 
         self._coadd = coaddUtils.Coadd.fromPolicy(policy)
 
@@ -54,9 +57,9 @@ class AddToCoadd(BaseStage):
 
         weight = coadd.addExposure(exposure)
 
-        # XXX dropping weight on the floor; how do we want to persist this???
         return {
             "coadd": coadd,
+            "coaddWeight": coaddWeight,
         }
 
 class Coadd(IterateMultiStage):
@@ -73,8 +76,10 @@ class Coadd(IterateMultiStage):
       - how to output the coadd at the very end
     """
     def __init__(self, name="coadd", factory=None, *args, **kwargs):
-        factory = StageFactory(factory, warp=warp.Warp, psfMatchToImage=psfMatch.PsfMatchToImage,
-                               addToCoadd=AddToCoadd)
+        factory = StageFactory(factory,
+            warp=warp.Warp,
+            psfMatchToImage=psfMatch.PsfMatchToImage,
+            addToCoadd=AddToCoadd)
         stages = factory.create(["warp",
                                  "psfMatchToImage",
                                  "addToCoadd"], *args, **kwargs)

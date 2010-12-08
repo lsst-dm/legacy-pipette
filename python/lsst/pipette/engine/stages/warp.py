@@ -26,21 +26,25 @@ import lsst.coadd.utils as coaddUtils
 class Warp(BaseStage):
     def __init__(self, *args, **kwargs):
         BaseStage.__init__(self,
-            requires=['exposure', 'dimensions', 'xy0', 'wcs'], *args, **kwargs)
+            requires=["exposure", "dimensions", "xy0", "wcs"], *args, **kwargs)
 
-        policy = self.config['warp'].getPolicy()
+        policy = self.config["warpPolicy"].getPolicy()
 
         self._warper = coaddUtils.Warp.fromPolicy(policy)
 
     def run(self, exposure, **kwargs):
         """Warp an Exposure to a specified size, xy0 and WCS
+        
+        Warning: overwrites the exposure on the clipboard with the new exposure
+        (unlike the real warping stage, which outputs warpedExposure);
+        that makes this stage easier to use in pipette but discards data.
 
         @param[in] exposure Exposure to process
         @param[in] dimensions dimensions of resulting exposure
         @param[in] xy0 xy0 of resulting exposure
         @param[in] wcs wcs of resulting exposure
         
-        @return {"exposure": warpedExposure}
+        @return {"exposure": exposure}
         """
         warpedExposure = self._warper.warpExposure(dimensions, xy0, wcs, exposure)
-        return {"exposure": warpedExposure}
+        return {"exposure": exposure}

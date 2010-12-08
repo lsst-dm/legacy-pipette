@@ -28,7 +28,7 @@ class PsfMatchToImage(BaseStage):
         BaseStage.__init__(self,
             requires=["exposure", "referenceExposure"], *args, **kwargs)
 
-        policy = self.config["psfMatchToImage"].getPolicy()
+        policy = self.config["psfMatchToImagePolicy"].getPolicy()
 
         self._matcher = coaddPsfMatch.PsfMatchToImage.fromPolicy(policy)
 

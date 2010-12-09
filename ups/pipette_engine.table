@@ -5,7 +5,7 @@ setupRequired(pex_policy)
 
 setupRequired(afw)
 setupRequired(coadd_utils)
-setupRequired(coadd_psfmatched)
+setupOptional(coadd_psfmatched)
 setupRequired(ip_diffim)
 setupRequired(ip_isr)
 setupRequired(meas_utils)

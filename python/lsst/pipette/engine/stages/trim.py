@@ -39,24 +39,10 @@ class Trim(BaseStage):
             amp = cameraGeom.cast_Amp(exposure.getDetector())
             diskDataSec = amp.getDiskDataSec()
             self.log.log(self.log.INFO, "Trimming amp %s: %s" % (amp.getId(), diskDataSec))
-            miAmp = MaskedImage(mi, diskDataSec)
+            miTrim = MaskedImage(mi, diskDataSec)
             amp.setTrimmed(True)
+            miAmp = MaskedImage(amp.prepareAmpData(miTrim.getImage()),
+                                amp.prepareAmpData(miTrim.getMask()),
+                                amp.prepareAmpData(miTrim.getVariance()))
             exposure.setMaskedImage(miAmp)
-        return
-
-    def _trimAmp(self, miTo, miFrom, amp, toDatasec):
-        """Trim overscan from amplifier
-
-        @param miTo Target MaskedImage
-        @param miFrom Source MaskedImage
-        @param amp Amplifier being trimmed
-        @param toDatasec Data section on target
-        """
-        MaskedImage = type(miTo)
-        fromDatasec = amp.getDiskDataSec()
-        self.log.log(self.log.INFO, "Trimming amp %s: %s --> %s" % (amp.getId(), fromDatasec, toDatasec))
-        trimAmp = amp.prepareAmpData(MaskedImage(miFrom, fromDatasec))
-        trimImage = MaskedImage(miTo, toDatasec)
-        trimImage <<= trimAmp
-        amp.setTrimmed(True)
         return

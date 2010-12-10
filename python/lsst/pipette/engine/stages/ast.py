@@ -8,6 +8,17 @@ import lsst.meas.astrom.sip as astromSip
 import lsst.meas.astrom.verifyWcs as astromVerify
 from lsst.pipette.engine.stage import BaseStage
 
+def offsetSources(sources,              # List of sources to offset
+                  dx,                   # x offset
+                  dy,                   # y offset
+                  ):
+    for source in sources:
+        x, y = source.getXAstrom(), source.getYAstrom()
+        source.setXAstrom(x + dx)
+        source.setYAstrom(y + dy)
+    return
+
+
 class Ast(BaseStage):
     def __init__(self, *args, **kwargs):
         super(Ast, self).__init__(requires=['exposure', 'sources'], provides=['matches', 'wcs'],
@@ -55,11 +66,7 @@ class Ast(BaseStage):
                 if y > yMax: yMax = y
             xMin = int(xMin)
             yMin = int(yMin)
-            for source in distSources:
-                x, y = source.getXAstrom(), source.getYAstrom()
-                source.setXAstrom(x - xMin)
-                source.setYAstrom(y - yMin)
-
+            offsetSources(distSources, -xMin, -yMin)
             size = afwGeom.makePointI(int(xMax - xMin + 0.5), int(yMax - yMin + 0.5))
         else:
             distSources = sources
@@ -91,11 +98,23 @@ class Ast(BaseStage):
             source.setRa(sky[0])
             source.setDec(sky[1])
 
+
         verify = dict()                    # Verification parameters
         verify.update(astromSip.sourceMatchStatistics(matches))
         verify.update(astromVerify.checkMatches(matches, exposure, self.log))
         for k, v in verify.items():
             exposure.getMetadata().set(k, v)
+
+        if distortion is not None:
+            # Undo distortion in matches
+            self.log.log(self.log.INFO, "Removing distortion correction.")
+            first = map(lambda match: match.first, matches)
+            second = map(lambda match: match.second, matches)
+            offsetSources(first, xMin, yMin)
+            offsetSources(second, xMin, yMin)
+            distortion.idealToActual(first, copy=False)
+            distortion.idealToActual(second, copy=False)
+
         return {'matches': matches,
                 'wcs': wcs
                 }

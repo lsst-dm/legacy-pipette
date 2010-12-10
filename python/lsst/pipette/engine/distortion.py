@@ -18,53 +18,66 @@ class CameraDistortion(object):
         """
         raise NotImplementedError("Method for %s not implemented" % __name__)
 
-    def _distortSources(self, input, *args, **kwargs):
+    def _distortSources(self, sources, copy=True, *args, **kwargs):
         """Common method to distort/undistort a source or sources.
 
-        @param input Source or iterable of sources to distort
+        @param inSource Source or iterable of sources to distort
         @returns Copy of source or sources with modified coordinates
         """
-        if hasattr(input, "__iter__"):
+        if hasattr(sources, "__iter__"):
             # Presumably an iterable of Sources
-            output = type(input)()
-            for inSource in input:
-                outSource = type(inSource)(inSource)
+            if copy:
+                output = type(sources)()
+            else:
+                output = sources
+            for index, inSource in enumerate(sources):
+                if copy:
+                    outSource = type(inSource)(inSource)
+                else:
+                    outSource = inSource
                 xIn, yIn = inSource.getXAstrom(), inSource.getYAstrom()
                 xOut, yOut = self._distortPosition(xIn, yIn, *args, **kwargs)
                 outSource.setXAstrom(xOut)
                 outSource.setYAstrom(yOut)
-                output.append(outSource)
-        elif isinstance(input, afwDet.Source):
-            output = type(input)(input)
-            xIn, yIn = input.getXAstrom(), input.getYAstrom()
+                if copy:
+                    output.append(outSource)
+        elif isinstance(sources, afwDet.Source):
+            if copy:
+                output = type(sources)(sources)
+            else:
+                output = sources
+            xIn, yIn = sources.getXAstrom(), sources.getYAstrom()
             xOut, yOut = self._distortPosition(xIn, yIn, *args, **kwargs)
             output.setXAstrom(xOut)
             output.setYAstrom(yOut)
-        elif isinstance(input, afwGeom.Point2D):
-            output = type(input)(input)
-            xIn, yIn = input.getX(), input.getY()
+        elif isinstance(sources, afwGeom.Point2D):
+            if copy:
+                output = type(sources)(sources)
+            else:
+                output = sources
+            xIn, yIn = sources.getX(), sources.getY()
             xOut, yOut = self._distortPosition(xIn, yIn, *args, **kwargs)
             output.setX(xOut)
             output.setY(yOut)
         else:
-            raise RuntimeError("Unrecognised type: %s" % str(type(input)))
+            raise RuntimeError("Unrecognised type: %s" % str(type(sources)))
         return output
 
-    def actualToIdeal(self, actual):
+    def actualToIdeal(self, actual, copy=True):
         """Transform source or sources from actual coordinates to ideal coodinates.
 
         @param measured Source or sources with actual (detector) coordinates
         @returns Copy of source or sources with ideal coordinates
         """
-        return self._distortSources(actual)
+        return self._distortSources(actual, copy=copy)
 
-    def idealToActual(self, ideal):
+    def idealToActual(self, ideal, copy=True):
         """Transform source or sources from ideal coordinates to actual coodinates.
 
         @param measured Source or sources with ideal coordinates
         @returns Copy of source or sources with actual (detector) coordinates
         """
-        return self._distortSources(ideal)
+        return self._distortSources(ideal, copy=copy)
 
 def createDistortion(ccd, distConfig):
     """Create a suitable CameraDistortion object
@@ -159,28 +172,33 @@ class RadialDistortion(CameraDistortion):
                 numpy.insert(self.actual, -1, actual)
         return
 
-    def _distortPosition(self, x, y, fromRadii, toRadii):
+    def _distortPosition(self, x, y, rFrom=None, rTo=None):
         """Distort/undistort a position.
 
         @param x X coordinate to distort
         @param y Y coordinate to distort
-        @param fromRadii Vector of lookup table providing the source radii
-        @param toRadii Vector of lookup table providing the target radii
+        @param rFrom Vector of lookup table providing the source radii
+        @param rTo Vector of lookup table providing the target radii
         @returns Copy of input source with distorted/undistorted coordinates
         """
+        assert rFrom is not None, "Source radii not provided"
+        assert rTo is not None, "Target radii not provided"
         x += self.x0
         y += self.y0
         theta = math.atan2(y, x)
         radius = math.hypot(x, y)
-        if radius < fromRadii[0] or radius > fromRadii[-1]:
+        if radius < rFrom[0] or radius > rFrom[-1]:
             raise RuntimeError("Radius (%f from %f,%f) is outside lookup table bounds (%f,%f)" %
-                               (radius, x, y, fromRadii[0], fromRadii[-1]))
-        r = numpy.interp(radius, fromRadii, toRadii)
+                               (radius, x - self.x0, y - self.y0, rFrom[0], rFrom[-1]))
+        r = numpy.interp(radius, rFrom, rTo)
+        if r < rTo[0] or r > rTo[-1]:
+            raise RuntimeError("Radius (%f-->%f from %f,%f) is outside lookup table bounds (%f,%f)" %
+                               (radius, r, x - self.x0, y - self.y0, rTo[0], rTo[-1]))
         return r * math.cos(theta) - self.x0, r * math.sin(theta) - self.y0
 
-    def actualToIdeal(self, sources):
-        return self._distortSources(sources, self.actual, self.ideal)
+    def actualToIdeal(self, sources, copy=True):
+        return self._distortSources(sources, rFrom=self.actual, rTo=self.ideal, copy=copy)
 
-    def idealToActual(self, sources):
-        return self._distortSources(sources, self.ideal, self.actual)
+    def idealToActual(self, sources, copy=True):
+        return self._distortSources(sources, rFrom=self.ideal, rTo=self.actual, copy=copy)
 

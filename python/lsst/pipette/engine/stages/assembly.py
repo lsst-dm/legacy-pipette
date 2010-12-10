@@ -35,6 +35,9 @@ class Assembly(BaseStage):
         exp = afwImage.makeExposure(miCcd, egExp.getWcs())
         exp.setWcs(egExp.getWcs())
         exp.setMetadata(egExp.getMetadata())
+        md = exp.getMetadata()
+        if md.exists('DATASEC'):
+            md.remove('DATASEC')
         exp.setFilter(egExp.getFilter())
         exp.setDetector(ccd)
         exp.getCalib().setExptime(egExp.getCalib().getExptime())

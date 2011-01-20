@@ -1,0 +1,36 @@
+Flow for processing a single CCD
+
+ProcessCcd: process a single CCD
+* Isr: Instrumental Signature Removal
+  + ProcessAmp: process a single amplifier
+    - saturation: mask saturated pixels
+    - overscan: subtract overscan
+    - trim: remove uninteresting pixels
+  + assembly: assemble individual amplifiers into a CCD
+  + bias: bias subtraction
+  + variance: calculate variance
+  + dark: dark subtraction
+  + flat: flat-fielding
+  + fringe: fringe subtraction (not implemented)
+  + defects: mask defects
+  + background: subtract background
+* Bootstrap: get what we need for characterisation before we have it
+  + fakePsf: generate a fake PSF
+  + Fix: fix instrumental problems with dodgy PSF
+    - interpolate: interpolate over bad pixels
+    - cr: identify CRs (but don't replace yet)
+  + Phot: photometry
+    - detect: bright object detection
+    - measure: measure bright objects
+  + psf: determine PSF
+  + apCorr: determine aperture correction
+* Char: characterise image
+  + Fix: fix instrumental problems with real PSF
+    - interpolate: interpolate over bad pixels
+    - cr: remove CRs
+  + Phot: photometry
+    - detect: faint object detection
+    - measure: measure faint objects
+  + distortion: create distortion model
+  + ast: astrometric calibration
+  + cal: photometric calibration

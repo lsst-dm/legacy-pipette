@@ -1,0 +1,248 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    roots: {
+        type: Policy
+        description: "Root directories"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "RootsDictionary.paf"
+    }
+
+    do: {
+        type: Policy
+        description: "Do we do these tasks?"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: {
+            target: Config
+            definitions: {
+                saturation: {
+                    type: boolean
+                    description: "Mask saturated pixels?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                overscan: {
+                    type: boolean
+                    description: "Perform overscan correction?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                bias: {
+                    type: boolean
+                    description: "Perform bias correction?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                dark: {
+                    type: boolean
+                    description: "Perform dark correction?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                flat: {
+                    type: boolean
+                    description: "Perform flat correction?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                fringe: {
+                    type: boolean
+                    description: "Perform fringe correction?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                defects: {
+                    type: boolean
+                    description: "Mask defects?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                interpolate: {
+                    type: boolean
+                    description: "Interpolate over bad pixels?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                trim: {
+                    type: boolean
+                    description: "Trim bias sections?"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    default: true
+                }
+                variance: {
+                    type: boolean
+                    description: "Calculate image variance"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    default: true
+                }
+                assembly: {
+                    type: boolean
+                    description: "Assemble amplifiers into a single CCD image"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    default: true
+                }
+                background: {
+                    type: boolean
+                    description: "Perform background subtraction?"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    default: false
+                }
+                phot: {
+                    type: boolean
+                    description: "Perform photometry?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                cr: {
+                    type: boolean
+                    description: "Mask cosmic rays?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                distortion: {
+                    type: boolean
+                    description: "Apply optical distortion?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                ast: {
+                    type: boolean
+                    description: "Perform astrometric calibration?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                cal: {
+                    type: boolean
+                    description: "Perform photometric calibration?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+            }
+        }
+    }
+
+    bootstrap: {
+        type: Policy
+        description: "Policy for bootstrapping the PSF"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "bootstrapDictionary.paf"
+    }
+
+    defects: {
+        type: Policy
+        description: "Policy for handling defects"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "defectsDictionary.paf"
+    }
+
+    background: {
+        type: Policy
+        description: "Background subtraction policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_utils:policy:BackgroundDictionary.paf
+    }
+    detect: {
+        type: Policy
+        description: "Source detection policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_utils:policy:DetectionDictionary.paf
+    }
+    measure: {
+        type: Policy
+        description: "Source measurement policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_algorithms:policy:MeasureSourcesDictionary.paf
+    }
+    psf: {
+        type: Policy
+        description: "PSF determination policies"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: {
+            target: Config
+            definitions: {
+                select: {
+                    type: Policy
+                    description: "PSF star selection policy"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    dictionary: @@meas_algorithms:policy:PsfSelectionRhlDictionary.paf
+                }
+                algorithm: {
+                    type: Policy
+                    description: "PSF measurement policy"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    dictionary: @@meas_algorithms:policy:PsfAlgorithmRhlDictionary.paf
+                }
+            }
+        }
+    }
+    apcorr: {
+        type: Policy
+        description: "Aperture correction policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_algorithms:policy:ApertureCorrectionDictionary.paf
+    }
+    cr: {
+        type: Policy
+        description: "Cosmic rays masking policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_algorithms:policy:CrRejectDictionary.paf
+    }
+    distortion: {
+        type: Policy
+        description: "Distortion configuration"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "distortionDictionary.paf"
+    }
+    ast: {
+        type: Policy
+        description: "Astrometric calibration policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_pipeline:policy:WcsDeterminationStageDictionary.paf
+    }
+    filters: {
+        type: Policy
+        description: "Filter translation table: data --> catalog"
+        minOccurs: 0
+        maxOccurs: 1
+    }
+#    cal: {
+#        type: Policy
+#        description: "Perform photometric calibration?"
+#        minOccurs: 0
+#        maxOccurs: 1
+#        dictionary: {
+#        }
+    }

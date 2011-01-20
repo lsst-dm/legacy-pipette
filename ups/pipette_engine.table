@@ -1,0 +1,16 @@
+setupRequired(utils)
+
+setupRequired(pex_logging)
+setupRequired(pex_policy)
+
+setupRequired(ip_isr)
+setupRequired(ip_utils)
+setupRequired(meas_utils)
+setupRequired(meas_algorithms)
+setupRequired(meas_pipeline)
+setupRequired(sdqa)
+
+setupRequired(ip_utils)
+setupRequired(afw)
+
+pathPrepend(PYTHONPATH, ${PRODUCT_DIR}/python)

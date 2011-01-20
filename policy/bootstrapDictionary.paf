@@ -1,0 +1,42 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    model: {
+        type: string
+        description: "PSF model type"
+        minOccurs: 1
+        maxOccurs: 1
+        default: SingleGaussian
+        allowed:  {
+            value: "SingleGaussian"
+            description: "Single Gaussian model"
+        }
+        allowed: {
+            value: "DoubleGaussian"
+            description: "Double Gaussian model"
+        }
+    }
+    fwhm: {
+        type: double
+        description: "FWHM of PSF model (arcsec)"
+        minOccurs: 1
+        maxOccurs: 1
+        default: 1.0
+    }
+    size: {
+        type: int
+        description: "Size of PSF model (pixels)"
+        minOccurs: 1
+        maxOccurs: 1
+        default: 15
+    }
+    thresholdValue: {
+        type: double
+        description: "Threshold (stdev) for PSF stars"
+        minOccurs: 1
+        maxOccurs: 1
+        default: 25.0
+    }
+}

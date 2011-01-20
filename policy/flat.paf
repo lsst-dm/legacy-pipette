@@ -1,0 +1,7 @@
+do: {
+    flat: false
+    fringe: false
+    phot: false
+    cr: false
+    scale: true
+}

@@ -1,0 +1,25 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    output: {
+        type: string
+        description: "Root directory for output data"
+        minOccurs: 0
+        maxOccurs: 1
+        default: "."
+    }
+    data: {
+        type: string
+        description: "Root directory for data"
+        minOccurs: 0
+        maxOccurs: 1
+    }
+    calib: {
+        type: string
+        description: "Root directory for calibrations"
+        minOccurs: 0
+        maxOccurs: 1
+    }
+}

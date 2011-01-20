@@ -1,0 +1,22 @@
+#<?cfg paf policy>
+
+do: {
+    saturation: true
+    overscan: true
+    flat: false
+    cr: true
+    phot: true
+    scale: true
+}
+
+detect: {
+    thresholdValue: 5.0
+    thresholdType: stdev
+}
+
+measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
+
+cr: {
+    nCrPixelMax: 200000
+}
+

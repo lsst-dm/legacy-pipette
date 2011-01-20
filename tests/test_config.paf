@@ -1,0 +1,13 @@
+#<?cfg paf policy ?>
+#
+# this is a comment
+#
+integer: 1                      # Integer
+float: 3.21                     # Float
+truth: true                     # Boolean true
+falsehood: false                # Boolean false
+string: this is a string        # String
+policy: {
+        subpolicy: true
+}
+array: 1 2 3 4 5                # Array

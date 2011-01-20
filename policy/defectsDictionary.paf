@@ -1,0 +1,13 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    grow: {
+        type: "int"
+        description: "Growth radius"
+        minOccurs: 0
+        maxOccurs: 1
+        default: 1
+    }
+}

@@ -1,0 +1,68 @@
+#<?cfg paf policy>
+
+sources: {
+    id: {
+        format: "%06d"
+        get: getId
+    }
+    amp: {
+        format: "%04d"
+        get: getAmpExposureId
+    }
+    x: {
+        format: "%8.3f"
+        get: getXAstrom
+    }
+    y: {
+        format: "%8.3f"
+        get: getYAstrom
+    }
+    xerr: {
+        format: "%8.3f"
+        get: getXAstromErr
+    }
+    yerr: {
+        format: "%8.3f"
+        get: getYAstromErr
+    }
+    ra: {
+        format: "%16.10f"
+        get: getRa
+    }
+    dec: {
+        format: "%16.10f"
+        get: getDec
+    }
+    Ixx: {
+        format: "%9.3f"
+        get: getIxx
+    }
+    Ixy: {
+        format: "%9.3f"
+        get: getIxy
+    }
+    Iyy: {
+        format: "%9.3f"
+        get: getIxy
+    }
+    psfflux: {
+        format: "%11g"
+        get: getPsfFlux
+    }
+    apflux: {
+        format: "%11g"
+        get: getApFlux
+    }
+    psffluxerr: {
+        format: "%11g"
+        get: getPsfFluxErr
+    }
+    apfluxerr: {
+        format: "%11g"
+        get: getApFluxErr
+    }
+    flags: {
+        format: "0x%04x"
+        get: getFlagForDetection
+    }
+}

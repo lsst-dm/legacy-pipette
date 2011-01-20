@@ -1,0 +1,35 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    radial: {
+        type: Policy
+        description: "Radial distortion configuration"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: {
+            target: Config
+            definitions: {
+                coeffs: {
+                    type: double
+                    description: "Radial distortion polynomial coefficients, from highest power down to constant (typically ending as 1.0, 0.0)"
+                    minOccurs: 0
+                }
+                actualToIdeal: {
+                    type: bool
+                    description: "Whether the coefficients are suitable for actual-to-ideal (TRUE) or ideal-to-actual (FALSE)"
+                    minOccurs: 0
+                    maxOccurs: 1
+                }
+                step: {
+                    type: double
+                    description: "Step size for lookup table (pixels)"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    default: 10.0
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,173 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    roots: {
+        type: Policy
+        description: "Root directories"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "RootsDictionary.paf"
+    }
+
+    do: {
+        type: Policy
+        description: "Do we do these tasks?"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: {
+            target: Config
+            definitions: {
+                saturation: {
+                    type: boolean
+                    description: "Mask saturated pixels?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                overscan: {
+                    type: boolean
+                    description: "Perform overscan correction?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                bias: {
+                    type: boolean
+                    description: "Perform bias correction?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                dark: {
+                    type: boolean
+                    description: "Perform dark correction?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                flat: {
+                    type: boolean
+                    description: "Perform flat correction?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                fringe: {
+                    type: boolean
+                    description: "Perform fringe correction?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                trim: {
+                    type: boolean
+                    description: "Trim bias sections?"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    default: true
+                }
+                variance: {
+                    type: boolean
+                    description: "Calculate image variance"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    default: true
+                }
+                assembly: {
+                    type: boolean
+                    description: "Assemble amplifiers into a single CCD image"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    default: true
+                }
+                phot: {
+                    type: boolean
+                    description: "Perform photometry?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                cr: {
+                    type: boolean
+                    description: "Mask cosmic rays?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+                scale: {
+                    type: boolean
+                    description: "Scale exposures by background?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
+            }
+        }
+    }
+    background: {
+        type: Policy
+        description: "Background measurement policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_utils:policy:BackgroundDictionary.paf
+    }
+    cr: {
+        type: Policy
+        description: "Cosmic rays masking policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_algorithms:policy:CrRejectDictionary.paf
+    }
+    detect: {
+        type: Policy
+        description: "Source detection policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_utils:policy:DetectionDictionary.paf
+    }
+    measure: {
+        type: Policy
+        description: "Source measurement policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_algorithms:policy:MeasureSourcesDictionary.paf
+    }
+    scale: {
+        type: Policy
+        description: "Exposure scaling policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: {
+            target: Config
+            definitions: {
+                iterate: {
+                    type: int
+                    description: "Number of iterations"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: 10
+                }
+            }
+        }
+    }
+    combine: {
+        type: Policy
+        description: "Combination policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: {
+            target: Config
+            definitions: {
+                rows: {
+                    type: int
+                    description: "Number of rows to read at once"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    default: 256
+                }
+            }
+        }
+    }
+}

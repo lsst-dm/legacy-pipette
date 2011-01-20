@@ -11,6 +11,16 @@ setupRequired(meas_pipeline)
 setupRequired(sdqa)
 
 setupRequired(ip_utils)
+
+setupOptional(obs_subaru)
+setupOptional(obs_cfht)
+setupOptional(obs_lsstSim)
+
+setupRequired(daf_persistence)
 setupRequired(afw)
 
+setupOptional(matplotlib)
+
+pathPrepend(PATH, ${PRODUCT_DIR}/bin)
+pathPrepend(PYTHONPATH, ${PRODUCT_DIR}/bin)
 pathPrepend(PYTHONPATH, ${PRODUCT_DIR}/python)

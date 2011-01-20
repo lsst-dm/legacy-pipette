@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-from lsst.pipette.engine.stage import MultiStage
-from lsst.pipette.engine.stageFactory import StageFactory
+from lsst.pipette.stage import MultiStage
+from lsst.pipette.stageFactory import StageFactory
 
-from lsst.pipette.engine.stages.isr import Isr
-from lsst.pipette.engine.stages.bootstrap import Bootstrap
-from lsst.pipette.engine.stages.phot import Phot
-from lsst.pipette.engine.stages.characterize import Characterize
+from lsst.pipette.stages.isr import Isr
+from lsst.pipette.stages.bootstrap import Bootstrap
+from lsst.pipette.stages.phot import Phot
+from lsst.pipette.stages.characterize import Characterize
 
 class CcdProcessing(MultiStage):
     """Processing of a single CCD."""

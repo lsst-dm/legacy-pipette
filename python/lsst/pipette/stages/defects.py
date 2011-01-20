@@ -2,8 +2,8 @@
 
 import lsst.ip.isr as ipIsr
 import lsst.meas.algorithms as measAlg
-import lsst.pipette.engine.util as engUtil
-from lsst.pipette.engine.stage import BaseStage
+import lsst.pipette.util as pipUtil
+from lsst.pipette.stage import BaseStage
 
 class Defects(BaseStage):
     def __init__(self, *args, **kwargs):
@@ -19,7 +19,7 @@ class Defects(BaseStage):
 
         policy = self.config['defects']
         defects = measAlg.DefectListT()
-        ccd = engUtil.getCcd(exposure)
+        ccd = pipUtil.getCcd(exposure)
         statics = ccd.getDefects() # Static defects
         for defect in statics:
             bbox = defect.getBBox()

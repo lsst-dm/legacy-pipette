@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from lsst.pipette.engine.stage import IterateMultiStage
-from lsst.pipette.engine.stageFactory import StageFactory
+from lsst.pipette.stage import IterateMultiStage
+from lsst.pipette.stageFactory import StageFactory
 
 class Isr(IterateMultiStage):
     """Instrumental Signature Removal stage."""

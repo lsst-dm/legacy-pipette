@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import lsst.meas.utils.sourceDetection as muDetection
-from lsst.pipette.engine.stage import BaseStage
+from lsst.pipette.stage import BaseStage
 
 class Background(BaseStage):
     def __init__(self, name, requires='exposure', provides=['background', 'exposure'], *args, **kwargs):

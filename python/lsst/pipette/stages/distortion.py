@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import lsst.pipette.engine.util as engUtil
-import lsst.pipette.engine.distortion as engDist
-from lsst.pipette.engine.stage import BaseStage
+import lsst.pipette.util as pipUtil
+import lsst.pipette.distortion as pipDist
+from lsst.pipette.stage import BaseStage
 
 class Distortion(BaseStage):
     def __init__(self, *args, **kwargs):
@@ -15,6 +15,6 @@ class Distortion(BaseStage):
         @param exposure Exposure from which to get CCD
         """
         assert exposure, "No exposure provided"
-        ccd = engUtil.getCcd(exposure)
-        dist = engDist.createDistortion(ccd, self.config['distortion'])
+        ccd = pipUtil.getCcd(exposure)
+        dist = pipDist.createDistortion(ccd, self.config['distortion'])
         return {'distortion': dist}

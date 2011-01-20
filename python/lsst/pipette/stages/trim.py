@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import lsst.afw.cameraGeom as cameraGeom
-import lsst.pipette.engine.util as engUtil
-from lsst.pipette.engine.stage import BaseStage
+import lsst.pipette.util as pipUtil
+from lsst.pipette.stage import BaseStage
 
 class Trim(BaseStage):
     def __init__(self, *args, **kwargs):
@@ -17,9 +17,9 @@ class Trim(BaseStage):
         assert exposure, "No exposure provided"
         mi = exposure.getMaskedImage()
         MaskedImage = type(mi)
-        if engUtil.detectorIsCcd(exposure):
+        if pipUtil.detectorIsCcd(exposure):
             # Effectively doing CCD assembly since we have all amplifiers
-            ccd = engUtil.getCcd(exposure)
+            ccd = pipUtil.getCcd(exposure)
             miCcd = MaskedImage(ccd.getAllPixels(True).getDimensions())
             for amp in ccd:
                 diskDataSec = amp.getDiskDataSec()

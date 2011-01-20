@@ -3,7 +3,7 @@
 import lsst.afw.math as afwMath
 import lsst.afw.detection as afwDet
 import lsst.meas.algorithms as measAlg
-from lsst.pipette.engine.stage import BaseStage
+from lsst.pipette.stage import BaseStage
 
 class Cr(BaseStage):
     def __init__(self, *args, **kwargs):

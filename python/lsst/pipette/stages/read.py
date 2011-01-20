@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from lsst.pipette.engine.stage import BaseStage
+from lsst.pipette.stage import BaseStage
 import lsst.afw.image as afwImage
 
 class Read(BaseStage):

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import lsst.ip.isr as ipIsr
-import lsst.pipette.engine.util as engUtil
-from lsst.pipette.engine.stage import BaseStage
+import lsst.pipette.util as pipUtil
+from lsst.pipette.stage import BaseStage
 
 class Saturation(BaseStage):
     def __init__(self, *args, **kwargs):
@@ -15,12 +15,12 @@ class Saturation(BaseStage):
         @param exposure Exposure to process
         """
         assert exposure, "No exposure provided"
-        ccd = engUtil.getCcd(exposure)
+        ccd = pipUtil.getCcd(exposure)
         mi = exposure.getMaskedImage()
         Exposure = type(exposure)
         MaskedImage = type(mi)
         for amp in ccd:
-            if not engUtil.haveAmp(exposure, amp):
+            if not pipUtil.haveAmp(exposure, amp):
                 continue
             saturation = amp.getElectronicParams().getSaturationLevel()
             miAmp = MaskedImage(mi, amp.getDiskDataSec())

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import lsst.ip.isr as ipIsr
-from lsst.pipette.engine.stages.detrend import Detrend
+from lsst.pipette.stages.detrend import Detrend
 
 class Bias(Detrend):
     def run(self, exposure=None, detrends=None, **kwargs):

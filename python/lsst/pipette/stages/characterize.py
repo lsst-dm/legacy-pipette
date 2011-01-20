@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from lsst.pipette.engine.stage import MultiStage
-from lsst.pipette.engine.stageFactory import StageFactory
-from lsst.pipette.engine.stages.phot import Phot
+from lsst.pipette.stage import MultiStage
+from lsst.pipette.stageFactory import StageFactory
+from lsst.pipette.stages.phot import Phot
 
 class Characterize(MultiStage):
     def __init__(self, name='char', factory=None, *args, **kwargs):

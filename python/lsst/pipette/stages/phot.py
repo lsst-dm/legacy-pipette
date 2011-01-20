@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from lsst.pipette.engine.stage import MultiStage
-from lsst.pipette.engine.stageFactory import StageFactory
+from lsst.pipette.stage import MultiStage
+from lsst.pipette.stageFactory import StageFactory
 
 class Phot(MultiStage):
      """Photometry stage.

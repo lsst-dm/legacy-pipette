@@ -2,7 +2,7 @@
 
 import math
 import lsst.meas.utils.sourceMeasurement as muMeasurement
-from lsst.pipette.engine.stage import BaseStage
+from lsst.pipette.stage import BaseStage
 
 class Measure(BaseStage):
     def __init__(self, *args, **kwargs):

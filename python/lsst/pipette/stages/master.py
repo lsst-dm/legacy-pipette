@@ -5,14 +5,14 @@ import numpy
 import lsst.afw.math as afwMath
 import lsst.afw.image as afwImage
 
-import lsst.pipette.engine.stage as engStage
-from lsst.pipette.engine.stageFactory import StageFactory
+import lsst.pipette.stage as pipStage
+from lsst.pipette.stageFactory import StageFactory
 
-from lsst.pipette.engine.stages.isr import Isr
-from lsst.pipette.engine.stages.background import BackgroundMeasure
-from lsst.pipette.engine.stages.read import Read
-from lsst.pipette.engine.stages.write import Write
-from lsst.pipette.engine.stages.drop import Drop
+from lsst.pipette.stages.isr import Isr
+from lsst.pipette.stages.background import BackgroundMeasure
+from lsst.pipette.stages.read import Read
+from lsst.pipette.stages.write import Write
+from lsst.pipette.stages.drop import Drop
 
 
 # Caller needs to start the clipboard with something like:
@@ -26,7 +26,7 @@ from lsst.pipette.engine.stages.drop import Drop
 # Note that the 'ident' matrix is constant in ccd (or whatever component) along the rows, and constant in
 # visit (or exposure) along the columns.  A corresponding numpy matrix would be accessed: value[ccd][visit]
 
-class MasterProcessExposure(engStage.IterateStage):
+class MasterProcessExposure(pipStage.IterateStage):
     """Master detrend exposure creation stage."""
     def __init__(self, name='master.process.exposure', *args, **kwargs):
         iterate = ['ident']
@@ -34,7 +34,7 @@ class MasterProcessExposure(engStage.IterateStage):
         super(MasterProcessExposure, self).__init__(name, iterate, stage, *args, **kwargs)
         return
 
-class MasterProcessComponent(engStage.IterateMultiStage):
+class MasterProcessComponent(pipStage.IterateMultiStage):
     """Master detrend processing stage."""
     def __init__(self, name='master.process.comp', factory=None, *args, **kwargs):
         factory = StageFactory(factory, isr=Isr, read=Read, write=Write, drop=Drop, bg=BackgroundMeasure)
@@ -47,7 +47,7 @@ class MasterProcessComponent(engStage.IterateMultiStage):
         super(MasterProcessComponent, self).__init__(name, iterate, None, stages, *args, **kwargs)
         return
 
-class MasterScale(engStage.BaseStage):
+class MasterScale(pipStage.BaseStage):
     """Master detrend scaling stage."""
     def __init__(self, name='master.scale', *args, **kwargs):
         super(MasterScale, self).__init__(name, requires='background', provides='scale', *args, **kwargs)
@@ -105,7 +105,7 @@ class MasterScale(engStage.BaseStage):
 
         return {'scale': numpy.exp(fluxes)}
 
-class MasterCombineExposure(engStage.IterateStage):
+class MasterCombineExposure(pipStage.IterateStage):
     """Master detrend exposure creation stage."""
     def __init__(self, name='master.exposure', *args, **kwargs):
         iterate = ['ident']
@@ -113,7 +113,7 @@ class MasterCombineExposure(engStage.IterateStage):
         super(MasterCombineExposure, self).__init__(name, iterate, stage, *args, **kwargs)
         return
 
-class MasterCombineComponent(engStage.BaseStage):
+class MasterCombineComponent(pipStage.BaseStage):
     """Master detrend combination stage"""
     def __init__(self, name='master.combine', *args, **kwargs):
         super(MasterCombineComponent, self).__init__(name, requires=['ident', 'outButler'],
@@ -176,7 +176,7 @@ class MasterCombineComponent(engStage.BaseStage):
 
         return {'master': master}
 
-class Master(engStage.MultiStage):
+class Master(pipStage.MultiStage):
     """Master detrend creation."""
     def __init__(self, name='master', factory=None, *args, **kwargs):
         factory = StageFactory(factory, 

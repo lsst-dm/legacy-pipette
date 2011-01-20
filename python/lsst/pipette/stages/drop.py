@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from lsst.pipette.engine.stage import BaseStage
+from lsst.pipette.stage import BaseStage
 import gc
 
 def drop(clipboard,                     # Clipboard with components to drop

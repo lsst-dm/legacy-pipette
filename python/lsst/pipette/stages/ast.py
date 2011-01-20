@@ -6,7 +6,7 @@ import lsst.meas.astrom as measAst
 import lsst.meas.astrom.net as astromNet
 import lsst.meas.astrom.sip as astromSip
 import lsst.meas.astrom.verifyWcs as astromVerify
-from lsst.pipette.engine.stage import BaseStage
+from lsst.pipette.stage import BaseStage
 
 def offsetSources(sources,              # List of sources to offset
                   dx,                   # x offset

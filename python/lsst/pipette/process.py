@@ -6,7 +6,7 @@ import lsst.afw.detection as afwDet
 import lsst.afw.image as afwImage
 import lsst.afw.display.ds9 as ds9
 import lsst.ip.isr as ipIsr
-import lsst.pipette.engine.util as engUtil
+import lsst.pipette.util as pipUtil
 
 """This module defines the base class for processes."""
 
@@ -109,7 +109,7 @@ class Process(object):
                 if len(exposure) == 1:
                     exposure = exposure[0]
                 else:
-                    exposure = ipIsr.assembleCcd(exposure, engUtil.getCcd(exposure[0]))
+                    exposure = ipIsr.assembleCcd(exposure, pipUtil.getCcd(exposure[0]))
             mi = exposure.getMaskedImage()
             ds9.mtv(mi, frame=frame, title=name)
             x0, y0 = mi.getX0(), mi.getY0()

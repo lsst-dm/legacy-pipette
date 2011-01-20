@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-from lsst.pipette.engine.stage import MultiStage, IgnoredStage
-from lsst.pipette.engine.stageFactory import StageFactory
-from lsst.pipette.engine.stages.cr import CrIdentify
-from lsst.pipette.engine.stages.detect import DetectBright
-from lsst.pipette.engine.stages.phot import Phot
+from lsst.pipette.stage import MultiStage, IgnoredStage
+from lsst.pipette.stageFactory import StageFactory
+from lsst.pipette.stages.cr import CrIdentify
+from lsst.pipette.stages.detect import DetectBright
+from lsst.pipette.stages.phot import Phot
 
 class Bootstrap(MultiStage):
     """Bootstrap stage involves putting inputs together and measuring the PSF."""

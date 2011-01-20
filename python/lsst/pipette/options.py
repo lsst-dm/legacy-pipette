@@ -22,14 +22,14 @@
 #
 
 import optparse
-import lsst.pipette.engine.config as engConfig
+import lsst.pipette.config as pipConfig
 
 """This module defines the option parsing for pipette LSST Algorithms testing."""
 
 class OptionParser(optparse.OptionParser):
     """OptionParser is an optparse.OptionParser that
     provides some standard arguments.  These are used to
-    populate the 'config' attribute as a lsst.pipette.engine.Config
+    populate the 'config' attribute as a lsst.pipette.config.Config
     """
     def __init__(self, *args, **kwargs):
         optparse.OptionParser.__init__(self, *args, **kwargs)
@@ -48,7 +48,7 @@ class OptionParser(optparse.OptionParser):
                         help="Debugging output?")
         self.add_option("--log", dest="log", type="string", default=None, help="Logging destination")
 
-        self.set_default('config', engConfig.Config())
+        self.set_default('config', pipConfig.Config())
         return
 
     def parse_args(self,                # OptionParser
@@ -58,7 +58,7 @@ class OptionParser(optparse.OptionParser):
 
         @params overrides Configurations to override default configuration
         """
-        config = engConfig.configuration(*overrides)
+        config = pipConfig.configuration(*overrides)
         opts, args = optparse.OptionParser.parse_args(self)
         config.merge(opts.config)
 
@@ -77,14 +77,14 @@ def optConfigDefinition(option, opt, value, parser):
 
 # optparse callback to override configurations
 def optConfigOverride(option, opt, value, parser):
-    override = engConfig.Config(value)
+    override = pipConfig.Config(value)
     parser.values.config.merge(override)
     return
 
 # optparse callback to set root directories
 def optConfigRoot(option, opt, value, parser):
     if not parser.values.config.has_key('roots'):
-        parser.values.config['roots'] = engConfig.Config()
+        parser.values.config['roots'] = pipConfig.Config()
     root = parser.values.config['roots']
     root[option.dest] = value
     return

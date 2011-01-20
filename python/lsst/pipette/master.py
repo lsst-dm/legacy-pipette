@@ -5,10 +5,10 @@ import numpy
 import lsst.afw.math as afwMath
 import lsst.afw.image as afwImage
 
-import lsst.pipette.engine.process as pipProc
-import lsst.pipette.engine.isr as pipIsr
-import lsst.pipette.engine.background as pipBackground
-import lsst.pipette.engine.phot as pipPhot
+import lsst.pipette.process as pipProc
+import lsst.pipette.isr as pipIsr
+import lsst.pipette.background as pipBackground
+import lsst.pipette.phot as pipPhot
 
 
 class Master(pipProc.Process):

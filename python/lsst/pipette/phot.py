@@ -5,7 +5,7 @@ import math
 import lsst.meas.utils.sourceDetection as muDetection
 import lsst.meas.utils.sourceMeasurement as muMeasurement
 
-import lsst.pipette.engine.process as pipProc
+import lsst.pipette.process as pipProc
 
 
 class Phot(pipProc.Process):

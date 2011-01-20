@@ -3,8 +3,8 @@
 import lsst.afw.math as afwMath
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.ip.isr as ipIsr
-import lsst.pipette.engine.util as engUtil
-import lsst.pipette.engine.process as pipProc
+import lsst.pipette.util as pipUtil
+import lsst.pipette.process as pipProc
 
 class Isr(pipProc.Process):
     def run(self, exposure, detrends=None):
@@ -42,12 +42,12 @@ class Isr(pipProc.Process):
         @param exposure Exposure to process
         """
         assert exposure, "No exposure provided"
-        ccd = engUtil.getCcd(exposure)
+        ccd = pipUtil.getCcd(exposure)
         mi = exposure.getMaskedImage()
         Exposure = type(exposure)
         MaskedImage = type(mi)
         for amp in ccd:
-            if not engUtil.haveAmp(exposure, amp):
+            if not pipUtil.haveAmp(exposure, amp):
                 continue
             saturation = amp.getElectronicParams().getSaturationLevel()
             miAmp = MaskedImage(mi, amp.getDiskDataSec())
@@ -63,11 +63,11 @@ class Isr(pipProc.Process):
         @param exposure Exposure to process
         """
         assert exposure, "No exposure provided"
-        ccd = engUtil.getCcd(exposure)
+        ccd = pipUtil.getCcd(exposure)
         mi = exposure.getMaskedImage()
         MaskedImage = type(mi)
         for amp in ccd:
-            if not engUtil.haveAmp(exposure, amp):
+            if not pipUtil.haveAmp(exposure, amp):
                 continue
             biassec = amp.getDiskBiasSec()
 
@@ -94,9 +94,9 @@ class Isr(pipProc.Process):
         assert exposure, "No exposure provided"
         mi = exposure.getMaskedImage()
         MaskedImage = type(mi)
-        if engUtil.detectorIsCcd(exposure):
+        if pipUtil.detectorIsCcd(exposure):
             # Effectively doing CCD assembly since we have all amplifiers
-            ccd = engUtil.getCcd(exposure)
+            ccd = pipUtil.getCcd(exposure)
             miCcd = MaskedImage(ccd.getAllPixels(True).getDimensions())
             for amp in ccd:
                 diskDataSec = amp.getDiskDataSec()
@@ -164,8 +164,8 @@ class Isr(pipProc.Process):
         """
         assert exposure, "No exposure provided"
         mi = exposure.getMaskedImage()
-        if engUtil.detectorIsCcd(exposure):
-            ccd = engUtil.getCcd(exposure)
+        if pipUtil.detectorIsCcd(exposure):
+            ccd = pipUtil.getCcd(exposure)
             MaskedImage = type(mi)
             for amp in ccd:
                 miAmp = MaskedImage(mi, amp.getDataSec(True))

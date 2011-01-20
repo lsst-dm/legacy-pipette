@@ -2,7 +2,7 @@
 
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.pipette.engine.util as engUtil
-from lsst.pipette.engine.stage import BaseStage
+from lsst.pipette.stage import BaseStage
 
 class Variance(BaseStage):
     def __init__(self, *args, **kwargs):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from lsst.pipette.engine.stage import BaseStage
-from lsst.pipette.engine.stages.trim import Trim
+from lsst.pipette.stage import BaseStage
+from lsst.pipette.stages.trim import Trim
 
 class Detrend(BaseStage):
     """A base class for stages that apply a detrend image."""

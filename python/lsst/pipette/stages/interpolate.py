@@ -2,7 +2,7 @@
 
 import lsst.afw.math as afwMath
 import lsst.meas.algorithms as measAlg
-from lsst.pipette.engine.stage import BaseStage
+from lsst.pipette.stage import BaseStage
 
 class Interpolate(BaseStage):
     def __init__(self, *args, **kwargs):

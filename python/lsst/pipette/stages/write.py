@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from lsst.pipette.engine.stage import BaseStage
+from lsst.pipette.stage import BaseStage
 
 class Write(BaseStage):
     def __init__(self, name, which={'postISRCCD': 'exposure'}, *args, **kwargs):

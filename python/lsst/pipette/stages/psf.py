@@ -3,7 +3,7 @@
 import lsst.sdqa as sdqa
 import lsst.meas.algorithms.psfSelectionRhl as maPsfSel
 import lsst.meas.algorithms.psfAlgorithmRhl as maPsfAlg
-from lsst.pipette.engine.stage import BaseStage
+from lsst.pipette.stage import BaseStage
 
 class Psf(BaseStage):
     def __init__(self, *args, **kwargs):

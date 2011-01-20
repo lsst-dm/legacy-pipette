@@ -3,6 +3,7 @@
 import os
 import sys
 
+import lsst.pex.logging as pexLog
 import lsst.obs.lsstSim as lsstSim
 import lsst.pipette.config as pipConfig
 import lsst.pipette.ccd as pipCcd
@@ -16,12 +17,13 @@ def run(rerun,                          # Rerun name
         raft,                           # Raft id
         sensor,                         # Sensor id
         config,                         # Configuration
+	log = pexLog.Log.getDefaultLog() # Log object
         ):
     io = pipReadWrite.ReadWrite(lsstSim.LsstSimMapper, ['visit', 'snap', 'raft', 'sensor'],
                                 fileKeys=['visit', 'snap', 'raft', 'sensor', 'channel'], config=config)
     roots = config['roots']
     basename = os.path.join(roots['output'], '%s-%d-%d-%s-%s' % (rerun, visit, snap, raft, sensor))
-    ccdProc = pipCcd.Ccd(config=config)
+    ccdProc = pipCcd.Ccd(config=config, log=log)
     dataId = {'visit': visit, 'snap': snap, 'raft': raft, 'sensor': sensor}
 
     detrends = io.detrends(dataId, config)

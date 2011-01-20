@@ -11,11 +11,11 @@ import lsst.meas.algorithms.psfSelectionRhl as maPsfSel
 import lsst.meas.algorithms.psfAlgorithmRhl as maPsfAlg
 import lsst.meas.algorithms.ApertureCorrection as maApCorr
 import lsst.meas.utils.sourceDetection as muDetection
-import lsst.pipette.engine.util as engUtil
-import lsst.pipette.engine.process as pipProc
-import lsst.pipette.engine.background as pipBackground
-import lsst.pipette.engine.fix as pipFix
-import lsst.pipette.engine.phot as pipPhot
+import lsst.pipette.util as pipUtil
+import lsst.pipette.process as pipProc
+import lsst.pipette.background as pipBackground
+import lsst.pipette.fix as pipFix
+import lsst.pipette.phot as pipPhot
 
 
 class Bootstrap(pipProc.Process):
@@ -80,10 +80,10 @@ class Bootstrap(pipProc.Process):
         egMi = egExp.getMaskedImage()   # The (assumed) model for masked images
         Exposure = type(egExp)
         MaskedImage = type(egMi)
-        ccd = engUtil.getCcd(egExp)
+        ccd = pipUtil.getCcd(egExp)
         miCcd = MaskedImage(ccd.getAllPixels(True).getDimensions())
         for exp in exposureList:
-            amp = engUtil.getAmp(exp)
+            amp = pipUtil.getAmp(exp)
             mi = exp.getMaskedImage()
             miAmp = MaskedImage(miCcd, amp.getDataSec(True))
             miAmp <<= mi
@@ -109,7 +109,7 @@ class Bootstrap(pipProc.Process):
 
         policy = self.config['defects']
         defects = measAlg.DefectListT()
-        ccd = engUtil.getCcd(exposure)
+        ccd = pipUtil.getCcd(exposure)
         statics = ccd.getDefects() # Static defects
         for defect in statics:
             bbox = defect.getBBox()

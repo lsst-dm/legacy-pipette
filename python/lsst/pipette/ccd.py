@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-import lsst.pipette.engine.process as pipProc
-import lsst.pipette.engine.isr as isrProc
-import lsst.pipette.engine.bootstrap as bsProc
-import lsst.pipette.engine.char as charProc
+import lsst.pipette.process as pipProc
+import lsst.pipette.isr as isrProc
+import lsst.pipette.bootstrap as bsProc
+import lsst.pipette.char as charProc
 
 class Ccd(pipProc.Process):
     def __init__(self, Isr=None):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import lsst.meas.utils.sourceDetection as muDetection
-import lsst.pipette.engine.process as pipProc
+import lsst.pipette.process as pipProc
 
 class Background(pipProc.Process):
     def __init__(self, subtract=True, *args, **kwargs):

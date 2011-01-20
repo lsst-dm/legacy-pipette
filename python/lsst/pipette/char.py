@@ -7,11 +7,11 @@ import lsst.meas.astrom.net as astromNet
 import lsst.meas.astrom.sip as astromSip
 import lsst.meas.astrom.verifyWcs as astromVerify
 import lsst.meas.photocal as photocal
-import lsst.pipette.engine.util as engUtil
-import lsst.pipette.engine.distortion as engDist
-import lsst.pipette.engine.process as pipProc
-import lsst.pipette.engine.phot as pipPhot
-import lsst.pipette.engine.fix as pipFix
+import lsst.pipette.util as pipUtil
+import lsst.pipette.distortion as pipDist
+import lsst.pipette.process as pipProc
+import lsst.pipette.phot as pipPhot
+import lsst.pipette.fix as pipFix
 
 class Char(pipProc.Process):
     def run(self, exposure, psf, apcorr, defects=None, wcs=None):
@@ -61,8 +61,8 @@ class Char(pipProc.Process):
         @return Distortion
         """
         assert exposure, "No exposure provided"
-        ccd = engUtil.getCcd(exposure)
-        dist = engDist.createDistortion(ccd, self.config['distortion'])
+        ccd = pipUtil.getCcd(exposure)
+        dist = pipDist.createDistortion(ccd, self.config['distortion'])
         return dist
 
     def ast(self, exposure, sources, distortion=None):

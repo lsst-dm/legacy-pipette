@@ -4,7 +4,7 @@ import re
 import os
 import numpy
 
-import lsst.pipette.engine.config as engConfig
+import lsst.pipette.config as pipConfig
 
 """This module is for writing catalog files from source lists"""
 
@@ -16,8 +16,8 @@ class Catalog(object):
         @param config Configuration specifying format styles
         @param allowNonfinite Boolean indicating whether non-finite values should be written as NaN
         """
-        if not isinstance(config, engConfig.Config):
-            config = engConfig.Config(config)
+        if not isinstance(config, pipConfig.Config):
+            config = pipConfig.Config(config)
         self.config = config
         self.allowNonfinite = allowNonfinite
         return

@@ -3,7 +3,7 @@
 import lsst.afw.math as afwMath
 import lsst.afw.detection as afwDet
 import lsst.meas.algorithms as measAlg
-import lsst.pipette.engine.process as pipProc
+import lsst.pipette.process as pipProc
 
 
 class Fix(pipProc.Process):

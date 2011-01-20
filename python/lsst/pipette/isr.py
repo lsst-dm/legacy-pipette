@@ -125,7 +125,7 @@ class Isr(pipProc.Process):
         return
 
 
-    def _checkDimensions(self, exposure, detrend):
+    def _checkDimensions(self, name, exposure, detrend):
         """Check that dimensions of detrend matches that of exposure
         of interest; trim if necessary.
 
@@ -135,12 +135,12 @@ class Isr(pipProc.Process):
         """
         if detrend.getMaskedImage().getDimensions() == exposure.getMaskedImage().getDimensions():
             return detrend
-        self.log.log(self.log.INFO, "Trimming %s to match dimensions" % self.name)
+        self.log.log(self.log.INFO, "Trimming %s to match dimensions" % name)
         trim = Trim('detrend.trim', log=self.log)
         trim.run(exposure=detrend)
         if detrend.getMaskedImage().getDimensions() != exposure.getMaskedImage().getDimensions():
             raise RuntimeError("Detrend %s is of wrong size: %s vs %s" %
-                               (self.name, detrend.getMaskedImage().getDimensions(),
+                               (name, detrend.getMaskedImage().getDimensions(),
                                 exposure.getMaskedImage().getDimensions()))
         return detrend
 
@@ -152,7 +152,7 @@ class Isr(pipProc.Process):
         """
         assert exposure, "No exposure provided"
         assert bias, "No bias provided"
-        bias = self._checkDimensions(exposure, bias)
+        bias = self._checkDimensions("bias", exposure, bias)
         self.log.log(self.log.INFO, "Debiasing image")
         ipIsr.biasCorrection(exposure, bias)
         return
@@ -196,7 +196,7 @@ class Isr(pipProc.Process):
         """
         assert exposure, "No exposure provided"
         assert dark, "No dark provided"
-        dark = self._checkDimensions(exposure, dark)
+        dark = self._checkDimensions("dark", exposure, dark)
         expTime = float(exposure.getCalib().getExptime())
         darkTime = float(dark.getCalib().getExptime())
         self.log.log(self.log.INFO, "Removing dark (%f sec vs %f sec)" % (expTime, darkTime))
@@ -211,7 +211,7 @@ class Isr(pipProc.Process):
         """
         assert exposure, "No exposure provided"
         assert flat, "No flat provided"
-        flat = self._checkDimensions(exposure, flat)
+        flat = self._checkDimensions("flat", exposure, flat)
         mi = exposure.getMaskedImage()
         image = mi.getImage()
         variance = mi.getVariance()
@@ -234,6 +234,6 @@ class Isr(pipProc.Process):
         """
         assert exposure, "No exposure provided"
         assert fringe, "No fringe provided"
-        fringe = self._checkDimensions(exposure, flat)
+        fringe = self._checkDimensions("fringe", exposure, fringe)
         raise NotimplementedError, "Fringe subtraction is not yet implemented."
 

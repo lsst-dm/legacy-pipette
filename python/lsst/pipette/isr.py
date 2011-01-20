@@ -136,8 +136,7 @@ class Isr(pipProc.Process):
         if detrend.getMaskedImage().getDimensions() == exposure.getMaskedImage().getDimensions():
             return detrend
         self.log.log(self.log.INFO, "Trimming %s to match dimensions" % name)
-        trim = Trim('detrend.trim', log=self.log)
-        trim.run(exposure=detrend)
+        self.trim(detrend)
         if detrend.getMaskedImage().getDimensions() != exposure.getMaskedImage().getDimensions():
             raise RuntimeError("Detrend %s is of wrong size: %s vs %s" %
                                (name, detrend.getMaskedImage().getDimensions(),

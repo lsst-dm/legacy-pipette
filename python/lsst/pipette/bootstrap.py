@@ -19,6 +19,13 @@ import lsst.pipette.phot as pipPhot
 
 
 class Bootstrap(pipProc.Process):
+    def __init__(self, Background=pipBackground.Background, Fix=pipFix.Fix, Phot=pipPhot.Phot,
+                 *args, **kwargs):
+        super(Bootstrap, self).__init__(*args, **kwargs)
+        self._Background = Background
+        self._Fix = Fix
+        self._Phot = Phot
+    
     def run(self, exposureList, wcs=None):
         """Bootstrap a PSF from the exposure
 
@@ -41,17 +48,14 @@ class Bootstrap(pipProc.Process):
             defects = None
 
         if do['background']:
-            bgProc = pipBackground.Background(config=self.config, log=self.log)
-            bg, exposure = bgProc.run(exposure)
+            bg, exposure = self.background(exposure)
 
         psf, wcs = self.fakePsf(exposure, wcs)
 
-        pipFix.Fix(config=self.config, log=self.log, keepCRs=True).run(exposure, psf, defects=defects)
+        self.fix(exposure, psf, defects=defects)
 
         if do['phot']:
-            threshold = self.config['bootstrap']['thresholdValue']
-            phot = pipPhot.Phot(config=self.config, log=self.log, threshold=threshold)
-            sources = phot.run(exposure, psf, wcs=wcs)
+            sources = self.phot(exposure, psf, wcs=wcs)
 
             psf, cellSet = self.psf(exposure, sources)
             apcorr = self.apCorr(exposure, cellSet)
@@ -138,6 +142,15 @@ class Bootstrap(pipProc.Process):
 
         return defects
 
+    def background(self, exposure):
+        """Background subtraction
+
+        @param exposure Exposure to process
+        @return Background, Background-subtracted exposure
+        """
+        background = self._Background(config=self.config, log=self.log)
+        return background.run(exposure)
+
     def fakePsf(self, exposure, wcs=None):
         """Initialise the bootstrap procedure by setting the PSF and WCS
 
@@ -156,6 +169,31 @@ class Bootstrap(pipProc.Process):
         size = bootstrap['size']
         psf = afwDet.createPsf(model, size, size, fwhm/(2*math.sqrt(2*math.log(2))))
         return psf, wcs
+
+
+    def fix(self, exposure, psf, defects=None):
+        """Fix CCD problems (defects, CRs)
+
+        @param exposure Exposure to process
+        @param psf Point Spread Function
+        @param defects Defect list, or None
+        """
+        fix = self._Fix(config=self.config, log=self.log, keepCRs=True)
+        fix.run(exposure, psf, defects=defects)
+
+    def phot(self, exposure, psf, apcorr=None, wcs=None):
+        """Perform photometry
+
+        @param exposure Exposure to process
+        @param psf Point Spread Function
+        @param apcorr Aperture correction, or None
+        @param wcs World Coordinate System, or None
+        @return Source list
+        """
+        threshold = self.config['bootstrap']['thresholdValue']
+        phot = self._Phot(config=self.config, log=self.log, threshold=threshold)
+        return phot.run(exposure, psf, wcs=wcs)
+
 
     def psf(self, exposure, sources):
         """Measure the PSF

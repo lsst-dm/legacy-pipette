@@ -14,6 +14,12 @@ import lsst.pipette.phot as pipPhot
 import lsst.pipette.fix as pipFix
 
 class Char(pipProc.Process):
+    def __init__(self, Fix=pipFix.Fix, Phot=pipPhot.Phot, *args, **kwargs):
+        super(Char, self).__init__(*args, **kwargs)
+        self._Fix = Fix
+        self._Phot = Phot
+        
+    
     def run(self, exposure, psf, apcorr, defects=None, wcs=None):
         """Characterise an exposure: photometry and astrometry
 
@@ -30,10 +36,10 @@ class Char(pipProc.Process):
 
         do = self.config['do']
 
-        pipFix.Fix(config=self.config, log=self.log, keepCRs=False).run(exposure, psf, defects=defects)
+        self.fix(exposure, psf, defects=defects)
+
         if do['phot']:
-            phot = pipPhot.Phot(config=self.config, log=self.log)
-            sources = phot.run(exposure, psf, apcorr=apcorr, wcs=wcs)
+            sources = self.phot(exposure, psf, apcorr=apcorr, wcs=wcs)
         else:
             sources = None
 
@@ -53,6 +59,27 @@ class Char(pipProc.Process):
         self.display('char', exposure=exposure, sources=sources, matches=matches)
         return sources, matches
 
+    def fix(self, exposure, psf, defects=None):
+        """Fix instrumental problems (defects, CRs)
+
+        @param exposure Exposure to process
+        @param psf Point spread function
+        @param defects Defect list, or None
+        """
+        fix = self._Fix(config=self.config, log=self.log, keepCRs=False)
+        fix.run(exposure, psf, defects=defects)
+
+    def phot(self, exposure, psf, apcorr=None, wcs=None):
+        """Perform photometry
+
+        @param exposure Exposure to process
+        @param psf Point spread function
+        @param apcorr Aperture correction
+        @param wcs World Coordinage System
+        @return Source list
+        """
+        phot = self._Phot(config=self.config, log=self.log)
+        return phot.run(exposure, psf, apcorr=apcorr, wcs=wcs)
 
     def distortion(self, exposure):
         """Generate appropriate optical distortion

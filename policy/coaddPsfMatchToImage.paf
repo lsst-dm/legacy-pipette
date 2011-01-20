@@ -1,0 +1,18 @@
+#<?cfg paf policy>
+
+roots: {
+    data: /path/to/data
+    output: /path/for/output
+}
+
+do: {
+    warp: true
+    psfMatchToImage: true
+    addToCoadd: true
+}
+
+warpPolicy: @@coadd_utils:policy/WarpDictionary.paf
+
+psfMatchToImagePolicy: @@coadd_psfmatched:policy/PsfMatchToImageDictionary.paf
+
+addToCoaddPolicy: @@coadd_utils:policy/CoaddDictionary.paf

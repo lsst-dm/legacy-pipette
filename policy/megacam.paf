@@ -1,0 +1,37 @@
+#<?cfg paf policy>
+
+roots: {
+    data: /path/to/data
+    calib: /path/to/calib
+    output: /path/for/output
+}
+
+do: {
+    bias: true
+    flat: true
+    defects: true
+    interpolate: true
+    saturation: true
+    overscan: true
+    background: true
+    cr: true
+    phot: true
+    #ast: true
+    #cal: true
+}
+
+detect: {
+    thresholdValue: 5.0
+    thresholdType: stdev
+}
+
+measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
+
+cr: {
+    nCrPixelMax: 200000
+}
+
+ast: {
+    defaultFilterName: MAG_R
+    numBrightStars: 100
+}

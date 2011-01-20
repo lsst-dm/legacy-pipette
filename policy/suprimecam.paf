@@ -1,0 +1,57 @@
+#<?cfg paf policy>
+
+roots: {
+    data: /path/to/data
+    calib: /path/to/calib
+    output: /path/for/output
+}
+
+do: {
+    flat: true
+    defects: true
+    interpolate: true
+    saturation: true
+    overscan: true
+    background: true
+    cr: true
+    phot: true
+    distortion: true
+    ast: true
+    cal: true
+}
+
+detect: {
+    thresholdValue: 5.0
+    thresholdType: stdev
+}
+
+measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
+
+defects: {
+    grow: 2
+}
+
+cr: {
+    nCrPixelMax: 200000
+}
+
+distortion: {
+    radial: { 
+        coeffs: -6.61572e-18 5.69338e-14 3.03146e-10 7.16417e-08 1.0 0.0
+        actualToIdeal: false
+        step: 10.0
+    }
+}
+
+filters: {
+    r: MAG_R
+    i: MAG_I
+    z: MAG_Z
+    y: MAG_Z
+}
+
+ast: {
+    defaultFilterName: MAG_R
+    numBrightStars: 200
+    sipOrder: 2
+}

@@ -4,11 +4,11 @@ import os
 import sys
 
 import lsst.obs.cfht as cfht
-import lsst.pipette.engine.config as pipConfig
-import lsst.pipette.engine.ccd as pipCcd
-import lsst.pipette.run.options as pipOptions
-import lsst.pipette.run.catalog as pipCatalog
-import lsst.pipette.run.readwrite as pipReadWrite
+import lsst.pipette.config as pipConfig
+import lsst.pipette.ccd as pipCcd
+import lsst.pipette.options as pipOptions
+import lsst.pipette.catalog as pipCatalog
+import lsst.pipette.readwrite as pipReadWrite
 
 def run(rerun,                          # Rerun name
         visit,                          # Visit number

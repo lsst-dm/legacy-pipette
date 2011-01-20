@@ -7,11 +7,11 @@ import sys
 import lsst.pex.policy as pexPolicy
 import lsst.daf.persistence as dafPersist
 import lsst.obs.suprime as suprime
-import lsst.pipette.engine.config as pipConfig
-import lsst.pipette.engine.master as pipMaster
-import lsst.pipette.run.options as runOptions
-import lsst.pipette.run.readwrite as runReadWrite
-import lsst.pipette.run.catalog as runCatalog
+import lsst.pipette.config as pipConfig
+import lsst.pipette.master as pipMaster
+import lsst.pipette.options as pipOptions
+import lsst.pipette.readwrite as pipReadWrite
+import lsst.pipette.catalog as pipCatalog
 
 def run(rerun,                          # Rerun name
         frames,                         # Frame number
@@ -22,7 +22,7 @@ def run(rerun,                          # Rerun name
 #    log.setThreshold(log.DEBUG)
 
     roots = config['roots']
-    io = runReadWrite.ReadWrite(suprime.SuprimeMapper, ['visit', 'ccd'], config=config)
+    io = pipReadWrite.ReadWrite(suprime.SuprimeMapper, ['visit', 'ccd'], config=config)
     detProc = pipMaster.Master(config=config)
     identMatrix = list()
     for ccd in ccds:
@@ -43,7 +43,7 @@ def run(rerun,                          # Rerun name
 
 
 if __name__ == "__main__":
-    parser = runOptions.OptionParser()
+    parser = pipOptions.OptionParser()
     parser.add_option("-r", "--rerun", default=os.getenv("USER", default="rerun"), dest="rerun",
                       help="rerun name (default=%default)")
     parser.add_option("-f", "--frames", dest="frames",
@@ -51,8 +51,8 @@ if __name__ == "__main__":
     parser.add_option("-c", "--ccds", dest="ccds",
                       help="CCDs to run, colon-delimited")
 
-    default = os.path.join(os.getenv("PIPETTE_ENGINE_DIR"), "policy", "MasterProcessDictionary.paf")
-    overrides = os.path.join(os.getenv("PIPETTE_RUN_DIR"), "policy", "suprimecam_detrend.paf")
+    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "MasterProcessDictionary.paf")
+    overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam_detrend.paf")
     config, opts, args = parser.parse_args(default, overrides)
     if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or opts.frames is None or opts.ccds is None:
         parser.print_help()

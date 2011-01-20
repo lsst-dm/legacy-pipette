@@ -4,11 +4,11 @@ import os
 import sys
 
 import lsst.obs.lsstSim as lsstSim
-import lsst.pipette.engine.config as pipConfig
-import lsst.pipette.engine.ccd as pipCcd
-import lsst.pipette.run.options as pipOptions
-import lsst.pipette.run.catalog as pipCatalog
-import lsst.pipette.run.readwrite as pipReadWrite
+import lsst.pipette.config as pipConfig
+import lsst.pipette.ccd as pipCcd
+import lsst.pipette.options as pipOptions
+import lsst.pipette.catalog as pipCatalog
+import lsst.pipette.readwrite as pipReadWrite
 
 def run(rerun,                          # Rerun name
         visit,                          # Visit number
@@ -36,7 +36,7 @@ def run(rerun,                          # Rerun name
     
     io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches)
 
-    catPolicy = os.path.join(os.getenv("PIPETTE_RUN_DIR"), "policy", "catalog.paf")
+    catPolicy = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "catalog.paf")
     catalog = pipCatalog.Catalog(catPolicy, allowNonfinite=False)
     if sources is not None:
         catalog.writeSources(basename + '.sources', sources, 'sources')
@@ -47,8 +47,8 @@ def run(rerun,                          # Rerun name
 def getConfig(overrideFile=None):
     """Return a proper config object, maybe given the name of policy file with an additional set of overrides"""
     
-    default = os.path.join(os.getenv("PIPETTE_ENGINE_DIR"), "policy", "CcdProcessDictionary.paf")
-    overrides = os.path.join(os.getenv("PIPETTE_RUN_DIR"), "policy", "lsstSim.paf")
+    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "CcdProcessDictionary.paf")
+    overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "lsstSim.paf")
     config = pipConfig.configuration(default, overrides)
     if overrideFile:
         config.merge(pipConfig.Config(overrideFile))

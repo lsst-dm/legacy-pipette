@@ -15,9 +15,9 @@ import lsst.pex.logging as pexLog
 import lsst.obs.suprime as suprime
 import lsst.afw.detection as afwDet
 
-import lsst.pipette.run.options as runOptions
-import lsst.pipette.run.readwrite as runReadWrite
-import lsst.pipette.run.comparisons as runCompare
+import lsst.pipette.options as pipOptions
+import lsst.pipette.readwrite as pipReadWrite
+import lsst.pipette.comparisons as pipCompare
 
 
 def gaussian(param, x):
@@ -28,7 +28,7 @@ def gaussian(param, x):
     
 
 def run(outName, frame1, frame2, config, matchTol=1.0, ccd=None):
-    io = runReadWrite.ReadWrite(suprime.SuprimeMapper, ['visit'], fileKeys=['visit', 'ccd'], config=config)
+    io = pipReadWrite.ReadWrite(suprime.SuprimeMapper, ['visit'], fileKeys=['visit', 'ccd'], config=config)
     roots = config['roots']
     output = os.path.join(roots['output'], '%s.pdf' % outName)
 
@@ -45,7 +45,7 @@ def run(outName, frame1, frame2, config, matchTol=1.0, ccd=None):
     print len(sources2), "sources read from", frame2
     matches = afwDet.matchRaDec(sources1, sources2, matchTol)
     print len(matches), "matches"
-    comp = runCompare.Comparisons(matches)
+    comp = pipCompare.Comparisons(matches)
 
 ###    plot.figure()
 ###    plot.plot(comp['ra'], comp['dec'], 'ro')
@@ -91,12 +91,12 @@ def extract(listOfDicts, name):
     return newList
 
 if __name__ == "__main__":
-    parser = runOptions.OptionParser()
+    parser = pipOptions.OptionParser()
     parser.add_option("-r", "--rerun", default=os.getenv("USER", default="rerun"), dest="rerun",
                       help="rerun name (default=%default)")
     parser.add_option("-c", "--ccd", type='int', default=None, dest="ccd", help="CCD to use")
 
-    overrides = os.path.join(os.getenv("PIPETTE_RUN_DIR"), "policy", "suprimecam.paf")
+    overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam.paf")
     config, opts, args = parser.parse_args(overrides)
     frame1 = args[0]
     frame2 = args[1]

@@ -4,12 +4,12 @@ import sys
 import os
 
 import lsst.obs.suprime as suprime
-import lsst.pipette.engine.config as engConfig
-import lsst.pipette.engine.stages.ccd as ccdStage
-import lsst.pipette.engine.queue as engQueue
-import lsst.pipette.run.options as runOptions
-import lsst.pipette.run.readwrite as runReadWrite
-import lsst.pipette.run.catalog as runCatalog
+import lsst.pipette.config as pipConfig
+import lsst.pipette.stages.ccd as ccdStage
+import lsst.pipette.queue as pipQueue
+import lsst.pipette.options as pipOptions
+import lsst.pipette.readwrite as pipReadWrite
+import lsst.pipette.catalog as pipCatalog
 
 def run(rerun,                          # Rerun name
         frameList,                      # Frame numbers
@@ -20,19 +20,19 @@ def run(rerun,                          # Rerun name
         submit=False,                   # Submit to queue?
         ):
     imports = [ ("lsst.obs.suprime", "suprime"),
-                ("lsst.pipette.run.readwrite", "runReadWrite"),
-                ("lsst.pipette.engine.stages.ccd", "ccdStage"),
+                ("lsst.pipette.readwrite", "pipReadWrite"),
+                ("lsst.pipette.ccd", "pipCcd"),
                 ("lsst.pex.logging", "pexLog"),
                 ]
     script = """
     log = pexLog.Log.getDefaultLog()
     log.addDestination(basename + '.log')
-    io = runReadWrite.ReadWrite(suprime.SuprimeMapper, ['visit', 'ccd'], config=config)
-    exposures = io.readRaw(dataId)
+    io = pipReadWrite.ReadWrite(suprime.SuprimeMapper, ['visit', 'ccd'], config=config)
+    raws = io.readRaw(dataId)
     detrends = io.detrends(dataId, config)
-    proc = ccdStage.CcdProcessing(config=config)
-    clipboard = proc.run(exposure=exposures, detrends=detrends)
-    io.write(dataId, **clipboard)
+    ccdProc = pipCcd.Ccd(config=config)
+    exposure, psf, apcorr, sources, matches = ccdProc.run(raws, detrends)
+    io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches)
     if clipboard.has_key('sources'):
         catalog.writeSources(basename + '.sources', clipboard['sources'], 'sources')
     if clipboard.has_key('matches'):
@@ -40,10 +40,10 @@ def run(rerun,                          # Rerun name
     """
 
     roots = config['roots']
-    catPolicy = os.path.join(os.getenv("PIPETTE_RUN_DIR"), "policy", "catalog.paf")
-    catalog = runCatalog.Catalog(catPolicy, allowNonfinite=False)
+    catPolicy = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "catalog.paf")
+    catalog = pipCatalog.Catalog(catPolicy, allowNonfinite=False)
 
-    queue = engQueue.PbsQueue(script, command=command, importList=imports, resourceList="walltime=300")
+    queue = pipQueue.PbsQueue(script, command=command, importList=imports, resourceList="walltime=300")
     roots = config['roots']
     for frame in frameList:
         for ccd in ccdList:
@@ -64,7 +64,7 @@ def run(rerun,                          # Rerun name
 
 
 if __name__ == "__main__":
-    parser = runOptions.OptionParser()
+    parser = pipOptions.OptionParser()
     parser.add_option("-r", "--rerun", default=os.getenv("USER", default="rerun"), dest="rerun",
                       help="rerun name (default=%default)")
     parser.add_option("-f", "--frames", default=None, dest="frames",
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     parser.add_option("-s", "--submit", action="store_true", default=False, dest="submit",
                       help="submit to queue? (default=%default)")
 
-    overrides = os.path.join(os.getenv("PIPETTE_RUN_DIR"), "policy", "suprimecam.paf")
+    overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam.paf")
     config, opts, args = parser.parse_args(overrides)
     if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or opts.frames is None or opts.ccds is None:
         parser.print_help()

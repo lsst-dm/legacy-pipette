@@ -4,11 +4,11 @@ import os
 import sys
 
 import lsst.obs.suprime as suprime
-import lsst.pipette.engine.config as pipConfig
-import lsst.pipette.engine.ccd as pipCcd
-import lsst.pipette.run.options as pipOptions
-import lsst.pipette.run.catalog as pipCatalog
-import lsst.pipette.run.readwrite as pipReadWrite
+import lsst.pipette.config as pipConfig
+import lsst.pipette.ccd as pipCcd
+import lsst.pipette.options as pipOptions
+import lsst.pipette.catalog as pipCatalog
+import lsst.pipette.readwrite as pipReadWrite
 
 def run(rerun,                          # Rerun name
         frame,                          # Frame number
@@ -26,7 +26,7 @@ def run(rerun,                          # Rerun name
     exposure, psf, apcorr, sources, matches = ccdProc.run(raws, detrends)
     io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches)
 
-    catPolicy = os.path.join(os.getenv("PIPETTE_RUN_DIR"), "policy", "catalog.paf")
+    catPolicy = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "catalog.paf")
     catalog = pipCatalog.Catalog(catPolicy, allowNonfinite=False)
     if sources is not None:
         catalog.writeSources(basename + '.sources', sources, 'sources')
@@ -44,8 +44,8 @@ if __name__ == "__main__":
     parser.add_option("-c", "--ccd", dest="ccd",
                       help="CCD to run (default=%default)")
 
-    default = os.path.join(os.getenv("PIPETTE_ENGINE_DIR"), "policy", "CcdProcessDictionary.paf")
-    overrides = os.path.join(os.getenv("PIPETTE_RUN_DIR"), "policy", "suprimecam.paf")
+    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "CcdProcessDictionary.paf")
+    overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam.paf")
     config, opts, args = parser.parse_args(default, overrides)
     if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or opts.frame is None or opts.ccd is None:
         parser.print_help()

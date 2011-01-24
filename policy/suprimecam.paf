@@ -38,15 +38,16 @@ distortion: {
 }
 
 filters: {
-    B: MAG_G
-    r: MAG_R
-    i: MAG_I
-    z: MAG_Z
-    y: MAG_Z
+    # Translation table for astrometry.net matching, and therefore photometric calibration
+    B: g
+    r: r
+    i: i
+    z: z
+    y: z
 }
 
 ast: {
-    defaultFilterName: MAG_R
+    defaultFilterName: r
     numBrightStars: 200
     sipOrder: 2
 }

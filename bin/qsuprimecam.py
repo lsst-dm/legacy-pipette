@@ -5,7 +5,6 @@ import os
 
 import lsst.obs.suprime as suprime
 import lsst.pipette.config as pipConfig
-import lsst.pipette.stages.ccd as ccdStage
 import lsst.pipette.queue as pipQueue
 import lsst.pipette.options as pipOptions
 import lsst.pipette.readwrite as pipReadWrite

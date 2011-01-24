@@ -52,7 +52,9 @@ class CameraDistortion(object):
             output.setYAstrom(yOut)
         elif isinstance(sources, afwGeom.Point2D):
             if copy:
-                output = type(sources)(sources)
+                output = type(sources)()
+                output.setX(sources.getX())
+                output.setY(sources.getY())
             else:
                 output = sources
             xIn, yIn = sources.getX(), sources.getY()

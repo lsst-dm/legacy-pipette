@@ -60,6 +60,7 @@ class Bootstrap(pipProc.Process):
             psf, cellSet = self.psf(exposure, sources)
             apcorr = self.apCorr(exposure, cellSet)
         else:
+            sources = None
             psf = None
             apcorr = None
 

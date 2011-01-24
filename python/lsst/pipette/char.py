@@ -103,20 +103,16 @@ class Char(pipProc.Process):
         assert exposure, "No exposure provided"
         assert sources, "No sources provided"
         
-        policy = self.config['ast']
-        path = os.path.join(os.environ['ASTROMETRY_NET_DATA_DIR'], "metadata.paf")
-        solver = astromNet.GlobalAstrometrySolution(path)
-        #solver.allowDistortion(self.policy.get('allowDistortion'))
         self.log.log(self.log.INFO, "Solving astrometry")
 
         try:
             menu = self.config['filters']
             filterName = menu[exposure.getFilter().getName()]
+            self.log.log(self.log.INFO, "Using catalog filter: %s" % filterName)
         except:
             self.log.log(self.log.WARN, "Unable to determine catalog filter from lookup table using %s" %
                          exposure.getFilter().getName())
-            filterName = policy['defaultFilterName']
-        self.log.log(self.log.INFO, "Using catalog filter: %s" % filterName)
+            filterName = None
 
         if distortion is not None:
             self.log.log(self.log.INFO, "Applying distortion correction.")
@@ -135,29 +131,19 @@ class Char(pipProc.Process):
             xMin = int(xMin)
             yMin = int(yMin)
             offsetSources(distSources, -xMin, -yMin)
-            size = afwGeom.makePointI(int(xMax - xMin + 0.5), int(yMax - yMin + 0.5))
+            size = (int(xMax - xMin + 0.5), int(yMax - yMin + 0.5))
         else:
             distSources = sources
-            size = afwGeom.makePointI(exposure.getWidth(), exposure.getHeight())
+            size = (exposure.getWidth(), exposure.getHeight())
 
-        if True:
-            solver.setMatchThreshold(policy['matchThreshold'])
-            solver.setStarlist(distSources)
-            solver.setNumBrightObjects(min(policy['numBrightStars'], len(distSources)))
-            solver.setImageSize(size.getX(), size.getY())
-            if not solver.solve(exposure.getWcs()):
-                raise RuntimeError("Unable to solve astrometry")
-            wcs = solver.getWcs()
-            matches = solver.getMatchedSources(filterName)
-            sipFitter = astromSip.CreateWcsWithSip(matches, wcs, policy['sipOrder'])
-            wcs = sipFitter.getNewWcs()
-            scatter = sipFitter.getScatterInArcsec()
-            self.log.log(self.log.INFO, "Astrometric scatter: %f" % scatter)
-        else:
-            matches, wcs = measAst.determineWcs(policy.getPolicy(), exposure, distSources,
-                                                solver=solver, log=self.log)
-            if matches is not None or len(matches) == 0:
-                raise RuntimeError("Unable to find any matches")
+        astrom = measAst.determineWcs(self.config['ast'].getPolicy(), exposure, distSources,
+                                      log=self.log, forceImageSize=size, filterName=filterName)
+        if astrom is None:
+            raise RuntimeError("Unable to solve astrometry")
+        wcs = astrom.wcs
+        matches = astrom.matches
+        if matches is None or len(matches) == 0:
+            raise RuntimeError("No astrometric matches")
 
         exposure.setWcs(wcs)
         for index, source in enumerate(sources):
@@ -169,7 +155,7 @@ class Char(pipProc.Process):
 
         verify = dict()                    # Verification parameters
         verify.update(astromSip.sourceMatchStatistics(matches))
-        verify.update(astromVerify.checkMatches(matches, exposure, self.log))
+        verify.update(astromVerify.checkMatches(matches, exposure, log=self.log))
         for k, v in verify.items():
             exposure.getMetadata().set(k, v)
 

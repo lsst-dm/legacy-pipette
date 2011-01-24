@@ -124,6 +124,7 @@ class Char(pipProc.Process):
             for x, y in ((0.0, 0.0), (0.0, exposure.getHeight()), (exposure.getWidth(), 0.0),
                          (exposure.getHeight(), exposure.getWidth())):
                 point = afwGeom.makePointD(x, y)
+                point = distortion.actualToIdeal(point)
                 x, y = point.getX(), point.getY()
                 if x < xMin: xMin = x
                 if x > xMax: xMax = x
@@ -154,13 +155,6 @@ class Char(pipProc.Process):
             source.setRa(sky[0])
             source.setDec(sky[1])
 
-
-        verify = dict()                    # Verification parameters
-        verify.update(astromSip.sourceMatchStatistics(matches))
-        verify.update(astromVerify.checkMatches(matches, exposure, log=log))
-        for k, v in verify.items():
-            exposure.getMetadata().set(k, v)
-
         if distortion is not None:
             # Undo distortion in matches
             self.log.log(self.log.INFO, "Removing distortion correction.")
@@ -170,6 +164,14 @@ class Char(pipProc.Process):
             offsetSources(second, xMin, yMin)
             distortion.idealToActual(first, copy=False)
             distortion.idealToActual(second, copy=False)
+
+
+        verify = dict()                    # Verification parameters
+        verify.update(astromSip.sourceMatchStatistics(matches))
+        verify.update(astromVerify.checkMatches(matches, exposure, log=log))
+        for k, v in verify.items():
+            exposure.getMetadata().set(k, v)
+
 
         return matches, wcs
 
@@ -181,7 +183,8 @@ class Char(pipProc.Process):
         """
         assert exposure, "No exposure provided"
         assert matches, "No matches provided"
-        
+
+        print "Doing photocal"
         zp = photocal.calcPhotoCal(matches, log=self.log, goodFlagValue=0)
         self.log.log(self.log.INFO, "Photometric zero-point: %f" % zp.getMag(1.0))
         exposure.getCalib().setFluxMag0(zp.getFlux(0))

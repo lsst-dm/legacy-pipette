@@ -147,6 +147,7 @@ class Char(pipProc.Process):
         matches = astrom.matches
         if matches is None or len(matches) == 0:
             raise RuntimeError("No astrometric matches")
+        self.log.log(self.log.INFO, "%d astrometric matches" % len(matches))
 
         # Apply WCS to sources
         for index, source in enumerate(sources):

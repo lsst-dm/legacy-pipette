@@ -165,6 +165,12 @@ class Char(pipProc.Process):
             distortion.idealToActual(first, copy=False)
             distortion.idealToActual(second, copy=False)
 
+        # Re-fit the WCS with the distortion undone
+        if self.config['ast']['calculateSip']:
+            sip = astromSip.CreateWcsWithSip(matches, wcs, self.config['ast']['sipOrder'])
+            wcs = sip.getNewWcs()
+            self.log.log(self.log.INFO, "Astrometric scatter: %f (%s non-linear terms)" %
+                         (sip.getScatterInArcsec(), "with" if wcs.hasDistortion() else "without"))
 
         verify = dict()                    # Verification parameters
         verify.update(astromSip.sourceMatchStatistics(matches))

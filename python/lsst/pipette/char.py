@@ -148,15 +148,15 @@ class Char(pipProc.Process):
         if matches is None or len(matches) == 0:
             raise RuntimeError("No astrometric matches")
 
-        exposure.setWcs(wcs)
+        # Apply WCS to sources
         for index, source in enumerate(sources):
             distSource = distSources[index]
             sky = wcs.pixelToSky(distSource.getXAstrom(), distSource.getYAstrom())
             source.setRa(sky[0])
             source.setDec(sky[1])
 
+        # Undo distortion in matches
         if distortion is not None:
-            # Undo distortion in matches
             self.log.log(self.log.INFO, "Removing distortion correction.")
             first = map(lambda match: match.first, matches)
             second = map(lambda match: match.second, matches)
@@ -178,6 +178,7 @@ class Char(pipProc.Process):
         for k, v in verify.items():
             exposure.getMetadata().set(k, v)
 
+        exposure.setWcs(wcs)
 
         return matches, wcs
 

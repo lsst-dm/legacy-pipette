@@ -22,6 +22,7 @@
 #
 
 import optparse
+import lsst.pex.logging as pexLog
 import lsst.pipette.config as pipConfig
 
 """This module defines the option parsing for pipette LSST Algorithms testing."""

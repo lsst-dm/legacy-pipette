@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import lsst.pex.logging as pexLog
 import lsst.afw.geom as afwGeom
 import lsst.meas.astrom as measAst
 import lsst.meas.astrom.net as astromNet
@@ -136,8 +137,9 @@ class Char(pipProc.Process):
             distSources = sources
             size = (exposure.getWidth(), exposure.getHeight())
 
+        log = pexLog.Log(self.log, "ast")
         astrom = measAst.determineWcs(self.config['ast'].getPolicy(), exposure, distSources,
-                                      log=self.log, forceImageSize=size, filterName=filterName)
+                                      log=log, forceImageSize=size, filterName=filterName)
         if astrom is None:
             raise RuntimeError("Unable to solve astrometry")
         wcs = astrom.wcs
@@ -155,7 +157,7 @@ class Char(pipProc.Process):
 
         verify = dict()                    # Verification parameters
         verify.update(astromSip.sourceMatchStatistics(matches))
-        verify.update(astromVerify.checkMatches(matches, exposure, log=self.log))
+        verify.update(astromVerify.checkMatches(matches, exposure, log=log))
         for k, v in verify.items():
             exposure.getMetadata().set(k, v)
 

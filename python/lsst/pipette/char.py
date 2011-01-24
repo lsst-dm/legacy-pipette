@@ -122,7 +122,7 @@ class Char(pipProc.Process):
             # Get distorted image size, and remove offset
             xMin, xMax, yMin, yMax = 0, exposure.getWidth(), 0, exposure.getHeight()
             for x, y in ((0.0, 0.0), (0.0, exposure.getHeight()), (exposure.getWidth(), 0.0),
-                         (exposure.getHeight(), exposure.getWidth())):
+                         (exposure.getWidth(), exposure.getHeight())):
                 point = afwGeom.makePointD(x, y)
                 point = distortion.actualToIdeal(point)
                 x, y = point.getX(), point.getY()

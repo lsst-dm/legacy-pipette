@@ -22,14 +22,12 @@ def run(rerun,                          # Rerun name
     basename = os.path.join(roots['output'], '%s-%d' % (rerun, frame))
     warpProc = pipWarp.Warp(config=config)
 
-    exposureList = list()
+    identList = list()
     for ccd in ccds:
         dataId = { 'visit': frame, 'ccd': ccd }
-        exposure = io.read('postISRCCD', dataId)
-        for exp in exposure:
-            exposureList.append(exp)
+        identList.append(dataId)
 
-    warp = warpProc.run(exposureList, coords[0], coords[1], scale, sizes[0], sizes[1])
+    warp = warpProc.run(identList, io.inButler, coords[0], coords[1], scale, sizes[0], sizes[1])
     warp.writeFits(basename + ".fits")
 
 

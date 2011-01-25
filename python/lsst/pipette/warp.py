@@ -30,10 +30,11 @@ import lsst.pipette.process as pipProc
 
 
 class Warp(pipProc.Process):
-    def run(self, exposureList, ra, dec, scale, xSize, ySize):
+    def run(self, identList, butler, ra, dec, scale, xSize, ySize):
         """Warp an exposure to a specified size, xy0 and WCS
 
-        @param[in] exposureList Exposures to process
+        @param[in] identList Identifiers of CCDs to warp
+        @param[in] butler Data butler
         @param[in] ra Right Ascension (radians) of skycell centre
         @param[in] dec Declination (radians) of skycell centre
         @param[in] scale Scale (arcsec/pixel) of skycell
@@ -43,15 +44,14 @@ class Warp(pipProc.Process):
         @return Warped exposure
         """
 
-        # XXX Read in images individually, warp and then delete
-
         skyWcs = self.skycell(ra, dec, scale, xSize, ySize)
 
         warp = afwImage.ExposureF(xSize, ySize)
         warp.setWcs(skyWcs)
         weight = afwImage.ImageF(xSize, ySize)
         
-        for index, exp in enumerate(exposureList):
+        for ident in identList:
+            exp = self.read(butler, ident, ["postISRCCD"])[0]
             width, height = exp.getWidth(), exp.getHeight()
             expWcs = exp.getWcs()
             xSkycell = list()
@@ -66,11 +66,11 @@ class Warp(pipProc.Process):
             xMax = min(xSize - 1, int(max(xSkycell) + 0.5))
             yMin = max(0, int(min(ySkycell)))
             yMax = min(ySize - 1, int(max(ySkycell) + 0.5))
-            self.log.log(self.log.INFO, "Bounds of image %d: %d,%d --> %d,%d" %
-                         (index, xMin, yMin, xMax, yMax))
+            self.log.log(self.log.INFO, "Bounds of image: %d,%d --> %d,%d" % (xMin, yMin, xMax, yMax))
             if xMin < xSize and xMax >= 0 and yMin < ySize and yMax >= 0:
                 bbox = afwImage.BBox(afwImage.PointI(xMin, yMin), afwImage.PointI(xMax, yMax))
                 self.warp(warp, weight, exp, bbox)
+            del exp
 
         # XXX Check that every pixel in the weight is either 1 or 0
 

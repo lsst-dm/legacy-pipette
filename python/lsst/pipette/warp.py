@@ -28,6 +28,18 @@ import lsst.afw.image as afwImage
 import lsst.coadd.utils as coaddUtils
 import lsst.pipette.process as pipProc
 
+class Skycell(object):
+    def __init__(self, wcs, width, height):
+        self._wcs = wcs
+        self._width = width
+        self._height = height
+
+    def getWcs(self):
+        return self._wcs
+
+    def getDimensions(self):
+        return self._width, self._height
+
 
 class Warp(pipProc.Process):
     def run(self, identList, butler, ra, dec, scale, xSize, ySize):
@@ -44,8 +56,36 @@ class Warp(pipProc.Process):
         @return Warped exposure
         """
 
-        skyWcs = self.skycell(ra, dec, scale, xSize, ySize)
+        skycell = self.skycell(ra, dec, scale, xSize, ySize)
+        return self.warp(identList, butler, skycell)
 
+    def skycell(self, ra, dec, scale, xSize, ySize):
+        """Define a skycell
+        
+        @param[in] ra Right Ascension (degrees) of skycell centre
+        @param[in] dec Declination (degrees) of skycell centre
+        @param[in] scale Scale (arcsec/pixel) of skycell
+        @param[in] xSize Size in x
+        @parma[in] ySize Size in y
+        
+        @return Skycell
+        """
+        crval = afwGeom.Point2D.make(ra, dec)
+        crpix = afwGeom.Point2D.make(xSize / 2.0, ySize / 2.0)
+        wcs = afwImage.createWcs(crval, crpix, scale / 3600.0, 0.0, 0.0, scale / 3600.0)
+        return Skycell(wcs, xSize, ySize)
+
+    def warp(self, identList, butler, skycell):
+        """Warp an exposure to a nominated skycell
+
+        @param[in] identList List of data identifiers
+        @param[in] butler Data butler
+        @param[in] skycell Skycell specification
+        @return Warped exposure
+        """
+
+        skyWcs = skycell.getWcs()
+        xSize, ySize = skycell.getDimensions()
         warp = afwImage.ExposureF(xSize, ySize)
         warp.setWcs(skyWcs)
         weight = afwImage.ImageF(xSize, ySize)
@@ -69,7 +109,7 @@ class Warp(pipProc.Process):
             self.log.log(self.log.INFO, "Bounds of image: %d,%d --> %d,%d" % (xMin, yMin, xMax, yMax))
             if xMin < xSize and xMax >= 0 and yMin < ySize and yMax >= 0:
                 bbox = afwImage.BBox(afwImage.PointI(xMin, yMin), afwImage.PointI(xMax, yMax))
-                self.warp(warp, weight, exp, bbox)
+                self.warpComponent(warp, weight, exp, bbox)
             del exp
 
         # XXX Check that every pixel in the weight is either 1 or 0
@@ -77,32 +117,15 @@ class Warp(pipProc.Process):
         coaddUtils.setCoaddEdgeBits(warp.getMaskedImage().getMask(), weight)
 
         return warp
+ 
 
-    def skycell(self, ra, dec, scale, xSize, ySize):
-        """Define a skycell
-        
-        @param[in] ra Right Ascension (degrees) of skycell centre
-        @param[in] dec Declination (degrees) of skycell centre
-        @param[in] scale Scale (arcsec/pixel) of skycell
-        @param[in] xSize Size in x
-        @parma[in] ySize Size in y
-        
-        @return WCS of skycell
-        """
-        crval = afwGeom.Point2D.make(ra, dec)
-        crpix = afwGeom.Point2D.make(xSize / 2.0, ySize / 2.0)
-        wcs = afwImage.createWcs(crval, crpix, scale / 3600.0, 0.0, 0.0, scale / 3600.0)
-        return wcs
-
-    def warp(self, warp, weight, exposure, bbox):
-        """Warp an exposure to a specified skycell
+    def warpComponent(self, warp, weight, exposure, bbox):
+        """Warp a component to a specified skycell
 
         @param[out] warp Warped exposure
         @param[out] weight Accumulated weight map
-        @param[in] exposure Exposure to process
-        @param[in] bbox bounding box for resulting exposure;
-            dimensions = bbox dimensions
-            xy0 = bbox minimum position
+        @param[in] exposure Exposure component to process
+        @param[in] bbox Bounding box for component on warp
         """
 
         warpImage = warp.getMaskedImage()

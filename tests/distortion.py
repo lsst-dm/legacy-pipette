@@ -32,8 +32,8 @@ import lsst.pex.policy as pexPolicy
 import lsst.afw.detection as afwDet
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.afw.cameraGeom.utils as cameraGeomUtils
-import lsst.pipette.engine.distortion as distortion
-import lsst.pipette.engine.config as engConfig
+import lsst.pipette.distortion as pipDist
+import lsst.pipette.config as pipConfig
 
 REVERSE_TOL = 0.01                      # Tolerance for difference after reversing, pixels
 ABSOLUTE_TOL = 2.0                      # Tolerance for difference with 'correct' version, pixels
@@ -77,8 +77,8 @@ class ConfigTestCase(unittest.TestCase):
         coeffs = list(COEFFS)
         coeffs.reverse()           # NumPy's poly1d wants coeffs in descending order of powers
         coeffs.append(0.0)         # NumPy's poly1d goes all the way down to zeroth power
-        self.config = engConfig.Config()
-        distConfig = engConfig.Config()
+        self.config = pipConfig.Config()
+        distConfig = pipConfig.Config()
         distConfig['coeffs'] = coeffs
         distConfig['actualToIdeal'] = True
         distConfig['step'] = 10.0
@@ -91,7 +91,7 @@ class ConfigTestCase(unittest.TestCase):
     def testRadialDistortion(self):
         for raft in self.camera:
             for ccdIndex, ccd in enumerate(cameraGeom.cast_Raft(raft)):
-                dist = distortion.createDistortion(ccd, self.config)
+                dist = pipDist.createDistortion(ccd, self.config)
                 size = ccd.getSize()
                 height, width = size.getX(), size.getY()
                 for x, y in ((0.0,0.0), (0.0, height), (0.0, width), (height, width), (height/2.0,width/2.0)):

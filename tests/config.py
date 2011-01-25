@@ -26,7 +26,7 @@
 import unittest
 import lsst.utils.tests as utilsTests
 
-import lsst.pipette.engine.config as cfg
+import lsst.pipette.config as pipConfig
 
 
 def compare(config,                     # Configuration being tested
@@ -49,7 +49,7 @@ class ConfigTestCase(unittest.TestCase):
     """A test case for configuration"""
 
     def setUp(self):
-        self.config = cfg.Config("tests/test_config.paf")
+        self.config = pipConfig.Config("tests/test_config.paf")
         self.truth = { 'integer': 1,
                        'float': 3.21,
                        'truth': True,

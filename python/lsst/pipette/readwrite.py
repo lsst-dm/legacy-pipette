@@ -37,21 +37,25 @@ def initMapper(mapper, config, log, inMap=True):
             mapp = getMapper(mapper)
         else:
             roots = config['roots']
+            dataRoot = roots['data']
+            calibRoot = roots['calib'] if roots.has_key('calib') else None
+            outRoot = roots['output']
             if inMap:
-                mapp = getMapper(mapper, root=roots['data'], calibRoot=roots['calib'])
+                mapp = getMapper(mapper, root=dataRoot, calibRoot=calibRoot)
             else:
 
                 # if there's no output registry, use the input registry
-                outRegistry = os.path.join(roots['output'], "registry.sqlite3")
-                inRegistry = os.path.join(roots['data'], "registry.sqlite3")
+                outRegistry = os.path.join(outRoot, "registry.sqlite3")
+                inRegistry = os.path.join(dataRoot, "registry.sqlite3")
                 if os.path.exists(outRegistry):
                     registry = outRegistry
                 elif (os.path.exists(inRegistry)):
                     registry = inRegistry
                 else:
-                    raise RuntimeError("Unable to find a registry for output mapper")
+                    log.log(log.WARN, "Unable to find a registry for output mapper")
+                    registry = None
                 
-                mapp = getMapper(mapper, root=roots['output'], registry=registry)
+                mapp = getMapper(mapper, root=outRoot, registry=registry)
 
     elif isinstance(mapper, dafPersist.Mapper):
         self.mapp = mapper

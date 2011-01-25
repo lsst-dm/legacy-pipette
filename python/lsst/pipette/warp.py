@@ -43,6 +43,8 @@ class Warp(pipProc.Process):
         @return Warped exposure
         """
 
+        # XXX Read in images individually, warp and then delete
+
         skyWcs = self.skycell(ra, dec, scale, xSize, ySize)
 
         warp = afwImage.ExposureF(xSize, ySize)

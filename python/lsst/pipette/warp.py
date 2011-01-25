@@ -72,6 +72,8 @@ class Warp(pipProc.Process):
 
         # XXX Check that every pixel in the weight is either 1 or 0
 
+        coaddUtils.setCoaddEdgeBits(warp.getMaskedImage().getMask(), weight)
+
         return warp
 
     def skycell(self, ra, dec, scale, xSize, ySize):

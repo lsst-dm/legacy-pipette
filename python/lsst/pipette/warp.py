@@ -21,39 +21,92 @@
 # see <http://www.lsstcorp.org/LegalNotices/>.
 #
 
-import lsst.pipette.process as pipProc
+import lsst.afw.coord as afwCoord
+import lsst.afw.math as afwMath
+import lsst.afw.geom as afwGeom
+import lsst.afw.image as afwImage
 import lsst.coadd.utils as coaddUtils
+import lsst.pipette.process as pipProc
 
 class Warp(pipProc.Process):
-    def __init__(self, *args, **kwargs):
-        super(Warp, self).__init__(*args, **kwargs)
-        policy = self.config["warp"].getPolicy()
-        self._warper = coaddUtils.Warp.fromPolicy(policy)
+    def run(self, exposureList, ra, dec, scale, xSize, ySize):
+        """Warp an exposure to a specified size, xy0 and WCS
 
-
-    def run(self, exposure, bbox, wcs):
-        """Warp an Exposure to a specified size, xy0 and WCS
-
-        @param[in] exposure Exposure to process
-        @param[in] bbox bounding box for resulting exposure;
-            dimensions = bbox dimensions
-            xy0 = bbox minimum position
-        @param[in] wcs wcs of resulting exposure
+        @param[in] exposureList Exposures to process
+        @param[in] ra Right Ascension (radians) of skycell centre
+        @param[in] dec Declination (radians) of skycell centre
+        @param[in] scale Scale (arcsec/pixel) of skycell
+        @param[in] xSize Size in x
+        @parma[in] ySize Size in y
         
         @return Warped exposure
         """
-        return self.warp(exposure, bbox, wcs)
 
+        skyWcs = self.skycell(ra, dec, scale, xSize, ySize)
 
-    def warp(self, exposure, bbox, wcs):
+        warp = afwImage.ExposureF(xSize, ySize)
+        warp.setWcs(skyWcs)
+        
+        for index, exp in enumerate(exposureList):
+            width, height = exp.getWidth(), exp.getHeight()
+            expWcs = exp.getWcs()
+            xSkycell = list()
+            ySkycell = list()
+            for x, y in ((0.0, 0.0), (0.0, height), (width, 0.0), (width, height)):
+                sky = expWcs.pixelToSky(x, y)
+                position = skyWcs.skyToPixel(sky)
+                xSkycell.append(position.getX())
+                ySkycell.append(position.getY())
+
+            xMin = max(0, int(min(xSkycell)))
+            xMax = min(xSize - 1, int(max(xSkycell) + 0.5))
+            yMin = max(0, int(min(ySkycell)))
+            yMax = min(ySize - 1, int(max(ySkycell) + 0.5))
+            self.log.log(self.log.INFO, "Bounds of image %d: %d,%d --> %d,%d" %
+                         (index, xMin, yMin, xMax, yMax))
+            if xMin < xSize and xMax >= 0 and yMin < ySize and yMax >= 0:
+                bbox = afwImage.BBox(afwImage.PointI(xMin, yMin), afwImage.PointI(xMax, yMax))
+                self.warp(warp, exp, bbox)
+
+        return warp
+
+    def skycell(self, ra, dec, scale, xSize, ySize):
+        """Define a skycell
+        
+        @param[in] ra Right Ascension (degrees) of skycell centre
+        @param[in] dec Declination (degrees) of skycell centre
+        @param[in] scale Scale (arcsec/pixel) of skycell
+        @param[in] xSize Size in x
+        @parma[in] ySize Size in y
+        
+        @return WCS of skycell
+        """
+        crval = afwGeom.Point2D.make(ra, dec)
+        crpix = afwGeom.Point2D.make(xSize / 2.0, ySize / 2.0)
+        wcs = afwImage.createWcs(crval, crpix, scale / 3600.0, 0.0, 0.0, scale / 3600.0)
+        return wcs
+
+    def warp(self, warp, exposure, bbox):
         """Warp an exposure to a specified skycell
 
+        @param[out] warp Warped exposure
         @param[in] exposure Exposure to process
         @param[in] bbox bounding box for resulting exposure;
             dimensions = bbox dimensions
             xy0 = bbox minimum position
-        @param[in] wcs wcs of resulting exposure
-
-        @return Warped exposure
         """
-        return self._warper.warpExposure(bbox, wcs, exposure)
+
+        warpImage = warp.getMaskedImage()
+        targetImage = warpImage.Factory(warpImage.getDimensions())
+        targetImage.set((0, 0, 0))
+        target = afwImage.makeExposure(targetImage, warp.getWcs())
+        subTarget = target.Factory(target, bbox)
+
+        policy = self.config["warp"]
+        kernel = afwMath.makeWarpingKernel(policy["warpingKernelName"])
+        kernel.computeCache(policy["cacheSize"])
+        interpLength = policy["interpLength"]
+
+        afwMath.warpExposure(subTarget, exposure, kernel, interpLength)
+        subWarp = warp.getMaskedImage().Factory(warp.getMaskedImage(), bbox)
+        subWarp += subTarget.getMaskedImage()

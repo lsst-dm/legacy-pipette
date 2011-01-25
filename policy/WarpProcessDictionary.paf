@@ -1,0 +1,21 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    roots: {
+        type: Policy
+        description: "Root directories"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "RootsDictionary.paf"
+    }
+
+    warp: {
+        type: Policy
+        description: "Warp policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@coadd_utils:policy:WarpDictionary.paf
+    }
+}

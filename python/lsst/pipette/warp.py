@@ -28,6 +28,7 @@ import lsst.afw.image as afwImage
 import lsst.coadd.utils as coaddUtils
 import lsst.pipette.process as pipProc
 
+
 class Warp(pipProc.Process):
     def run(self, exposureList, ra, dec, scale, xSize, ySize):
         """Warp an exposure to a specified size, xy0 and WCS
@@ -46,6 +47,7 @@ class Warp(pipProc.Process):
 
         warp = afwImage.ExposureF(xSize, ySize)
         warp.setWcs(skyWcs)
+        weight = afwImage.ImageF(xSize, ySize)
         
         for index, exp in enumerate(exposureList):
             width, height = exp.getWidth(), exp.getHeight()
@@ -66,7 +68,9 @@ class Warp(pipProc.Process):
                          (index, xMin, yMin, xMax, yMax))
             if xMin < xSize and xMax >= 0 and yMin < ySize and yMax >= 0:
                 bbox = afwImage.BBox(afwImage.PointI(xMin, yMin), afwImage.PointI(xMax, yMax))
-                self.warp(warp, exp, bbox)
+                self.warp(warp, weight, exp, bbox)
+
+        # XXX Check that every pixel in the weight is either 1 or 0
 
         return warp
 
@@ -86,10 +90,11 @@ class Warp(pipProc.Process):
         wcs = afwImage.createWcs(crval, crpix, scale / 3600.0, 0.0, 0.0, scale / 3600.0)
         return wcs
 
-    def warp(self, warp, exposure, bbox):
+    def warp(self, warp, weight, exposure, bbox):
         """Warp an exposure to a specified skycell
 
         @param[out] warp Warped exposure
+        @param[out] weight Accumulated weight map
         @param[in] exposure Exposure to process
         @param[in] bbox bounding box for resulting exposure;
             dimensions = bbox dimensions
@@ -108,5 +113,9 @@ class Warp(pipProc.Process):
         interpLength = policy["interpLength"]
 
         afwMath.warpExposure(subTarget, exposure, kernel, interpLength)
+
         subWarp = warp.getMaskedImage().Factory(warp.getMaskedImage(), bbox)
-        subWarp += subTarget.getMaskedImage()
+        subWeight = weight.Factory(weight, bbox)
+
+        badpix = ~afwImage.MaskU.getPlaneBitMask("DETECTED") # Allow these through
+        coaddUtils.addToCoadd(subWarp, subWeight, subTarget.getMaskedImage(), badpix, 1.0)

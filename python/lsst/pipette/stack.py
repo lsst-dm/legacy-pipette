@@ -29,7 +29,7 @@ class Stack(pipWarp.Warp):
 
         badpix = ~afwImage.MaskU.getPlaneBitMask("DETECTED") # Allow these through
         for identList in identMatrix:
-            warp = self.warpExposure(identList, butler, skycell)
+            warp = self.warp(identList, butler, skycell)
             # XXX Save for later
             
             coaddUtils.addToCoadd(coadd.getMaskedImage(), weight, warp.getMaskedImage(), badpix, 1.0)

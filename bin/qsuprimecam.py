@@ -15,7 +15,7 @@ def run(rerun,                          # Rerun name
         ccdList,                        # CCD numbers
         config,                         # Configuration
         command=None,                   # Command for PBS
-        queue=None,                     # Queue name
+        queueName=None,                 # Queue name
         submit=False,                   # Submit to queue?
         ):
     imports = [ ("lsst.obs.suprime", "suprime"),
@@ -32,17 +32,18 @@ def run(rerun,                          # Rerun name
     ccdProc = pipCcd.Ccd(config=config)
     exposure, psf, apcorr, sources, matches = ccdProc.run(raws, detrends)
     io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches)
-    if clipboard.has_key('sources'):
-        catalog.writeSources(basename + '.sources', clipboard['sources'], 'sources')
-    if clipboard.has_key('matches'):
-        catalog.writeMatches(basename + '.matches', clipboard['matches'], 'sources')
+    if sources is not None:
+        catalog.writeSources(basename + '.sources', sources, 'sources')
+    if matches is not None:
+        catalog.writeMatches(basename + '.matches', matches, 'sources')
     """
 
     roots = config['roots']
     catPolicy = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "catalog.paf")
     catalog = pipCatalog.Catalog(catPolicy, allowNonfinite=False)
 
-    queue = pipQueue.PbsQueue(script, command=command, importList=imports, resourceList="walltime=300")
+    queue = pipQueue.PbsQueue(script, command=command, importList=imports,
+                              resourceList="walltime=300", queue=queueName)
     roots = config['roots']
     for frame in frameList:
         for ccd in ccdList:
@@ -77,9 +78,9 @@ if __name__ == "__main__":
     parser.add_option("-s", "--submit", action="store_true", default=False, dest="submit",
                       help="submit to queue? (default=%default)")
 
-    defaults = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "CcdProcessDictionary.paf")
+    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "CcdProcessDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam.paf")
-    config, opts, args = parser.parse_args(defaults, overrides)
+    config, opts, args = parser.parse_args(default, overrides)
     if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or opts.frames is None or opts.ccds is None:
         parser.print_help()
         sys.exit(1)
@@ -89,4 +90,4 @@ if __name__ == "__main__":
         sys.exit(1)
 
     run(opts.rerun, map(int, opts.frames.split(":")), map(int, opts.ccds.split(":")), config,
-        command=opts.command, queue=opts.queue, submit=opts.submit)
+        command=opts.command, queueName=opts.queue, submit=opts.submit)

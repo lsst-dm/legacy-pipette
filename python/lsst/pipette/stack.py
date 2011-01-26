@@ -39,3 +39,4 @@ class Stack(pipWarp.Warp):
         coaddImage = coadd.getMaskedImage()
         coaddImage /= weight
 
+        return coaddImage

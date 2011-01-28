@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
+import lsst.afw.image as afwImage
 import lsst.pipette.isr as pipIsr
 import lsst.pipette.util as pipUtil
 
 class IsrSuprimeCam(pipIsr.Isr):
     def run(self, exposure, *args, **kwargs):
-        self.guider(exposure)
         super(IsrSuprimeCam, self).run(exposure, *args, **kwargs)
+        self.guider(exposure)
 
     def guider(self, exposure):
         """Mask guider shadow
@@ -22,11 +23,11 @@ class IsrSuprimeCam(pipIsr.Isr):
             return
 
         md = exposure.getMetadata()
-        if not md.has_key("S_AG_X"):
+        if not md.exists("S_AG-X"):
             self.log.log(self.log.WARN, "No autoguider position in exposure metadata.")
             return
 
-        xGuider = md["S_AG_X"]
+        xGuider = md.get("S_AG-X")
         if ccdNum in [1, 2, 7]:
             maskLimit = int(60.0 * xGuider - 2300.0) # From SDFRED
         elif ccdNum in [0, 6]:
@@ -39,13 +40,23 @@ class IsrSuprimeCam(pipIsr.Isr):
             # Nothing to mask!
             return
 
-        self.log.log(self.log.INFO, "Masking autoguider shadow at y > %d" % maskLimit)
-        mask = mi.getMask()
-        bbox = afwImage.BBox(afwImage.PointI(0, 0), afwImage.PointI(-1, maskLimit - height))
-        badMask = mask.Factory(mask, bbox)
+        if False:
+            # XXX This mask plane isn't respected by background subtraction or source detection or measurement
+            self.log.log(self.log.INFO, "Masking autoguider shadow at y > %d" % maskLimit)
+            mask = mi.getMask()
+            bbox = afwImage.BBox(afwImage.PointI(0, maskLimit - 1),
+                                 afwImage.PointI(mask.getWidth() - 1, height - 1))
+            badMask = mask.Factory(mask, bbox)
+            
+            mask.addMaskPlane("GUIDER")
+            badBitmask = mask.getPlaneBitMask("GUIDER")
+            
+            badMask |= badBitmask
+        else:
+            # XXX Temporary solution until a mask plane is respected by downstream processes
+            self.log.log(self.log.INFO, "Removing pixels affected by autoguider shadow at y > %d" % maskLimit)
+            bbox = afwImage.BBox(afwImage.PointI(0, 0), mi.getWidth(), maskLimit)
+            good = mi.Factory(mi, bbox)
+            exposure.setMaskedImage(good)
 
-        mask.addMaskPlane("GUIDER")
-        badBitmask = mask.getPlaneBitMask("GUIDER")
-
-        badMask |= badBitmask
         return

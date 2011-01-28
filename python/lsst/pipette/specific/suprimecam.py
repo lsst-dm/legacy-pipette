@@ -3,7 +3,7 @@
 import lsst.pipette.isr as pipIsr
 import lsst.pipette.util as pipUtil
 
-class IsrSuprimecam(pipIsr.Isr):
+class IsrSuprimeCam(pipIsr.Isr):
     def run(self, exposure, *args, **kwargs):
         self.guider(exposure)
         super(IsrSuprimeCam, self).run(exposure, *args, **kwargs)

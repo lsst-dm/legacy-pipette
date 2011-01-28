@@ -9,6 +9,7 @@ import lsst.pipette.ccd as pipCcd
 import lsst.pipette.options as pipOptions
 import lsst.pipette.catalog as pipCatalog
 import lsst.pipette.readwrite as pipReadWrite
+import lsst.pipette.specific.suprimecam as pipSuprimeCam
 
 def run(rerun,                          # Rerun name
         frame,                          # Frame number
@@ -18,7 +19,7 @@ def run(rerun,                          # Rerun name
     io = pipReadWrite.ReadWrite(suprime.SuprimeMapper, ['visit', 'ccd'], config=config)
     roots = config['roots']
     basename = os.path.join(roots['output'], '%s-%d%d' % (rerun, frame, ccd))
-    ccdProc = pipCcd.Ccd(config=config)
+    ccdProc = pipCcd.Ccd(config=config, Isr=pipSuprimeCam.IsrSuprimeCam)
     dataId = { 'visit': frame, 'ccd': ccd }
 
     raws = io.readRaw(dataId)

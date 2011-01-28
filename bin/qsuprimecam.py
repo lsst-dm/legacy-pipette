@@ -21,6 +21,7 @@ def run(rerun,                          # Rerun name
     imports = [ ("lsst.obs.suprime", "suprime"),
                 ("lsst.pipette.readwrite", "pipReadWrite"),
                 ("lsst.pipette.ccd", "pipCcd"),
+                ("lsst.pipette.specific.suprimecam", "pipSuprimeCam"),
                 ("lsst.pex.logging", "pexLog"),
                 ]
     script = """

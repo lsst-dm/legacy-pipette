@@ -29,7 +29,7 @@ def run(rerun,                          # Rerun name
     io = pipReadWrite.ReadWrite(suprime.SuprimeMapper, ['visit', 'ccd'], config=config)
     raws = io.readRaw(dataId)
     detrends = io.detrends(dataId, config)
-    ccdProc = pipCcd.Ccd(config=config)
+    ccdProc = pipCcd.Ccd(config=config, Isr=pipSuprimeCam.IsrSuprimeCam)
     exposure, psf, apcorr, sources, matches = ccdProc.run(raws, detrends)
     io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches)
     if sources is not None:

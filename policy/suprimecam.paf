@@ -49,7 +49,7 @@ filters: {
 ast: {
     defaultFilterName: R
     numBrightStars: 200
-    sipOrder: 4
+    sipOrder: 2
     starGalaxyColumnName: "STARNOTGAL"
     magErrorColumnPattern: "%(filter)s_ERR"
 }

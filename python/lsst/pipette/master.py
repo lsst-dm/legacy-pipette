@@ -12,7 +12,8 @@ import lsst.pipette.phot as pipPhot
 
 
 class Master(pipProc.Process):
-    def __init__(self, Isr=pipIsr.Isr, BackgroundMeasure=pipBackground.BackgroundMeasure):
+    def __init__(self, Isr=pipIsr.Isr, BackgroundMeasure=pipBackground.BackgroundMeasure, *args, **kwargs):
+        super(Master, self).__init__(*args, **kwargs)
         self.Isr = Isr
         self.BackgroundMeasure = BackgroundMeasure
         mask = self.config['mask']

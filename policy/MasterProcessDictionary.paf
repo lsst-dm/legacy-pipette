@@ -185,13 +185,13 @@ definitions: {
            target: Config
            definitions: {
                threshold: {
-                   type: float
+                   type: double
                    description: "Threshold for flagging suspect pixels"
                    maxOccurs: 1
                    default: 25.0
                }
                frac: {
-                   type: float
+                   type: double
                    description: "Minimum fraction of images where bad pixels got flagged"
                    maxOccurs: 1
                    default: 0.5

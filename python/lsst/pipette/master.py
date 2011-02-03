@@ -66,7 +66,7 @@ class Master(pipProc.Process):
             self.display('master', exposure=master, pause=True)
             masterList.append(master)
 
-        if do['flag']:
+        if do['mask']:
             for index, identList in enumerate(identMatrix):
                 flag = None
                 for ident in identList:

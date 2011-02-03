@@ -4,6 +4,7 @@ import numpy
 
 import lsst.afw.math as afwMath
 import lsst.afw.image as afwImage
+import lsst.afw.detection as afwDet
 
 import lsst.pipette.process as pipProc
 import lsst.pipette.isr as pipIsr
@@ -38,40 +39,53 @@ class Master(pipProc.Process):
 
         do = self.config['do']
 
-        isrProc = self.Isr(config=self.config, log=self.log)
-        bgProc = self.BackgroundMeasure(config=self.config, log=self.log)
 
-        bgMatrix = list()
-        for identList in identMatrix:
-            bgList = list()
-            bgMatrix.append(bgList)
-            for ident in identList:
-                exposure, detrends = self.read(inButler, ident, ['raw', 'detrends'])
-                isrProc.run(exposure, detrends=detrends)
-                del detrends
-                bg = bgProc.run(exposure)
-                bgList.append(bg)
-                # XXX photometry so we can mask objects?
-                self.write(outButler, ident, {'postISRCCD': exposure})
-                del exposure
-                
-        if do['scale']:
-            compScales, expScales = self.scale(bgMatrix)
-        else:
-            compScales, expScales = None, None
+
 
         masterList = list()
-        for identList in identMatrix:
-            master = self.combine(identList, outButler, expScales=expScales)
-            self.display('master', exposure=master, pause=True)
+        for index, identList in enumerate(identMatrix):
+            master = afwImage.ExposureF("flat-%d.fits" % index)
             masterList.append(master)
+
+
+
+#        isrProc = self.Isr(config=self.config, log=self.log)
+#        bgProc = self.BackgroundMeasure(config=self.config, log=self.log)
+#
+#        bgMatrix = list()
+#        for identList in identMatrix:
+#            bgList = list()
+#            bgMatrix.append(bgList)
+#            for ident in identList:
+#                exposure, detrends = self.read(inButler, ident, ['raw', 'detrends'])
+#                isrProc.run(exposure, detrends=detrends)
+#                del detrends
+#                bg = bgProc.run(exposure)
+#                bgList.append(bg)
+#                # XXX photometry so we can mask objects?
+#                self.write(outButler, ident, {'postISRCCD': exposure})
+#                del exposure
+#                
+#        if do['scale']:
+#            compScales, expScales = self.scale(bgMatrix)
+#        else:
+#            compScales, expScales = None, None
+#
+#        masterList = list()
+#        for identList in identMatrix:
+#            master = self.combine(identList, outButler, expScales=expScales)
+#            self.display('master', exposure=master, pause=True)
+#            masterList.append(master)
+#
+#        for index, master in enumerate(masterList):
+#            master.writeFits("flat-%d.fits" % index)
 
         if do['mask']:
             for index, identList in enumerate(identMatrix):
                 flag = None
                 for ident in identList:
-                    exp = self.read(outButler, ident, ["postISRCCD"])
-                    flag = self.flag(flag, exp, masterList[index])
+                    expList = self.read(outButler, ident, ["postISRCCD"])
+                    flag = self.flag(flag, expList[0], masterList[index])
                 mask = self.mask(flag, len(identList))
                 masterList[index] = mask
 
@@ -212,29 +226,31 @@ class Master(pipProc.Process):
         mi = exposure.getMaskedImage() 
         dims = mi.getDimensions()
         if flag is None:
-            flag = afwImage.MaskU(dims)
+            flag = afwImage.ImageU(dims)
         image = mi.getImage()
-        image /= flat
+        image /= flat.getMaskedImage().getImage()
 
-        stats = afwMath.makeStatistics(image, mask.getMask(), afwMath.MEDIAN | afwMath.STDEVCLIP, 
+        stats = afwMath.makeStatistics(image, mi.getMask(), afwMath.MEDIAN | afwMath.STDEVCLIP, 
                                        afwMath.StatisticsControl())
         median = stats.getValue(afwMath.MEDIAN)
         stdev = stats.getValue(afwMath.STDEVCLIP)
 
-        flag += threshold(image, median + self._thresh * stdev, True)
-        flag += threshold(image, median - self._thresh * stdev, False)
+        flag += threshold(image, median + self._threshold * stdev, True)
+        flag += threshold(image, median - self._threshold * stdev, False)
         
         return flag
 
     def mask(self, flag, num):
-        return threshold(flag, num * self._maskFrac, True)
+        return threshold(flag, num * self._frac, True)
 
 
 
 def threshold(image, threshold, positive):
-    thresh = afwDet.createThreshold(threshold, positive)
+    thresh = afwDet.createThreshold(threshold, "value", positive)
     feet = afwDet.makeFootprintSet(image, thresh)
-    pixels = afwImage.MaskU(image.getDimensions())
+    pixels = afwImage.ImageU(image.getDimensions())
     pixels.set(0)
-    afwDet.setMaskFromFootprint(pixels, feet, 1)
+    for foot in feet.getFootprints():
+        foot.insertIntoImage(pixels, 1)
     return pixels
+

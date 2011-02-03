@@ -12,6 +12,14 @@ import lsst.pipette.phot as pipPhot
 
 
 class Master(pipProc.Process):
+    def __init__(self, Isr=pipIsr.Isr, BackgroundMeasure=pipBackground.BackgroundMeasure):
+        self.Isr = Isr
+        self.BackgroundMeasure = BackgroundMeasure
+        mask = self.config['mask']
+        self._threshold = mask['threshold']
+        self._frac = mask['frac']
+
+
     def run(self, identMatrix, inButler, outButler):
         """Combine individual detrend exposures to create a master detrend.
 
@@ -29,8 +37,8 @@ class Master(pipProc.Process):
 
         do = self.config['do']
 
-        isrProc = pipIsr.Isr(config=self.config, log=self.log)
-        bgProc = pipBackground.BackgroundMeasure(config=self.config, log=self.log)
+        isrProc = self.Isr(config=self.config, log=self.log)
+        bgProc = self.BackgroundMeasure(config=self.config, log=self.log)
 
         bgMatrix = list()
         for identList in identMatrix:
@@ -56,6 +64,15 @@ class Master(pipProc.Process):
             master = self.combine(identList, outButler, expScales=expScales)
             self.display('master', exposure=master, pause=True)
             masterList.append(master)
+
+        if do['flag']:
+            for index, identList in enumerate(identMatrix):
+                flag = None
+                for ident in identList:
+                    exp = self.read(outButler, ident, ["postISRCCD"])
+                    flag = self.flag(flag, exp, masterList[index])
+                mask = self.mask(flag, len(identList))
+                masterList[index] = mask
 
         return masterList
 
@@ -186,3 +203,37 @@ class Master(pipProc.Process):
         self.log.log(self.log.INFO, "Background of combined image: %f" % (median))
 
         return master
+
+
+    def flag(self, flag, exposure, flat):
+        assert exposure, "exposure not provided"
+        assert flat, "flat not provided"
+        mi = exposure.getMaskedImage() 
+        dims = mi.getDimensions()
+        if flag is None:
+            flag = afwImage.MaskU(dims)
+        image = mi.getImage()
+        image /= flat
+
+        stats = afwMath.makeStatistics(image, mask.getMask(), afwMath.MEDIAN | afwMath.STDEVCLIP, 
+                                       afwMath.StatisticsControl())
+        median = stats.getValue(afwMath.MEDIAN)
+        stdev = stats.getValue(afwMath.STDEVCLIP)
+
+        flag += threshold(image, median + self._thresh * stdev, True)
+        flag += threshold(image, median - self._thresh * stdev, False)
+        
+        return flag
+
+    def mask(self, flag, num):
+        return threshold(flag, num * self._maskFrac, True)
+
+
+
+def threshold(image, threshold, positive):
+    thresh = afwDet.createThreshold(threshold, positive)
+    feet = afwDet.makeFootprintSet(image, thresh)
+    pixels = afwImage.MaskU(image.getDimensions())
+    pixels.set(0)
+    afwDet.setMaskFromFootprint(pixels, feet, 1)
+    return pixels

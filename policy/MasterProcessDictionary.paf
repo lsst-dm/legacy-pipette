@@ -103,6 +103,13 @@ definitions: {
                     maxOccurs: 1
                     default: false
                 }
+                mask: {
+                    type: boolean
+                    description: "Generate mask?"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: false
+                }
             }
         }
     }
@@ -170,4 +177,26 @@ definitions: {
             }
         }
     }
+    mask: {
+       type: Policy
+       description: "Mask construction policy"
+       maxOccurs: 1
+       dictionary: {
+           target: Config
+           definitions: {
+               threshold: {
+                   type: float
+                   description: "Threshold for flagging suspect pixels"
+                   maxOccurs: 1
+                   default: 25.0
+               }
+               frac: {
+                   type: float
+                   description: "Minimum fraction of images where bad pixels got flagged"
+                   maxOccurs: 1
+                   default: 0.5
+               }
+           }
+       }
+   }
 }

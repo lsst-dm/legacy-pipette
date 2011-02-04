@@ -235,19 +235,22 @@ class Master(pipProc.Process):
         median = stats.getValue(afwMath.MEDIAN)
         stdev = stats.getValue(afwMath.STDEVCLIP)
 
-        flag += threshold(image, median + self._threshold * stdev, True)
-        flag += threshold(image, median - self._threshold * stdev, False)
+        self.log.log(self.log.INFO, "Background: %f +/- %f" % (median, stdev))
+        flag += threshold(image, median + self._threshold * stdev, True, log=self.log)
+        flag += threshold(image, median - self._threshold * stdev, False, log=self.log)
         
         return flag
 
     def mask(self, flag, num):
-        return threshold(flag, num * self._frac, True)
+        return threshold(flag, num * self._frac, True, log=self.log)
 
 
 
-def threshold(image, threshold, positive):
+def threshold(image, threshold, positive, log=None):
     thresh = afwDet.createThreshold(threshold, "value", positive)
     feet = afwDet.makeFootprintSet(image, thresh)
+    if log is not None:
+        log.log(log.INFO, "Found %d footprints" % len(feet))
     pixels = afwImage.ImageU(image.getDimensions())
     pixels.set(0)
     for foot in feet.getFootprints():

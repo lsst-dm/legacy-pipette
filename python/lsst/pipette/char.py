@@ -32,8 +32,6 @@ class Char(pipProc.Process):
         @return Sources, Source Matches
         """
         assert exposure, "No exposure provided"
-        assert psf, "No psf provided"
-        assert apcorr, "No apcorr provided"
 
         do = self.config['do']
 

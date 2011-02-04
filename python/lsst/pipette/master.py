@@ -250,7 +250,7 @@ def threshold(image, threshold, positive, log=None):
     thresh = afwDet.createThreshold(threshold, "value", positive)
     feet = afwDet.makeFootprintSet(image, thresh)
     if log is not None:
-        log.log(log.INFO, "Found %d footprints" % len(feet))
+        log.log(log.INFO, "Found %d footprints" % len(feet.getFootprints()))
     pixels = afwImage.ImageU(image.getDimensions())
     pixels.set(0)
     for foot in feet.getFootprints():

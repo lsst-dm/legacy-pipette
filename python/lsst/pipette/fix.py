@@ -20,7 +20,6 @@ class Fix(pipProc.Process):
         @param defects Defect list
         """
         assert exposure, "No exposure provided"
-        assert psf, "No psf provided"
 
         do = self.config['do']
 

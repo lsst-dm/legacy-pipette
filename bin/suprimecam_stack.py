@@ -12,6 +12,7 @@ import lsst.pipette.readwrite as pipReadWrite
 def run(rerun,                          # Rerun name
         frames,                          # Frame number
         ccds,                           # CCD number
+        skytile,                        # Skytile identifier
         config,                         # Configuration
         coords,                         # Skycell centre coordinates
         scale,                          # Pixel scale
@@ -31,7 +32,9 @@ def run(rerun,                          # Rerun name
         identMatrix.append(identList)
 
     stack = stackProc.run(identMatrix, io.inButler, coords[0], coords[1], scale, sizes[0], sizes[1])
-    stack.writeFits(basename + ".fits")
+
+    #stack.writeFits(basename + ".fits")
+    stackProc.write(io.outButler, {'stack': rerun, 'skytile': skytile}, {"stack": stack})
 
 
 
@@ -44,6 +47,8 @@ if __name__ == "__main__":
                       help="visit to run, colon-delimited")
     parser.add_option("-c", "--ccds", dest="ccds", default="0:1:2:3:4:5:6:7:8:9",
                       help="CCD to run (default=%default)")
+    parser.add_option("-s", "--skytile", dest="skytile", type="int"
+                      help="Skytile identifier")
     parser.add_option("--coords", dest="coords", type="float", nargs=2,
                       help="Coordinates for skycell, degrees")
     parser.add_option("--scale", dest="scale", type="float",
@@ -55,9 +60,9 @@ if __name__ == "__main__":
     overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam_warp.paf")
     config, opts, args = parser.parse_args(default, overrides)
     if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or opts.frames is None or opts.ccds is None \
-       or opts.coords is None or opts.scale is None or opts.sizes is None:
+       or opts.skytile is None or opts.coords is None or opts.scale is None or opts.sizes is None:
         parser.print_help()
         sys.exit(1)
 
-    run(opts.rerun, map(int, opts.frames.split(":")), map(int, opts.ccds.split(":")), config,
+    run(opts.rerun, map(int, opts.frames.split(":")), map(int, opts.ccds.split(":")), opts.skytile, config,
         opts.coords, opts.scale, opts.sizes)

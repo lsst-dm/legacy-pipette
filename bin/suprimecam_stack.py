@@ -47,7 +47,7 @@ if __name__ == "__main__":
                       help="visit to run, colon-delimited")
     parser.add_option("-c", "--ccds", dest="ccds", default="0:1:2:3:4:5:6:7:8:9",
                       help="CCD to run (default=%default)")
-    parser.add_option("-s", "--skytile", dest="skytile", type="int"
+    parser.add_option("-s", "--skytile", dest="skytile", type="int",
                       help="Skytile identifier")
     parser.add_option("--coords", dest="coords", type="float", nargs=2,
                       help="Coordinates for skycell, degrees")

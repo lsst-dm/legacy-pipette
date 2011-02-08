@@ -60,7 +60,7 @@ class Stack(pipProcess.Process):
         """
         return self._warp.skycell(ra, dec, scale, xSize, ySize)
 
-    def warp(identList, butler, skycell):
+    def warp(self, identList, butler, skycell):
         """Warp an exposure to a nominated skycell
 
         @param[in] identList List of data identifiers

@@ -3,14 +3,13 @@ setupRequired(utils)
 setupRequired(pex_logging)
 setupRequired(pex_policy)
 
+setupRequired(coadd_utils)
 setupRequired(ip_isr)
 setupRequired(ip_utils)
 setupRequired(meas_utils)
 setupRequired(meas_algorithms)
 setupRequired(meas_pipeline)
 setupRequired(sdqa)
-
-setupRequired(ip_utils)
 
 setupOptional(obs_subaru)
 setupOptional(obs_cfht)

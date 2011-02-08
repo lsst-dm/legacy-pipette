@@ -33,10 +33,10 @@ class Stack(pipProcess.Process):
         coadd.setWcs(skycell.getWcs())
         weight = afwImage.ImageF(xSize, ySize)
 
-        badpix = ~afwImage.MaskU.getPlaneBitMask("DETECTED") # Allow these through
+        badpix = afwImage.MaskU.getPlaneBitMask("EDGE") # Allow everything else through
         for identList in identMatrix:
             warp = self.warp(identList, butler, skycell)
-            # XXX Save for later
+            # XXX Save for later?
             
             coaddUtils.addToCoadd(coadd.getMaskedImage(), weight, warp.getMaskedImage(), badpix, 1.0)
 

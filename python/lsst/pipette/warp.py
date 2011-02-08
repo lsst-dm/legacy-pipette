@@ -144,5 +144,5 @@ class Warp(pipProc.Process):
         subWarp = warp.getMaskedImage().Factory(warp.getMaskedImage(), bbox)
         subWeight = weight.Factory(weight, bbox)
 
-        badpix = ~afwImage.MaskU.getPlaneBitMask("DETECTED") # Allow these through
+        badpix = afwImage.MaskU.getPlaneBitMask("EDGE") # Allow everything else through
         coaddUtils.addToCoadd(subWarp, subWeight, subTarget.getMaskedImage(), badpix, 1.0)

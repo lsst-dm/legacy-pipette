@@ -160,9 +160,9 @@ class Bootstrap(pipProc.Process):
         @return PSF, WCS
         """
         assert exposure, "No exposure provided"
-        if not wcs:
+        if wcs is None:
             wcs = exposure.getWcs()
-        assert wcs, "No wcs provided"
+        assert wcs is not None, "No wcs provided"
 
         bootstrap = self.config['bootstrap']
         model = bootstrap['model']

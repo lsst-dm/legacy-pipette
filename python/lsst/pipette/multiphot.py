@@ -36,7 +36,7 @@ class MultiPhot(pipProcess.Process):
         return sourceList
 
     def psf(self, exposure):
-        psf, wcs = self._Bootstrap.fakePsf(exposure, wcs)
+        psf, wcs = self._Bootstrap.fakePsf(exposure)
         sources = self._Bootstrap.phot(exposure, psf, wcs=wcs)
         psf, cellSet = self._Bootstrap.psf(exposure, sources)
         apcorr = self._Bootstrap.apCorr(exposure, cellSet)

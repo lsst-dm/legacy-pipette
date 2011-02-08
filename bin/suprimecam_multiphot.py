@@ -19,12 +19,17 @@ def run(rerun,                          # Rerun name
     roots = config['roots']
     basename = os.path.join(roots['output'], rerun)
 
-    photProc = pipMultiPhot.MultipPhot(config=config)
+    photProc = pipMultiPhot.MultiPhot(config=config)
 
-    refStack = photProc.read(io.inButler, {'stack': reference, 'skytile': skytile}, ['stack'])[0]
+    #import lsst.pex.logging as pexLog
+    #pexLog.Log.getDefaultLog().setThreshold(pexLog.Log.DEBUG)
+
+    refId = {'stack': reference, 'skytile': skytile, 'filter': "r"}
+    refStack = photProc.read(io.inButler, refId, ['stack'])[0]
     measStackList = list()
     for name in measureList:
-        measStack = photProc.read(io.inButler, {'stack': name, 'skytile': skytile}, ['stack'])[0]
+        dataId = {'stack': name, 'skytile': skytile, 'filter': "r"}
+        measStack = refStack if dataId == refId else photProc.read(io.inButler, dataId, ['stack'])[0]
         measStackList.append(measStack)
 
     sourceList = photProc.run(refStack, measStackList)
@@ -32,7 +37,7 @@ def run(rerun,                          # Rerun name
     catPolicy = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "catalog.paf")
     catalog = pipCatalog.Catalog(catPolicy, allowNonfinite=False)
     for name, sources in zip(measureList, sourceList):
-        catalog.writeSources(basename + '-name' + '.sources', sources, 'sources')
+        catalog.writeSources(basename + '-' + name + '.sources', sources, 'sources')
 
 
 
@@ -44,7 +49,7 @@ if __name__ == "__main__":
                       help="Reference stack name")
     parser.add_option("-m", "--measure", dest="measure", default=[], action="append",
                       help="Stack name to measure")
-    parser.add_option("-s", "--skytile", dest="skytile", type="int"
+    parser.add_option("-s", "--skytile", dest="skytile", type="int",
                       help="Skytile identifier")
 
     default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "MultiPhotProcessDictionary.paf")

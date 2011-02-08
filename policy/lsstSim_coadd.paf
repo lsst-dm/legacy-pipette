@@ -1,0 +1,46 @@
+#<?cfg paf dictionary ?>
+
+definitions: {
+    roots: {
+        type: Policy
+        description: "Root directories"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "RootsDictionary.paf"
+    }
+    warpPolicy: {
+        description: "Policy to control warping."
+        type: "policy"
+        dictionary: @@coadd_utils:policy/WarpDictionary.paf
+        minOccurs: 1
+        maxOccurs: 1
+    }
+    coaddPolicy: {
+        description: "Policy to control coadd."
+        type: "policy"
+        dictionary: @@coadd_utils:policy/CoaddDictionary.paf
+        minOccurs: 1
+        maxOccurs: 1
+    }
+    saveDebugImages: {
+        description: "Save intermediate images?"
+        type: "bool"
+        default: false
+        minOccurs: 1
+        maxOccurs: 1
+    }
+    bboxMin: {
+        description: "Lower left corner of bounding box used to subframe to all input images"
+        type: "int"
+        default: 0 0
+        minOccurs: 2
+        maxOccurs: 2
+    }
+    bboxSize: {
+        description: "Size of bounding box used to subframe all input images; 0 0 for full input images"
+        type: "int"
+        default: 0 0
+        minOccurs: 2
+        maxOccurs: 2
+    }
+}

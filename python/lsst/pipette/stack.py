@@ -3,10 +3,16 @@
 import lsst.afw.image as afwImage
 import lsst.coadd.utils as coaddUtils
 
+import lsst.pipette.process as pipProcess
 import lsst.pipette.warp as pipWarp
 
 
-class Stack(pipWarp.Warp):
+class Stack(pipProcess.Process):
+    def __init__(self, Warp=pipWarp.Warp, **kwargs):
+        super(Stack, self).__init__(**kwargs)
+        self._warp = Warp(**kwargs)
+
+    
     def run(self, identMatrix, butler, ra, dec, scale, xSize, ySize):
         """Warp and stack images
 
@@ -17,7 +23,7 @@ class Stack(pipWarp.Warp):
         @param[in] scale Scale (arcsec/pixel) of skycell
         @param[in] xSize Size in x
         @parma[in] ySize Size in y
-        @output Stacked image
+        @output Stacked exposure
         """
         assert identMatrix, "No identMatrix provided"
 
@@ -39,4 +45,27 @@ class Stack(pipWarp.Warp):
         coaddImage = coadd.getMaskedImage()
         coaddImage /= weight
 
-        return coaddImage
+        return coadd
+
+    def skycell(self, ra, dec, scale, xSize, ySize):
+        """Define a skycell
+        
+        @param[in] ra Right Ascension (degrees) of skycell centre
+        @param[in] dec Declination (degrees) of skycell centre
+        @param[in] scale Scale (arcsec/pixel) of skycell
+        @param[in] xSize Size in x
+        @parma[in] ySize Size in y
+        
+        @return Skycell
+        """
+        return self._warp.skycell(ra, dec, scale, xSize, ySize)
+
+    def warp(identList, butler, skycell):
+        """Warp an exposure to a nominated skycell
+
+        @param[in] identList List of data identifiers
+        @param[in] butler Data butler
+        @param[in] skycell Skycell specification
+        @return Warped exposure
+        """
+        return self._warp.warp(identList, butler, skycell)

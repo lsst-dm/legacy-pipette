@@ -35,9 +35,19 @@ def coadd(idList, butler, radec, scale, size, policy):
     warper = coaddUtils.Warp.fromPolicy(warpPolicy)
     coadd = coaddUtils.Coadd.fromPolicy(coaddBBox, coaddWcs, coaddPolicy)
     for ident in idList:
-        print "Processing", ident
-        exposure = butler.get("calexp", ident)
-        print "Exposure=%r" % (exposure,)
+#        print "Processing", ident
+        # this will work once I start using commas in rafts and sensors. Meanwhile...
+        #exposure = butler.get("calexp", ident)
+        try:
+            fileName = butler.mapper.calexpTemplate % ident
+            filePath = os.path.join(butler.mapper.root, fileName)
+        except Exception, e:
+            print "Failed on %s: %s" % (ident, e)
+        if not os.path.exists(filePath):
+            print "Could not find file; skipping:", filePath
+            continue
+        print "Processing", filePath
+        exposure = afwImage.ExposureF(filePath)
         warpedExposure = warper.warpExposure(coaddWcs, exposure, maxBBox = coaddBBox)
         coadd.addExposure(exposure)
 
@@ -102,11 +112,11 @@ if __name__ == "__main__":
 
     # at the moment ReadWrite simply instantiates the input butler;; maybe later it will be more useful
     io = pipReadWrite.ReadWrite(lsstSim.LsstSimMapper, idNameList,
-                                fileKeys=idNameList+['channel'], config=config)
+                                fileKeys=idNameList+["channel"], config=config)
                                 
-    roots = config['roots']
-    baseName = os.path.join(roots['output'], opts.rerun)
+    roots = config["roots"]
+    baseName = os.path.join(roots["output"], opts.rerun)
 
     coaddExposure, weightMap = coadd(idList, io.inButler, opts.radec, opts.scale, opts.size, config.getPolicy())
-    coaddExposure.writeFits(baseName + ".fits")
+    coaddExposure.writeFits(baseName + "Coadd.fits")
     weightMap.writeFits(baseName + "WeightMap.fits")

@@ -3,7 +3,7 @@
 import os
 import sys
 
-import lsst.obs.suprime as suprime
+import lsst.obs.suprimecam as suprimecam
 import lsst.pipette.config as pipConfig
 import lsst.pipette.multiphot as pipMultiPhot
 import lsst.pipette.options as pipOptions
@@ -15,7 +15,7 @@ def run(rerun,                          # Rerun name
         skytile,                        # Sky tile number
         config,                         # Configuration
         ):
-    io = pipReadWrite.ReadWrite(suprime.SuprimeMapper, ['visit', 'ccd'], config=config)
+    io = pipReadWrite.ReadWrite(suprimecam.SuprimecamMapper, ['visit', 'ccd'], config=config)
     roots = config['roots']
     basename = os.path.join(roots['output'], rerun)
 

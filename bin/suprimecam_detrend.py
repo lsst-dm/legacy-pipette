@@ -6,7 +6,7 @@ import sys
 #import lsst.pex.logging as pexLog
 import lsst.pex.policy as pexPolicy
 import lsst.daf.persistence as dafPersist
-import lsst.obs.suprime as suprime
+import lsst.obs.suprimecam as suprimecam
 import lsst.pipette.config as pipConfig
 import lsst.pipette.master as pipMaster
 import lsst.pipette.options as pipOptions
@@ -22,7 +22,7 @@ def run(rerun,                          # Rerun name
 #    log.setThreshold(log.DEBUG)
 
     roots = config['roots']
-    io = pipReadWrite.ReadWrite(suprime.SuprimeMapper, ['visit', 'ccd'], config=config)
+    io = pipReadWrite.ReadWrite(suprimecam.SuprimecamMapper, ['visit', 'ccd'], config=config)
     detProc = pipMaster.Master(config=config)
     identMatrix = list()
     for ccd in ccds:

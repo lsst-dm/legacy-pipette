@@ -3,7 +3,7 @@
 import os
 import sys
 
-import lsst.obs.suprime as suprime
+import lsst.obs.suprimecam as suprimecam
 import lsst.pipette.config as pipConfig
 import lsst.pipette.stack as pipStack
 import lsst.pipette.options as pipOptions
@@ -18,7 +18,7 @@ def run(rerun,                          # Rerun name
         scale,                          # Pixel scale
         sizes,                          # Skycell size
         ):
-    io = pipReadWrite.ReadWrite(suprime.SuprimeMapper, ['visit', 'ccd'], config=config)
+    io = pipReadWrite.ReadWrite(suprimecam.SuprimecamMapper, ['visit', 'ccd'], config=config)
     roots = config['roots']
     basename = os.path.join(roots['output'], rerun)
     stackProc = pipStack.Stack(config=config)

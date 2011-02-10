@@ -1,1 +1,4 @@
+# Policy overrides for forced multicolor photometry with Suprime-Cam
+
+measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
 

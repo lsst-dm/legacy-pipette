@@ -8,6 +8,7 @@ import lsst.pipette.config as pipConfig
 import lsst.pipette.multiphot as pipMultiPhot
 import lsst.pipette.options as pipOptions
 import lsst.pipette.readwrite as pipReadWrite
+import lsst.pipette.catalog as pipCatalog
 
 def run(rerun,                          # Rerun name
         reference,                      # Reference stack name

@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+import lsst.ip.isr as ipIsr
+import lsst.meas.algorithms as measAlg
+
 import lsst.pipette.process as pipProcess
 import lsst.pipette.phot as pipPhot
 import lsst.pipette.bootstrap as pipBootstrap
@@ -22,14 +25,18 @@ class MultiPhot(pipProcess.Process):
         assert exposureList and len(exposureList) > 0, "exposureList not provided"
         
         refPsf, refApcorr = self.psf(refExposure)
-        footprintSet = self.detect(refExposure, refPsf, apcorr=refApcorr)
+        footprintSet = self.detect(refExposure, refPsf)
         sourceList = list()
         for exp in exposureList:
+            self.display("isr", exposure=exp)
+            exp.writeFits("test.fits")
+
             psf, apcorr = self.psf(exp)
             wcs = exp.getWcs()
             # Assumptions:
             # * Measurement uses the positions provided without tweaking
             # * Measurement creates sources for all footprints in order
+            # These assumptions seem to be met at the moment...
             sources = self.measure(exp, footprintSet, psf, apcorr=apcorr, wcs=wcs)
             sourceList.append(sources)
 
@@ -37,6 +44,15 @@ class MultiPhot(pipProcess.Process):
 
     def psf(self, exposure):
         psf, wcs = self._Bootstrap.fakePsf(exposure)
+
+        # Need to clobber NANs...
+        # XXX Use a Pipette process for this
+        exposure.getMaskedImage().getMask().addMaskPlane("UNMASKEDNAN")
+        nanMasker = ipIsr.UnmaskedNanCounterF()
+        nanMasker.apply(exposure.getMaskedImage())
+        nans = ipIsr.defectListFromMask(exposure, maskName='UNMASKEDNAN')
+        measAlg.interpolateOverDefects(exposure.getMaskedImage(), psf, nans, 0.0)
+        
         sources = self._Bootstrap.phot(exposure, psf, wcs=wcs)
         psf, cellSet = self._Bootstrap.psf(exposure, sources)
         apcorr = self._Bootstrap.apCorr(exposure, cellSet)

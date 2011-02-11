@@ -1,0 +1,30 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    num: {
+        type: int
+        description: "Number of regions to measure on CCD"
+        maxOccurs: 1
+        default: 10000
+    }
+    size: {
+        type: int
+        description: "Size of region (pixels)"
+        maxOccurs: 1
+        default: 10
+    }
+    iterations: {
+        type: int
+        description: "Number of fitting iterations"
+        maxOccurs: 1
+        default: 10
+    }
+    clip: {
+        type: double
+        description: "Clipping threshold (stdevs)"
+        maxOccurs: 1
+        default: 2.0
+    }
+}

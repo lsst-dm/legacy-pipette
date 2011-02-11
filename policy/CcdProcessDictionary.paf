@@ -142,6 +142,13 @@ definitions: {
         }
     }
 
+    fringe: {
+        type: Policy
+        description: "Policy for fringe subtraction"
+        maxOccurs: 1
+        dictionaryFile: "FringeDictionary.paf"
+    }
+
     bootstrap: {
         type: Policy
         description: "Policy for bootstrapping the PSF"

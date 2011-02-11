@@ -234,5 +234,61 @@ class Isr(pipProc.Process):
         assert exposure, "No exposure provided"
         assert fringe, "No fringe provided"
         fringe = self._checkDimensions("fringe", exposure, fringe)
-        raise NotimplementedError, "Fringe subtraction is not yet implemented."
 
+        policy = self.config['fringe']
+
+        science = exposure.getMaskedImage()
+        fringe = fringe.getMaskedImage()
+        width, height = exposure.getWidth(), exposure.getHeight()
+
+        num = policy['num']
+        size = policy['size']
+        iterations = policy['iterations']
+        clip = policy['clip']
+
+        xList = numpy.random_integers(width - size, size=num)
+        yList = numpy.random_integers(height - size, size=num)
+
+        bgScience = afwMath.makeStatistics(science, afwMath.MEDIAN).getValue()
+        bgFringe = afwMath.makeStatistics(fringe, afwMath.MEDIAN).getValue()
+
+        measScience = ma.zeros(2 * num)
+        measFringe = ma.zeros(2 * num)
+        for i in range(num):
+            x, y = xList[i], yList[i]
+            bbox = afwImage.BBox(afwImage.PointI(x, y), afwImage.PointI(x + size, y + size))
+
+            subScience = science.Factory(science, bbox)
+            subFringe = fringe.Factory(fringe, bbox)
+
+            scienceMeas[i] = afwMath.makeStatistics(subScience, afwMath.MEDIAN).getValue() - bgScience
+            fringeMeas[i] = afwMath.makeStatistics(subFringe, afwMath.MEDIAN).getValue() - bgFringe
+
+            # Force linear regression to go through 0,0
+            scienceMeas[num+i] = scienceMeas[i]
+            fringeMeas[num+i] = fringeMeas[i]
+
+        regression = lambda x, y, n: ((x * y).sum() - x.sum() * y.sum() / n) / ((x**2).sum() - x.sum()**2 / n)
+
+        lastNum = num
+        for i in range(iterations):
+            slope = regression(fringeMeas, scienceMeas, 2.0 * num)
+            
+            fit = fringeMeas * slope
+            resid = scienceMeas - fit
+            rms = (resid**2).sum() / (2.0 * num - 1)
+            limit = clip * rms
+
+            resid.clip(-limit, limit)
+            scienceMeas.mask = resid.mask
+            fringeMeas.mask = resid.mask
+
+            newNum = resid.num()
+            if newNum == lastNum:
+                # Iterating isn't buying us anything
+                break
+            lastNum = newNum
+
+        slope = regression(fringeMeas, scienceMeas, 2.0 * num)
+        self.log.log(self.log.INFO, "Fringe amplitude scaling: %f" % slope
+        science.scaledMinus(slope, fringe)

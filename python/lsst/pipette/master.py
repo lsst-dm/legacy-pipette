@@ -39,46 +39,33 @@ class Master(pipProc.Process):
 
         do = self.config['do']
 
+        isrProc = self.Isr(config=self.config, log=self.log)
+        bgProc = self.BackgroundMeasure(config=self.config, log=self.log)
 
-
+        bgMatrix = list()
+        for identList in identMatrix:
+            bgList = list()
+            bgMatrix.append(bgList)
+            for ident in identList:
+                exposure, detrends = self.read(inButler, ident, ['raw', 'detrends'])
+                isrProc.run(exposure, detrends=detrends)
+                del detrends
+                bg = bgProc.run(exposure)
+                bgList.append(bg)
+                # XXX photometry so we can mask objects?
+                self.write(outButler, ident, {'postISRCCD': exposure})
+                del exposure
+                
+        if do['scale']:
+            compScales, expScales = self.scale(bgMatrix)
+        else:
+            compScales, expScales = None, None
 
         masterList = list()
-        for index, identList in enumerate(identMatrix):
-            master = afwImage.ExposureF("flat-%d.fits" % index)
+        for identList in identMatrix:
+            master = self.combine(identList, outButler, expScales=expScales)
+            self.display('master', exposure=master, pause=True)
             masterList.append(master)
-
-
-
-#        isrProc = self.Isr(config=self.config, log=self.log)
-#        bgProc = self.BackgroundMeasure(config=self.config, log=self.log)
-#
-#        bgMatrix = list()
-#        for identList in identMatrix:
-#            bgList = list()
-#            bgMatrix.append(bgList)
-#            for ident in identList:
-#                exposure, detrends = self.read(inButler, ident, ['raw', 'detrends'])
-#                isrProc.run(exposure, detrends=detrends)
-#                del detrends
-#                bg = bgProc.run(exposure)
-#                bgList.append(bg)
-#                # XXX photometry so we can mask objects?
-#                self.write(outButler, ident, {'postISRCCD': exposure})
-#                del exposure
-#                
-#        if do['scale']:
-#            compScales, expScales = self.scale(bgMatrix)
-#        else:
-#            compScales, expScales = None, None
-#
-#        masterList = list()
-#        for identList in identMatrix:
-#            master = self.combine(identList, outButler, expScales=expScales)
-#            self.display('master', exposure=master, pause=True)
-#            masterList.append(master)
-#
-#        for index, master in enumerate(masterList):
-#            master.writeFits("flat-%d.fits" % index)
 
         if do['mask']:
             for index, identList in enumerate(identMatrix):

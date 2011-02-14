@@ -7,7 +7,7 @@ definitions: {
         type: int
         description: "Number of regions to measure on CCD"
         maxOccurs: 1
-        default: 10000
+        default: 30000
     }
     size: {
         type: int
@@ -19,12 +19,18 @@ definitions: {
         type: int
         description: "Number of fitting iterations"
         maxOccurs: 1
-        default: 10
+        default: 20
     }
     clip: {
         type: double
         description: "Clipping threshold (stdevs)"
         maxOccurs: 1
-        default: 2.0
+        default: 2.5
+    }
+    discard: {
+        type: double
+        description: "Discard threshold (stdevs)"
+        maxOccurs: 1
+        default: 5.0
     }
 }

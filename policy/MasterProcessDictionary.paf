@@ -97,11 +97,24 @@ definitions: {
                     default: false
                 }
                 scale: {
-                    type: boolean
-                    description: "Scale exposures by background?"
+                    type: string
+                    description: "How should scaling be done?"
                     minOccurs: 1
                     maxOccurs: 1
-                    default: false
+                    default: "NONE"
+                    allowed: {
+                        value: "NONE"
+                        description: "No scaling at all"
+                    }
+                    allowed: {
+                        value: "FLAT"
+                        description: "Scale for flat-field"
+                    }
+                    allowed: {
+                        value: "FRINGE"
+                        description: "Scale for fringe"
+                    }
+
                 }
                 mask: {
                     type: boolean

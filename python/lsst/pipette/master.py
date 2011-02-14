@@ -55,15 +55,15 @@ class Master(pipProc.Process):
                 # XXX photometry so we can mask objects?
                 self.write(outButler, ident, {'postISRCCD': exposure})
                 del exposure
-                
-        if do['scale']:
+
+        if do['scale'] != "NONE":
             compScales, expScales = self.scale(bgMatrix)
         else:
             compScales, expScales = None, None
 
         masterList = list()
-        for identList in identMatrix:
-            master = self.combine(identList, outButler, expScales=expScales)
+        for identList, bgList in zip(identMatrix, bgMatrix):
+            master = self.combine(identList, outButler, expScales=expScales, backgrounds=bgList)
             self.display('master', exposure=master, pause=True)
             masterList.append(master)
 
@@ -112,12 +112,20 @@ class Master(pipProc.Process):
         if bad:
             raise RuntimeError("One or more bad backgrounds found.")
 
-        matrix = numpy.log(numpy.array(bg)) # log(Background) for each exposure/component
+        matrix = numpy.array(bg)        # Background for each exposure/component
         components, exposures = numpy.shape(matrix)
+        self.log.log(self.log.DEBUG, "Input backgrounds: %s" % matrix)
+
+        if self.config['do']['scale'] == "FRINGE":
+            compScales = numpy.ones(components)
+            expScales = numpy.apply_along_axis(lambda x: numpy.average(x), 0, matrix)
+            return compScales, expScales
+
+
+        # Flat-field scaling
+        matrix = numpy.log(matrix)      # log(Background) for each exposure/component
         compScales = numpy.zeros(components) # Initial guess at log(scale) for each component
         expScales = numpy.apply_along_axis(lambda x: numpy.average(x - compScales), 0, matrix)
-
-        self.log.log(self.log.DEBUG, "Input backgrounds: %s" % numpy.exp(matrix))
 
         for iterate in range(self.config['scale']['iterate']):
             # XXX use masks for each quantity: maskedarrays
@@ -140,12 +148,13 @@ class Master(pipProc.Process):
 
         return numpy.exp(compScales), numpy.exp(expScales)
 
-    def combine(self, identList, butler, expScales=None):
+    def combine(self, identList, butler, expScales=None, backgrounds=None):
         """Combine multiple exposures for a single component
 
         @param identList List of data identifiers
         @param butler Data butler
         @param expScales Scales to apply for each exposure, or None
+        @param bgList List of background models
         @return Combined image
         """
         numRows = self.config['combine']['rows'] # Number of rows to combine at once
@@ -176,13 +185,23 @@ class Master(pipProc.Process):
             stop = min(start + numRows, height)
             rows = stop - start
             box = afwImage.BBox(afwImage.PointI(0, start), width, rows)
-            for index, i in enumerate(identList):
+            for index, id in enumerate(identList):
                 data = afwImage.MaskedImageF(width, rows)
-                exp = butler.get('postISRCCD', i)
+                exp = butler.get('postISRCCD', id)
                 image = exp.getMaskedImage()
                 data <<= afwImage.MaskedImageF(image, box)
+
+                # XXX This is a little sleazy, assuming the fringes aren't varying.
+                # What we really should do is remove the background and scale by the fringe amplitude
+                if self.config['do']['scale'] == "FRINGE" and backgrounds is not None:
+                    bg = backgrounds[index]
+                    if isinstance(bg, afwMath.mathLib.Background):
+                        bg = afwImage.ImageF(bg.getImageF(), box)
+                    data -= bg
+
                 if expScales is not None:
                     data /= expScales[index]
+                    
                 combine.push_back(data)
                 del exp
                 #gc.collect()

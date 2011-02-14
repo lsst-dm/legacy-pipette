@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+import math
+import numpy.random
+import numpy.ma as ma
+import lsst.afw.image as afwImage
+
 import lsst.afw.math as afwMath
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.ip.isr as ipIsr
@@ -235,60 +240,76 @@ class Isr(pipProc.Process):
         assert fringe, "No fringe provided"
         fringe = self._checkDimensions("fringe", exposure, fringe)
 
-        policy = self.config['fringe']
+        # XXX This is a first cut at fringe subtraction.  It should be fairly simple to generalise to allow
+        # multiple fringe frames (generated from, e.g., Principal Component Analysis) and solve for the linear
+        # combination that best reproduces the fringes on the science frame.        
+        # Optimisations:
+        # * Push the whole thing into C++
+        # * Persist the fringe measurements along with the fringe frame
+
 
         science = exposure.getMaskedImage()
         fringe = fringe.getMaskedImage()
         width, height = exposure.getWidth(), exposure.getHeight()
 
+        policy = self.config['fringe']
         num = policy['num']
         size = policy['size']
         iterations = policy['iterations']
         clip = policy['clip']
+        discard = policy['discard']
 
-        xList = numpy.random_integers(width - size, size=num)
-        yList = numpy.random_integers(height - size, size=num)
+        xList = numpy.random.random_integers(width - size, size=num)
+        yList = numpy.random.random_integers(height - size, size=num)
 
-        bgScience = afwMath.makeStatistics(science, afwMath.MEDIAN).getValue()
+        bgStats = afwMath.makeStatistics(science, afwMath.MEDIAN | afwMath.STDEVCLIP)
+        bgScience = bgStats.getValue(afwMath.MEDIAN)
+        sdScience = bgStats.getValue(afwMath.STDEVCLIP)
         bgFringe = afwMath.makeStatistics(fringe, afwMath.MEDIAN).getValue()
 
-        measScience = ma.zeros(2 * num)
-        measFringe = ma.zeros(2 * num)
+        measScience = ma.zeros(num)
+        measFringe = ma.zeros(num)
         for i in range(num):
             x, y = xList[i], yList[i]
-            bbox = afwImage.BBox(afwImage.PointI(x, y), afwImage.PointI(x + size, y + size))
+            bbox = afwImage.BBox(afwImage.PointI(x, y), afwImage.PointI(x + size - 1, y + size - 1))
 
             subScience = science.Factory(science, bbox)
             subFringe = fringe.Factory(fringe, bbox)
 
-            scienceMeas[i] = afwMath.makeStatistics(subScience, afwMath.MEDIAN).getValue() - bgScience
-            fringeMeas[i] = afwMath.makeStatistics(subFringe, afwMath.MEDIAN).getValue() - bgFringe
+            measScience[i] = afwMath.makeStatistics(subScience, afwMath.MEDIAN).getValue() - bgScience
+            measFringe[i] = afwMath.makeStatistics(subFringe, afwMath.MEDIAN).getValue() - bgFringe
 
-            # Force linear regression to go through 0,0
-            scienceMeas[num+i] = scienceMeas[i]
-            fringeMeas[num+i] = fringeMeas[i]
+        # Immediately discard measurements that aren't in the background 'noise' (which includes the fringe
+        # modulation.  These have been corrupted by objects.
+        limit = discard * sdScience
+        masked = ma.masked_outside(measScience, -limit, limit)
+        measScience.mask = masked.mask
+        measFringe.mask = masked.mask
 
         regression = lambda x, y, n: ((x * y).sum() - x.sum() * y.sum() / n) / ((x**2).sum() - x.sum()**2 / n)
 
+        # Solve for the fringe amplitude, with rejection of bad points
         lastNum = num
         for i in range(iterations):
-            slope = regression(fringeMeas, scienceMeas, 2.0 * num)
+            slope = regression(measFringe, measScience, 2.0 * num)
+            intercept = measScience.mean() - slope * measFringe.mean()
             
-            fit = fringeMeas * slope
-            resid = scienceMeas - fit
-            rms = (resid**2).sum() / (2.0 * num - 1)
+            fit = measFringe * slope + intercept
+            resid = measScience - fit
+            sort = ma.sort(resid.copy())
+            rms = 0.74 * (sort[int(0.75 * lastNum)] - sort[int(0.25 * lastNum)])
             limit = clip * rms
 
-            resid.clip(-limit, limit)
-            scienceMeas.mask = resid.mask
-            fringeMeas.mask = resid.mask
+            resid = ma.masked_outside(resid, -limit, limit)
+            measScience.mask = resid.mask
+            measFringe.mask = resid.mask
 
-            newNum = resid.num()
+            newNum = resid.count()
             if newNum == lastNum:
                 # Iterating isn't buying us anything
                 break
             lastNum = newNum
 
-        slope = regression(fringeMeas, scienceMeas, 2.0 * num)
-        self.log.log(self.log.INFO, "Fringe amplitude scaling: %f" % slope
+        slope = regression(measFringe, measScience, 2.0 * num)
+        self.log.log(self.log.INFO, "Fringe amplitude scaling: %f" % slope)
         science.scaledMinus(slope, fringe)

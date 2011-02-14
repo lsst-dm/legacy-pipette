@@ -6,7 +6,7 @@ do: {
     flat: false
     cr: true
     phot: true
-    scale: true
+    scale: NONE
 }
 
 detect: {

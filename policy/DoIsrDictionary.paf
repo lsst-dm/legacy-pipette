@@ -1,0 +1,69 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    processAmp: {
+        type: Policy
+        description: "Process single amplifiers"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "DoProcessAmpDictionary.paf"
+    }
+    assembly: {
+        type: boolean
+        description: "Assemble amplifiers into a single CCD image"
+        minOccurs: 0
+        maxOccurs: 1
+        default: true
+    }
+    bias: {
+        type: boolean
+        description: "Perform bias correction?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    variance: {
+        type: boolean
+        description: "Calculate image variance"
+        minOccurs: 0
+        maxOccurs: 1
+        default: true
+    }
+    dark: {
+        type: boolean
+        description: "Perform dark correction?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    flat: {
+        type: boolean
+        description: "Perform flat correction?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    fringe: {
+        type: boolean
+        description: "Perform fringe correction?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    defects: {
+        type: boolean
+        description: "Mask defects?"
+        minOccurs: 1
+        maxOccurs: 1
+        default: false
+    }
+    background: {
+        type: boolean
+        description: "Perform background subtraction?"
+        minOccurs: 0
+        maxOccurs: 1
+        default: false
+    }
+}

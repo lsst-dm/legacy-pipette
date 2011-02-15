@@ -1,0 +1,18 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    interpolate: {
+        type: boolean
+        description: "Interpolate over defects?"
+        maxOccurs: 1
+        default: false
+    }
+    cosmicray: {
+        type: boolean
+        description: "Find cosmic rays?"
+        maxOccurs: 1
+        default: false
+    }
+}

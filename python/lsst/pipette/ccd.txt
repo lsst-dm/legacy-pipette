@@ -5,32 +5,33 @@ ProcessCcd: process a single CCD
   + ProcessAmp: process a single amplifier
     - saturation: mask saturated pixels
     - overscan: subtract overscan
-    - trim: remove uninteresting pixels
   + assembly: assemble individual amplifiers into a CCD
   + bias: bias subtraction
   + variance: calculate variance
   + dark: dark subtraction
   + flat: flat-fielding
-  + fringe: fringe subtraction (not implemented)
+  + fringe: fringe subtraction
   + defects: mask defects
   + background: subtract background
-* Bootstrap: get what we need for characterisation before we have it
+* Calibrate: calibrate exposure (psf, astro, photo)
   + fakePsf: generate a fake PSF
-  + Fix: fix instrumental problems with dodgy PSF
+  + Repair: fix instrumental problems with dodgy PSF
     - interpolate: interpolate over bad pixels
-    - cr: identify CRs (but don't replace yet)
-  + Phot: photometry
+    - cosmicray: identify CRs (but don't replace yet)
+  + Photometry: photometry in preparation for PSF
     - detect: bright object detection
     - measure: measure bright objects
   + psf: determine PSF
   + apCorr: determine aperture correction
-* Char: characterise image
-  + Fix: fix instrumental problems with real PSF
+  + Repair: fix instrumental problems with real PSF
     - interpolate: interpolate over bad pixels
-    - cr: remove CRs
-  + Phot: photometry
-    - detect: faint object detection
-    - measure: measure faint objects
+    - cosmicray: identify CRs (replace)
+  + background: subtract background with bright sources masked
+  + Rephotometry: photometry to measure bright sources with real PSF
+    - measure: re-measure bright objects with real PSF
   + distortion: create distortion model
-  + ast: astrometric calibration
-  + cal: photometric calibration
+  + astro: astrometric calibration
+  + photo: photometric calibration
+* Photometry: photometry of faint sources
+  - detect: faint object detection
+  - measure: measure faint objects

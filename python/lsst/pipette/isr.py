@@ -8,24 +8,38 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.ip.isr as ipIsr
+import lsst.meas.algorithms as measAlg
 import lsst.pipette.util as pipUtil
 import lsst.pipette.process as pipProc
+import lsst.pipette.processAmp as pipAmp
+import lsst.pipette.background as pipBackground
 
 class Isr(pipProc.Process):
-    def run(self, exposure, detrends=None):
+    def __init__(self, ProcessAmp=pipAmp.ProcessAmp, Background=pipBackground.Background, *args, **kwargs):
+        super(Isr, self).__init__(*args, **kwargs)
+        self._ProcessAmp = ProcessAmp
+        self._Background = Background
+    
+    def run(self, exposureList, detrends=None):
         """Run Instrument Signature Removal (ISR)
 
-        @param exposure Exposure to process
+        @param exposureList List of exposures to process
         @param detrends Dict with detrends to apply (bias,dark,flat,fringe)
+        @return Exposure, list of defects, background
         """
-        assert exposure, "No exposure provided"
-        do = self.config['do']
-        if do['saturation']:
-            self.saturation(exposure)
-        if do['overscan']:
-            self.overscan(exposure)
-        if do['trim']:
-            self.trim(exposure)
+        assert exposureList, "No exposure provided"
+        do = self.config['do']['isr']
+
+        for exp in exposureList:
+            self.processAmp(exp)
+
+        if do['assembly']:
+            exposure = self.assembly(exposureList)
+            if detrends is not None:
+                for kind in detrends.keys():
+                    detrends[kind] = self.assembly(detrends[kind])
+        self.display('assembly', exposure=exposure)
+
         if do['bias']:
             self.bias(exposure, detrends['bias'])
         if do['variance']:
@@ -37,9 +51,92 @@ class Isr(pipProc.Process):
         if do['fringe']:
             self.fringe(exposure, detrends['fringe'])
 
+        self.display('flattened', exposure=exposure)
+
+        if do['defects']:
+            defects = self.defects(exposure)
+        else:
+            defects = None
+
+        if do['background']:
+            bg, exposure = self.background(exposure)
+        else:
+            bg = None
+
         self.display('isr', exposure=exposure)
-        return
-    
+        return exposure, defects, bg
+
+    def processAmp(self, exposure):
+        """Process a single amplifier
+
+        @param exposure Exposure to process
+        """
+        processAmp = self._ProcessAmp(config=self.config, log=self.log)
+        processAmp.run(exposure)
+
+    def assembly(self, exposureList):
+        """Assembly of amplifiers into a CCD
+
+        @param exposure List of exposures to be assembled (each is an amp from the same exposure)
+        @return Assembled exposure
+        """
+        if not hasattr(exposureList, "__iter__"):
+            # This is not a list; presumably it's a single item needing no assembly
+            return exposureList
+        assert len(exposureList) > 0, "Nothing in exposureList"
+        if len(exposureList) == 1 and exposureList[0].getMaskedImage().getDimensions() == \
+           pipUtil.getCcd(exposureList[0]).getAllPixels(True).getDimensions():
+            # Special case: single exposure of the correct size
+            return exposureList[0]
+        
+        egExp = exposureList[0]         # The (assumed) model for exposures
+        egMi = egExp.getMaskedImage()   # The (assumed) model for masked images
+        Exposure = type(egExp)
+        MaskedImage = type(egMi)
+        ccd = pipUtil.getCcd(egExp)
+        miCcd = MaskedImage(ccd.getAllPixels(True).getDimensions())
+
+        for exp in exposureList:
+            mi = exp.getMaskedImage()
+            if pipUtil.detectorIsCcd(exp):
+                for amp in ccd:
+                    self._assembleAmp(miCcd, mi, amp)
+                exp.setMaskedImage(miCcd)
+            else:
+                amp = pipUtil.getAmp(exp)
+                self._assembleAmp(miCcd, mi, amp)
+
+        exp = afwImage.makeExposure(miCcd, egExp.getWcs())
+        exp.setWcs(egExp.getWcs())
+        exp.setMetadata(egExp.getMetadata())
+        md = exp.getMetadata()
+        if md.exists('DATASEC'):
+            md.remove('DATASEC')
+        exp.setFilter(egExp.getFilter())
+        exp.setDetector(ccd)
+        exp.getCalib().setExptime(egExp.getCalib().getExptime())
+        exp.getCalib().setMidTime(egExp.getCalib().getMidTime())
+        return exp
+
+    def _assembleAmp(self, target, source, amp):
+        """Assemble an amplifier
+
+        @param target Target image (CCD)
+        @param source Source image (amplifier)
+        @param amp Amplifier
+        """
+        sourceDataSec = amp.getDiskDataSec()
+        targetDataSec = amp.getDataSec(True)
+        self.log.log(self.log.INFO, "Assembling amp %s: %s --> %s" %
+                     (amp.getId(), sourceDataSec, targetDataSec))
+        sourceTrim = source.Factory(source, sourceDataSec)
+        sourceTrim = sourceTrim.Factory(amp.prepareAmpData(sourceTrim.getImage()),
+                                        amp.prepareAmpData(sourceTrim.getMask()),
+                                        amp.prepareAmpData(sourceTrim.getVariance()))
+        targetTrim = target.Factory(target, targetDataSec)
+        targetTrim <<= sourceTrim
+        amp.setTrimmed(True)
+
 
     def saturation(self, exposure):
         """Mask saturated pixels
@@ -90,46 +187,6 @@ class Isr(pipProc.Process):
             image -= offset
         return
 
-
-    def trim(self, exposure):
-        """Trim overscan out of exposure
-
-        @param exposure Exposure to process
-        """
-        assert exposure, "No exposure provided"
-        mi = exposure.getMaskedImage()
-        MaskedImage = type(mi)
-        if pipUtil.detectorIsCcd(exposure):
-            # Effectively doing CCD assembly since we have all amplifiers
-            ccd = pipUtil.getCcd(exposure)
-            miCcd = MaskedImage(ccd.getAllPixels(True).getDimensions())
-            for amp in ccd:
-                diskDataSec = amp.getDiskDataSec()
-                trimDataSec = amp.getDataSec(True)
-                miTrim = MaskedImage(mi, diskDataSec)
-                miTrim = MaskedImage(amp.prepareAmpData(miTrim.getImage()),
-                                     amp.prepareAmpData(miTrim.getMask()),
-                                     amp.prepareAmpData(miTrim.getVariance()))
-                miAmp = MaskedImage(miCcd, trimDataSec)
-                self.log.log(self.log.INFO, "Trimming amp %s: %s --> %s" %
-                             (amp.getId(), diskDataSec, trimDataSec))
-                miAmp <<= miTrim
-                amp.setTrimmed(True)
-            exposure.setMaskedImage(miCcd)
-        else:
-            # AFW doesn't provide a useful target datasec, so we just make an image that has the useful pixels
-            amp = cameraGeom.cast_Amp(exposure.getDetector())
-            diskDataSec = amp.getDiskDataSec()
-            self.log.log(self.log.INFO, "Trimming amp %s: %s" % (amp.getId(), diskDataSec))
-            miTrim = MaskedImage(mi, diskDataSec)
-            amp.setTrimmed(True)
-            miAmp = MaskedImage(amp.prepareAmpData(miTrim.getImage()),
-                                amp.prepareAmpData(miTrim.getMask()),
-                                amp.prepareAmpData(miTrim.getVariance()))
-            exposure.setMaskedImage(miAmp)
-        return
-
-
     def _checkDimensions(self, name, exposure, detrend):
         """Check that dimensions of detrend matches that of exposure
         of interest; trim if necessary.
@@ -140,12 +197,9 @@ class Isr(pipProc.Process):
         """
         if detrend.getMaskedImage().getDimensions() == exposure.getMaskedImage().getDimensions():
             return detrend
-        self.log.log(self.log.INFO, "Trimming %s to match dimensions" % name)
-        self.trim(detrend)
-        if detrend.getMaskedImage().getDimensions() != exposure.getMaskedImage().getDimensions():
-            raise RuntimeError("Detrend %s is of wrong size: %s vs %s" %
-                               (name, detrend.getMaskedImage().getDimensions(),
-                                exposure.getMaskedImage().getDimensions()))
+        raise RuntimeError("Detrend %s is of wrong size: %s vs %s" %
+                           (name, detrend.getMaskedImage().getDimensions(),
+                            exposure.getMaskedImage().getDimensions()))
         return detrend
 
     def bias(self, exposure, bias):
@@ -313,3 +367,51 @@ class Isr(pipProc.Process):
         slope = regression(measFringe, measScience, 2.0 * num)
         self.log.log(self.log.INFO, "Fringe amplitude scaling: %f" % slope)
         science.scaledMinus(slope, fringe)
+
+    def defects(self, exposure):
+        """Mask defects
+
+        @param exposure Exposure to process
+        @return Defect list
+        """
+        assert exposure, "No exposure provided"
+
+        policy = self.config['defects']
+        defects = measAlg.DefectListT()
+        ccd = pipUtil.getCcd(exposure)
+        statics = ccd.getDefects() # Static defects
+        for defect in statics:
+            bbox = defect.getBBox()
+            new = measAlg.Defect(bbox)
+            defects.append(new)
+        ipIsr.maskBadPixelsDef(exposure, defects, fwhm=None, interpolate=False, maskName='BAD')
+        self.log.log(self.log.INFO, "Masked %d static defects." % len(statics))
+
+        grow = policy['grow']
+        sat = ipIsr.defectListFromMask(exposure, growFootprints=grow, maskName='SAT') # Saturated defects
+        self.log.log(self.log.INFO, "Added %d saturation defects." % len(sat))
+        for defect in sat:
+            bbox = defect.getBBox()
+            new = measAlg.Defect(bbox)
+            defects.append(new)
+
+        exposure.getMaskedImage().getMask().addMaskPlane("UNMASKEDNAN")
+        nanMasker = ipIsr.UnmaskedNanCounterF()
+        nanMasker.apply(exposure.getMaskedImage())
+        nans = ipIsr.defectListFromMask(exposure, maskName='UNMASKEDNAN')
+        self.log.log(self.log.INFO, "Added %d unmasked NaNs." % nanMasker.getNpix())
+        for defect in nans:
+            bbox = defect.getBBox()
+            new = measAlg.Defect(bbox)
+            defects.append(new)
+
+        return defects
+
+    def background(self, exposure):
+        """Background subtraction
+
+        @param exposure Exposure to process
+        @return Background, Background-subtracted exposure
+        """
+        background = self._Background(config=self.config, log=self.log)
+        return background.run(exposure)

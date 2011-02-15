@@ -16,68 +16,15 @@ definitions: {
         description: "Do we do these tasks?"
         minOccurs: 0
         maxOccurs: 1
-        dictionary: {
-            target: Config
-            definitions: {
-                isr: {
-                    type: Policy
-                    description: "Instrumental Signature Removal"
-                    minOccurs: 1
-                    maxOccurs: 1
-                    dictionaryFile: "DoIsrDictionary.paf"
-                }
-                phot: {
-                    type: boolean
-                    description: "Perform photometry?"
-                    minOccurs: 1
-                    maxOccurs: 1
-                    default: false
-                }
-                cr: {
-                    type: boolean
-                    description: "Mask cosmic rays?"
-                    minOccurs: 1
-                    maxOccurs: 1
-                    default: false
-                }
-                distortion: {
-                    type: boolean
-                    description: "Apply optical distortion?"
-                    minOccurs: 1
-                    maxOccurs: 1
-                    default: false
-                }
-                ast: {
-                    type: boolean
-                    description: "Perform astrometric calibration?"
-                    minOccurs: 1
-                    maxOccurs: 1
-                    default: false
-                }
-                cal: {
-                    type: boolean
-                    description: "Perform photometric calibration?"
-                    minOccurs: 1
-                    maxOccurs: 1
-                    default: false
-                }
-            }
-        }
+        dictionaryFile: "DoProcessCcdDictionary.paf"
     }
 
-    fringe: {
+    calibrate: {
         type: Policy
-        description: "Policy for fringe subtraction"
-        maxOccurs: 1
-        dictionaryFile: "FringeDictionary.paf"
-    }
-
-    bootstrap: {
-        type: Policy
-        description: "Policy for bootstrapping the PSF"
+        description: "Policy for calibration"
         minOccurs: 0
         maxOccurs: 1
-        dictionaryFile: "bootstrapDictionary.paf"
+        dictionaryFile: "calibrateDictionary.paf"
     }
 
     defects: {
@@ -141,7 +88,7 @@ definitions: {
         maxOccurs: 1
         dictionary: @@meas_algorithms:policy:ApertureCorrectionDictionary.paf
     }
-    cr: {
+    cosmicray: {
         type: Policy
         description: "Cosmic rays masking policy"
         minOccurs: 0
@@ -155,7 +102,7 @@ definitions: {
         maxOccurs: 1
         dictionaryFile: "distortionDictionary.paf"
     }
-    ast: {
+    astrometry: {
         type: Policy
         description: "Astrometric calibration policy"
         minOccurs: 0
@@ -168,9 +115,9 @@ definitions: {
         minOccurs: 0
         maxOccurs: 1
     }
-#    cal: {
+#    zeropoint: {
 #        type: Policy
-#        description: "Perform photometric calibration?"
+#        description: "Photometric calibration policies"
 #        minOccurs: 0
 #        maxOccurs: 1
 #        dictionary: {

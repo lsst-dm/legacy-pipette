@@ -170,27 +170,20 @@ class ReadWrite(object):
 
         @param dataId Data identifier for butler
         @param config Configuration (for which detrends to read)
-        @returns List of dicts with detrend exposures
+        @returns Dict of lists for each detrend type
         """
         identifiers = self.lookup(dataId)
-        detrends = list()
-        for ident in identifiers:
-            ident.update(dataId)
-            do = config['do']
-            dets = dict()
-            if do['bias']:
-                self.log.log(self.log.INFO, "Reading bias for %s" % (ident))
-                dets['bias'] = self.inButler.get('bias', ident)
-            if do['dark']:
-                self.log.log(self.log.INFO, "Reading dark for %s" % (ident))
-                dets['dark'] = self.inButler.get('dark', ident)
-            if do['flat']:
-                self.log.log(self.log.INFO, "Reading flat for %s" % (ident))
-                dets['flat'] = self.inButler.get('flat', ident)
-            if do['fringe']:
-                self.log.log(self.log.INFO, "Reading fringe for %s" % (ident))
-                dets['fringe'] = self.inButler.get('fringe', ident)
-            detrends.append(dets)
+        detrends = dict()
+        do = config['do']['isr']
+        for kind in ('bias', 'dark', 'flat', 'fringe'):
+            if do[kind]:
+                detList = list()
+                for ident in identifiers:
+                    ident.update(dataId)
+                    self.log.log(self.log.INFO, "Reading %s for %s" % (kind, ident))
+                    detrend = self.inButler.get(kind, ident)
+                    detList.append(detrend)
+                detrends[kind] = detList
         return detrends
 
     def write(self, dataId, exposure=None, psf=None, sources=None, matches=None, **kwargs):

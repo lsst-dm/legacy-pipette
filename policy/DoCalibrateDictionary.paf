@@ -1,0 +1,48 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    repair: {
+        type: Policy
+        description: "Repair exposure defects?"
+        maxOccurs: 1
+        dictionaryFile: "DoRepairDictionary.paf"
+    }
+    psf: {
+        type: boolean
+        description: "Measure PSF?"
+        maxOccurs: 1
+        default: false
+    }
+    apcorr: {
+        type: boolean
+        description: "Measure aperture correction?"
+        maxOccurs: 1
+        default: false
+    }
+    background: {
+        type: boolean
+        description: "Subtract background?"
+        maxOccurs: 1
+        default: false
+    }
+    distortion: {
+        type: boolean
+        description: "Apply optical distortion?"
+        maxOccurs: 1
+        default: false
+    }
+    astrometry: {
+        type: boolean
+        description: "Perform astrometric calibration?"
+        maxOccurs: 1
+        default: false
+    }
+    zeropoint: {
+        type: boolean
+        description: "Perform photometric calibration?"
+        maxOccurs: 1
+        default: false
+    }
+}

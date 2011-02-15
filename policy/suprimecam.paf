@@ -1,18 +1,35 @@
 #<?cfg paf policy>
 
 do: {
-    saturation: true
-    overscan: true
-    flat: true
-    defects: true
-    interpolate: true
-    background: true
-    cr: true
+    isr: {
+        processAmp: {
+            saturation: true
+            overscan: true
+        }
+        assembly: true
+        bias: false
+        variance: true
+        dark: false
+        flat: true
+        fringe: false
+        defects: true
+        background: true
+    }
+    calibrate: {
+        repair: {
+            interpolate: true
+            cosmicray: true
+        }
+        psf: true
+        apcorr: true
+        background: false
+        distortion: true
+        astrometry: true
+        zeropoint: true
+    }
     phot: true
-    distortion: true
-    ast: true
-    cal: true
 }
+
 
 detect: {
     thresholdValue: 5.0
@@ -25,7 +42,7 @@ defects: {
     grow: 2
 }
 
-cr: {
+cosmicray: {
     nCrPixelMax: 200000
 }
 
@@ -46,7 +63,7 @@ filters: {
     y: Z
 }
 
-ast: {
+astrometry: {
     defaultFilterName: R
     numBrightStars: 200
     sipOrder: 2

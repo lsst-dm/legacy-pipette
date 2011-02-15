@@ -13,16 +13,14 @@ import lsst.meas.algorithms.ApertureCorrection as maApCorr
 import lsst.meas.utils.sourceDetection as muDetection
 import lsst.pipette.util as pipUtil
 import lsst.pipette.process as pipProc
-import lsst.pipette.background as pipBackground
 import lsst.pipette.fix as pipFix
 import lsst.pipette.phot as pipPhot
 
 
 class Bootstrap(pipProc.Process):
-    def __init__(self, Background=pipBackground.Background, Fix=pipFix.Fix, Phot=pipPhot.Phot,
+    def __init__(self, Fix=pipFix.Fix, Phot=pipPhot.Phot,
                  *args, **kwargs):
         super(Bootstrap, self).__init__(*args, **kwargs)
-        self._Background = Background
         self._Fix = Fix
         self._Phot = Phot
     
@@ -41,14 +39,6 @@ class Bootstrap(pipProc.Process):
             exposure = self.assembly(exposureList)
         else:
             exposure = exposureList[0]
-            
-        if do['defects']:
-            defects = self.defects(exposure)
-        else:
-            defects = None
-
-        if do['background']:
-            bg, exposure = self.background(exposure)
 
         psf, wcs = self.fakePsf(exposure, wcs)
 
@@ -68,89 +58,6 @@ class Bootstrap(pipProc.Process):
         return exposure, defects, psf, apcorr
 
 
-    def assembly(self, exposureList):
-        """Assembly of amplifiers into a CCD
-
-        @param exposure List of exposures to be assembled (each is an amp from the same exposure)
-        @return Assembled exposure
-        """
-        if not hasattr(exposureList, "__iter__"):
-            # This is not a list; presumably it's a single item needing no assembly
-            return exposureList
-        if len(exposureList) == 1:
-            # Special case
-            return exposureList[0]
-        
-        egExp = exposureList[0]         # The (assumed) model for exposures
-        egMi = egExp.getMaskedImage()   # The (assumed) model for masked images
-        Exposure = type(egExp)
-        MaskedImage = type(egMi)
-        ccd = pipUtil.getCcd(egExp)
-        miCcd = MaskedImage(ccd.getAllPixels(True).getDimensions())
-        for exp in exposureList:
-            amp = pipUtil.getAmp(exp)
-            mi = exp.getMaskedImage()
-            miAmp = MaskedImage(miCcd, amp.getDataSec(True))
-            miAmp <<= mi
-        exp = afwImage.makeExposure(miCcd, egExp.getWcs())
-        exp.setWcs(egExp.getWcs())
-        exp.setMetadata(egExp.getMetadata())
-        md = exp.getMetadata()
-        if md.exists('DATASEC'):
-            md.remove('DATASEC')
-        exp.setFilter(egExp.getFilter())
-        exp.setDetector(ccd)
-        exp.getCalib().setExptime(egExp.getCalib().getExptime())
-        exp.getCalib().setMidTime(egExp.getCalib().getMidTime())
-        return exp
-
-    def defects(self, exposure):
-        """Mask defects
-
-        @param exposure Exposure to process
-        @return Defect list
-        """
-        assert exposure, "No exposure provided"
-
-        policy = self.config['defects']
-        defects = measAlg.DefectListT()
-        ccd = pipUtil.getCcd(exposure)
-        statics = ccd.getDefects() # Static defects
-        for defect in statics:
-            bbox = defect.getBBox()
-            new = measAlg.Defect(bbox)
-            defects.append(new)
-        ipIsr.maskBadPixelsDef(exposure, defects, fwhm=None, interpolate=False, maskName='BAD')
-        self.log.log(self.log.INFO, "Masked %d static defects." % len(statics))
-
-        grow = policy['grow']
-        sat = ipIsr.defectListFromMask(exposure, growFootprints=grow, maskName='SAT') # Saturated defects
-        self.log.log(self.log.INFO, "Added %d saturation defects." % len(sat))
-        for defect in sat:
-            bbox = defect.getBBox()
-            new = measAlg.Defect(bbox)
-            defects.append(new)
-
-        exposure.getMaskedImage().getMask().addMaskPlane("UNMASKEDNAN")
-        nanMasker = ipIsr.UnmaskedNanCounterF()
-        nanMasker.apply(exposure.getMaskedImage())
-        nans = ipIsr.defectListFromMask(exposure, maskName='UNMASKEDNAN')
-        self.log.log(self.log.INFO, "Added %d unmasked NaNs." % nanMasker.getNpix())
-        for defect in nans:
-            bbox = defect.getBBox()
-            new = measAlg.Defect(bbox)
-            defects.append(new)
-
-        return defects
-
-    def background(self, exposure):
-        """Background subtraction
-
-        @param exposure Exposure to process
-        @return Background, Background-subtracted exposure
-        """
-        background = self._Background(config=self.config, log=self.log)
-        return background.run(exposure)
 
     def fakePsf(self, exposure, wcs=None):
         """Initialise the bootstrap procedure by setting the PSF and WCS

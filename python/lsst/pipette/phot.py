@@ -8,9 +8,9 @@ import lsst.meas.utils.sourceMeasurement as muMeasurement
 import lsst.pipette.process as pipProc
 
 
-class Phot(pipProc.Process):
+class Photometry(pipProc.Process):
     def __init__(self, threshold=None, *args, **kwargs):
-        super(Phot, self).__init__(*args, **kwargs)
+        super(Photometry, self).__init__(*args, **kwargs)
         self._threshold = threshold
         return
     
@@ -29,7 +29,7 @@ class Phot(pipProc.Process):
         sources = self.measure(exposure, footprintSet, psf, apcorr=apcorr, wcs=wcs)
 
         self.display('phot', exposure=exposure, sources=sources, pause=True)
-        return sources
+        return sources, footprintSet
 
 
     def detect(self, exposure, psf):
@@ -88,3 +88,20 @@ class Phot(pipProc.Process):
                 source.setPsfFluxErr(math.sqrt(corr**2 * fluxErr**2 + corrErr**2 * flux**2))
 
         return sources
+
+
+class Rephotometry(Photometry):
+    def run(self, exposure, footprints, psf, apcorr=None, wcs=None):
+        """Photometer footprints that have already been detected
+
+        @param exposure Exposure to process
+        @param footprints Footprints to rephotometer
+        @param psf PSF for photometry
+        @param apcorr Aperture correction to apply
+        @param wcs WCS to apply
+        """
+        return self.measure(exposure, footprints, psf, apcorr=apcorr, wcs=wcs)
+        
+
+    def detect(self, exposure, psf):
+        raise NotImplementedError("This method is deliberately not implemented: it should never be run!")

@@ -1,0 +1,27 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    saturation: {
+        type: boolean
+        description: "Mask saturated pixels?"
+        minOccurs: 0
+        maxOccurs: 1
+        default: false
+    }
+    overscan: {
+        type: boolean
+        description: "Perform overscan correction?"
+        minOccurs: 0
+        maxOccurs: 1
+        default: false
+    }
+    trim: {
+        type: boolean
+        description: "Trim bias sections?"
+        minOccurs: 0
+        maxOccurs: 1
+        default: true
+    }
+}

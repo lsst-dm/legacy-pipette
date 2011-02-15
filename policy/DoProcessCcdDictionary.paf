@@ -1,0 +1,25 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    isr: {
+        type: Policy
+        description: "Instrumental Signature Removal"
+        maxOccurs: 1
+        dictionaryFile: "DoIsrDictionary.paf"
+    }
+    calibrate: {
+        type: Policy
+        description: "Exposure calibration"
+        maxOccurs: 1
+        dictionaryFile: "DoCalibrateDictionary.paf"
+    }
+    phot: {
+        type: boolean
+        description: "Perform photometry?"
+        maxOccurs: 1
+        default: false
+    }
+
+}

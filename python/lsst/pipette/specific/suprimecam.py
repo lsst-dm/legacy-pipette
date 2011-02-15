@@ -5,16 +5,15 @@ import lsst.pipette.isr as pipIsr
 import lsst.pipette.util as pipUtil
 
 class IsrSuprimeCam(pipIsr.Isr):
-    def run(self, exposure, *args, **kwargs):
-        super(IsrSuprimeCam, self).run(exposure, *args, **kwargs)
-        self.guider(exposure)
-
-    def guider(self, exposure):
-        """Mask guider shadow
+    def defects(self, exposure):
+        """Mask defects and trim guider shadow
 
         @param exposure Exposure to process
+        @return Defect list
         """
         assert exposure, "No exposure provided"
+
+        defects = super(IsrSuprimeCam, self).defects(exposure)
 
         ccd = pipUtil.getCcd(exposure)
         ccdNum = ccd.getId().getSerial()

@@ -5,7 +5,7 @@ import sys
 
 import lsst.obs.suprimecam as suprimecam
 import lsst.pipette.config as pipConfig
-import lsst.pipette.ccd as pipCcd
+import lsst.pipette.processCcd as pipProcCcd
 import lsst.pipette.options as pipOptions
 import lsst.pipette.catalog as pipCatalog
 import lsst.pipette.readwrite as pipReadWrite
@@ -19,7 +19,7 @@ def run(rerun,                          # Rerun name
     io = pipReadWrite.ReadWrite(suprimecam.SuprimecamMapper, ['visit', 'ccd'], config=config)
     roots = config['roots']
     basename = os.path.join(roots['output'], '%s-%d%d' % (rerun, frame, ccd))
-    ccdProc = pipCcd.Ccd(config=config, Isr=pipSuprimeCam.IsrSuprimeCam)
+    ccdProc = pipProcCcd.ProcessCcd(config=config, Isr=pipSuprimeCam.IsrSuprimeCam)
     dataId = { 'visit': frame, 'ccd': ccd }
 
     raws = io.readRaw(dataId)
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     parser.add_option("-c", "--ccd", dest="ccd",
                       help="CCD to run (default=%default)")
 
-    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "CcdProcessDictionary.paf")
+    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam.paf")
     config, opts, args = parser.parse_args(default, overrides)
     if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or opts.frame is None or opts.ccd is None:

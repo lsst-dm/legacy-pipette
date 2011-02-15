@@ -25,12 +25,12 @@ definitions: {
         type: double
         description: "Clipping threshold (stdevs)"
         maxOccurs: 1
-        default: 2.5
+        default: 3.0
     }
     discard: {
         type: double
         description: "Discard threshold (stdevs)"
         maxOccurs: 1
-        default: 5.0
+        default: 2.0
     }
 }

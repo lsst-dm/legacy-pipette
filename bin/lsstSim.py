@@ -66,7 +66,7 @@ if __name__ == "__main__":
     parser.add_option("-r", "--raft", dest="raft", help="Raft to run")
     parser.add_option("-s", "--sensor", dest="sensor", help="Sensor to run")
 
-    default = os.path.join(os.getenv("PIPETTE_ENGINE_DIR"), "policy", "CcdProcessDictionary.paf")
+    default = os.path.join(os.getenv("PIPETTE_ENGINE_DIR"), "policy", "ProcessCcdDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_RUN_DIR"), "policy", "lsstSim.paf")
     config, opts, args = parser.parse_args(default, overrides)
     if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or opts.visit is None or \

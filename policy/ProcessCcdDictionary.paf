@@ -19,6 +19,12 @@ definitions: {
         dictionaryFile: "DoProcessCcdDictionary.paf"
     }
 
+    fringe: {
+        type: Policy
+        description: "Policy for fringe subtraction"
+        maxOccurs: 1
+        dictionaryFile: "FringeDictionary.paf"
+    }
     calibrate: {
         type: Policy
         description: "Policy for calibration"

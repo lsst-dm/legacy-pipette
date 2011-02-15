@@ -51,7 +51,7 @@ class Calibrate(pipProc.Process):
 
         self.repair(exposure, psf, defects=defects, preserve=True)
 
-        if do['psf'] or do['apcorr'] or do['astrometry'] or do['zeropoint']:
+        if do['psf'] or do['astrometry'] or do['zeropoint']:
             sources, footprints = self.phot(exposure, psf)
         else:
             sources, footprints = None, None
@@ -61,19 +61,20 @@ class Calibrate(pipProc.Process):
         else:
             psf, cellSet = None, None
 
-        if do['apcorr']:
+        if do['psf'] and do['apcorr']:
             apcorr = self.apCorr(exposure, cellSet)
         else:
             apcorr = None
 
         # Wash, rinse, repeat with proper PSF
 
-        self.repair(exposure, psf, defects=defects, preserve=False)
+        if do['psf']:
+            self.repair(exposure, psf, defects=defects, preserve=False)
 
         if do['background']:
             self.background(exposure, footprints=footprints, background=background)
 
-        if do['astrometry'] or do['zeropoint']:
+        if do['psf'] and (do['astrometry'] or do['zeropoint']):
             sources = self.rephot(exposure, footprints, psf, apcorr=apcorr)
 
         if do['distortion']:

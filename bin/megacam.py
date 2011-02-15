@@ -42,7 +42,7 @@ if __name__ == "__main__":
     parser.add_option("-v", "--visit", dest="visit", help="Visit to run")
     parser.add_option("-c", "--ccd", dest="ccd", help="CCD to run")
 
-    default = os.path.join(os.getenv("PIPETTE_ENGINE_DIR"), "policy", "CcdProcessDictionary.paf")
+    default = os.path.join(os.getenv("PIPETTE_ENGINE_DIR"), "policy", "ProcessCcdDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_RUN_DIR"), "policy", "megacam.paf")
     config, opts, args = parser.parse_args(default, overrides)
     if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or \

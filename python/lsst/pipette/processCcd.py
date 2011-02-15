@@ -33,7 +33,10 @@ class ProcessCcd(pipProc.Process):
 
         psf, apcorr, sources, matches = self.calibrate(exposure)
 
-        sources, footprints = self.phot(exposure, psf, apcorr)
+        if self.config['do']['phot']:
+            sources, footprints = self.phot(exposure, psf, apcorr)
+        else:
+            sources, footprints = None, None
 
         return exposure, psf, apcorr, sources, matches
             

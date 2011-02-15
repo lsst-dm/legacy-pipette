@@ -3,6 +3,10 @@
 target: Config
 
 definitions: {
+    filters: {
+        type: string
+        description: "Only subtract fringes for these filters"
+    }
     num: {
         type: int
         description: "Number of regions to measure on CCD"

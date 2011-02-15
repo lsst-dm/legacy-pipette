@@ -11,7 +11,7 @@ do: {
         variance: true
         dark: false
         flat: true
-        fringe: false
+        fringe: true
         defects: true
         background: true
     }
@@ -30,6 +30,10 @@ do: {
     phot: true
 }
 
+fringe: {
+    filters: W-S-ZR
+    filters: y
+}
 
 detect: {
     thresholdValue: 5.0

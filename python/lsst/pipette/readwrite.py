@@ -175,7 +175,7 @@ class ReadWrite(object):
         identifiers = self.lookup(dataId)
         detrends = dict()
         do = config['do']['isr']
-        for kind in ('bias', 'dark', 'flat', 'fringe'):
+        for kind in ('bias', 'dark', 'flat'):
             if do[kind]:
                 detList = list()
                 for ident in identifiers:
@@ -184,6 +184,19 @@ class ReadWrite(object):
                     detrend = self.inButler.get(kind, ident)
                     detList.append(detrend)
                 detrends[kind] = detList
+        # Fringe depends on the filter
+        if do['fringe']:
+            fringeList = list()
+            for ident in identifiers:
+                ident.update(dataId)
+                filterList = self.inButler.queryMetadata("raw", None, "filter", ident)
+                assert len(filterList) == 1, "Filter query is non-unique: %s" % filterList
+                filtName = filterList[0]
+                if filtName in config['fringe']['filters']:
+                    fringe = self.inButler.get("fringe", ident)
+                    fringeList.append(fringe)
+            if len(fringeList) > 0:
+                detrends['fringe'] = fringeList
         return detrends
 
     def write(self, dataId, exposure=None, psf=None, sources=None, matches=None, **kwargs):

@@ -5,7 +5,7 @@ import sys
 
 import lsst.obs.cfht as cfht
 import lsst.pipette.config as pipConfig
-import lsst.pipette.ccd as pipCcd
+import lsst.pipette.processCcd as pipProcCcd
 import lsst.pipette.options as pipOptions
 import lsst.pipette.catalog as pipCatalog
 import lsst.pipette.readwrite as pipReadWrite
@@ -18,7 +18,7 @@ def run(rerun,                          # Rerun name
     io = pipReadWrite.ReadWrite(cfht.CfhtMapper, ['visit', 'ccd'], fileKeys=['amp'], config=config)
     roots = config['roots']
     basename = os.path.join(roots['output'], '%s-%d-%d' % (rerun, visit, ccd))
-    ccdProc = pipCcd.Ccd(config=config)
+    ccdProc = pipProcCcd.Ccd(config=config)
     dataId = {'visit': visit, 'ccd': ccd}
 
     raws = io.readRaw(dataId)

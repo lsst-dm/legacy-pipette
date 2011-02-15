@@ -20,7 +20,7 @@ def run(rerun,                          # Rerun name
         ):
     imports = [ ("lsst.obs.suprime", "suprime"),
                 ("lsst.pipette.readwrite", "pipReadWrite"),
-                ("lsst.pipette.ccd", "pipCcd"),
+                ("lsst.pipette.processCcd", "pipProcCcd"),
                 ("lsst.pipette.specific.suprimecam", "pipSuprimeCam"),
                 ("lsst.pex.logging", "pexLog"),
                 ]
@@ -30,7 +30,7 @@ def run(rerun,                          # Rerun name
     io = pipReadWrite.ReadWrite(suprime.SuprimeMapper, ['visit', 'ccd'], config=config)
     raws = io.readRaw(dataId)
     detrends = io.detrends(dataId, config)
-    ccdProc = pipCcd.Ccd(config=config, Isr=pipSuprimeCam.IsrSuprimeCam)
+    ccdProc = pipProcCcd.Ccd(config=config, Isr=pipSuprimeCam.IsrSuprimeCam)
     exposure, psf, apcorr, sources, matches = ccdProc.run(raws, detrends)
     io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches)
     if sources is not None:

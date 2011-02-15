@@ -1,17 +1,27 @@
 #<?cfg paf policy>
 
 do: {
-    bias: true
-    flat: true
-    defects: true
-    interpolate: true
-    saturation: true
-    overscan: true
-    background: true
-    cr: true
+    isr: {
+        processAmp: {
+           saturation: true
+           overscan: true
+        }
+        bias: true
+        flat: true
+        defects: true
+        background: true
+    }
+    calibrate: {
+        repair: {
+            interpolate: true
+            cosmicray: true
+        }
+        psf: true
+        apcorr: true
+        astrometry: true
+        zeropoint: true
+    }
     phot: true
-    #ast: true
-    #cal: true
 }
 
 detect: {
@@ -21,11 +31,11 @@ detect: {
 
 measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
 
-cr: {
+cosmicray: {
     nCrPixelMax: 200000
 }
 
-ast: {
+astrometry: {
     defaultFilterName: MAG_R
     numBrightStars: 100
 }

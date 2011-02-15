@@ -48,8 +48,10 @@ class Isr(pipProc.Process):
             self.dark(exposure, detrends['dark'])
         if do['flat']:
             self.flat(exposure, detrends['flat'])
-        if do['fringe']:
-            self.fringe(exposure, detrends['fringe'])
+        if len(do['fringe']) > 0:
+            filtName = exposure.getFilter().getName()
+            if filtName in do['fringe']:
+                self.fringe(exposure, detrends['fringe'])
 
         self.display('flattened', exposure=exposure)
 
@@ -340,6 +342,8 @@ class Isr(pipProc.Process):
         measScience.mask = masked.mask
         measFringe.mask = masked.mask
 
+        self.log.log(self.log.DEBUG, "Fringe discard: %f %d" % (limit, measScience.count()))
+
         regression = lambda x, y, n: ((x * y).sum() - x.sum() * y.sum() / n) / ((x**2).sum() - x.sum()**2 / n)
 
         # Solve for the fringe amplitude, with rejection of bad points
@@ -359,6 +363,7 @@ class Isr(pipProc.Process):
             measFringe.mask = resid.mask
 
             newNum = resid.count()
+            self.log.log(self.log.DEBUG, "Fringe iter %d: %f %f %f %d" % (i, slope, intercept, rms, newNum))
             if newNum == lastNum:
                 # Iterating isn't buying us anything
                 break

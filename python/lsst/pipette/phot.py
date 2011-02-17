@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import numpy
 import math
 
 import lsst.meas.utils.sourceDetection as muDetection
@@ -84,8 +85,9 @@ class Photometry(pipProc.Process):
                 flux = source.getPsfFlux()
                 fluxErr = source.getPsfFluxErr()
                 corr, corrErr = apcorr.computeAt(x, y)
-                source.setPsfFlux(flux * corr)
-                source.setPsfFluxErr(math.sqrt(corr**2 * fluxErr**2 + corrErr**2 * flux**2))
+                if (numpy.isfinite(flux) and numpy.isfinite(fluxErr)):
+                    source.setPsfFlux(flux * corr)
+                    source.setPsfFluxErr(numpy.sqrt(corr**2 * fluxErr**2 + corrErr**2 * flux**2))
 
         return sources
 

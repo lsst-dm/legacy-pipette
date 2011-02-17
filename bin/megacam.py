@@ -18,7 +18,7 @@ def run(rerun,                          # Rerun name
     io = pipReadWrite.ReadWrite(cfht.CfhtMapper, ['visit', 'ccd'], fileKeys=['amp'], config=config)
     roots = config['roots']
     basename = os.path.join(roots['output'], '%s-%d-%d' % (rerun, visit, ccd))
-    ccdProc = pipProcCcd.Ccd(config=config)
+    ccdProc = pipProcCcd.ProcessCcd(config=config)
     dataId = {'visit': visit, 'ccd': ccd}
 
     raws = io.readRaw(dataId)

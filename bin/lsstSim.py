@@ -23,7 +23,7 @@ def run(rerun,                          # Rerun name
                                 fileKeys=['visit', 'snap', 'raft', 'sensor', 'channel'], config=config)
     roots = config['roots']
     basename = os.path.join(roots['output'], '%s-%d-%d-%s-%s' % (rerun, visit, snap, raft, sensor))
-    ccdProc = pipProcCcd.Ccd(config=config, log=log)
+    ccdProc = pipProcCcd.ProcessCcd(config=config, log=log)
     dataId = {'visit': visit, 'snap': snap, 'raft': raft, 'sensor': sensor}
 
     detrends = io.detrends(dataId, config)

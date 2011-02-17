@@ -33,8 +33,9 @@ class ProcessCcd(pipProc.Process):
 
         psf, apcorr, sources, matches = self.calibrate(exposure)
 
+
         if self.config['do']['phot']:
-            sources, footprints = self.phot(exposure, psf, apcorr)
+            sources, footprints = self.phot(exposure, psf, apcorr, wcs=exposure.getWcs())
         else:
             sources, footprints = None, None
 
@@ -53,6 +54,6 @@ class ProcessCcd(pipProc.Process):
         calibrate = self._Calibrate(config=self.config, log=self.log)
         return calibrate.run(exposure)
 
-    def phot(self, exposure, psf, apcorr):
+    def phot(self, exposure, psf, apcorr, wcs=None):
         phot = self._Photometry(config=self.config, log=self.log)
-        return phot.run(exposure, psf, apcorr)
+        return phot.run(exposure, psf, apcorr, wcs=wcs)

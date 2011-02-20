@@ -27,9 +27,15 @@ definitions: {
                     description: "Step size for lookup table (pixels)"
                     minOccurs: 0
                     maxOccurs: 1
-                    default: 10.0
+                    #                    default: 10.0
                 }
             }
         }
+    }
+    class: {
+        type: string
+        description: dotted "class name which provides distortion methods."
+        minOccurs: 0
+        maxOccurs: 1
     }
 }

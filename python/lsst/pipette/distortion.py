@@ -88,8 +88,20 @@ def createDistortion(ccd, distConfig):
     @param config Configuration for distortion
     @returns CameraDistortion specified by ccd and configuration
     """
-    if distConfig.has_key('radial'):
+    if 'radial' in distConfig and 'class' in distConfig:
+        raise RuntimeError("more than one distortion mechanism was specified in the configuration!")
+    
+    if 'radial' in distConfig:
         return RadialDistortion(ccd, distConfig['radial'])
+    elif 'class' in distConfig:
+        try:
+            distMod, distClassname = distConfig['class'].rsplit('.', 1)
+            _temp = __import__(distMod, globals(), locals(), [distClassname], -1)
+            distClass = _temp.__dict__[distClassname]
+        except Exception, e:
+            raise RuntimeError('Failed to import distortion class %s: %s' % \
+                               (distConfig['class'], e))
+        return distClass(ccd, distConfig)
     else:
         return NullDistortion()
 

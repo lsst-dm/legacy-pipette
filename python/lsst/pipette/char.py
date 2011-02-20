@@ -144,6 +144,7 @@ class Char(pipProc.Process):
         wcs = astrom.wcs
         matches = astrom.matches
         if matches is None or len(matches) == 0:
+            self.log.log(self.log.WARN, "no astrometric matches. astrom=%s, wcs=%s" % (astrom, wcs))
             raise RuntimeError("No astrometric matches")
         self.log.log(self.log.INFO, "%d astrometric matches" % len(matches))
 
@@ -190,7 +191,7 @@ class Char(pipProc.Process):
         assert exposure, "No exposure provided"
         assert matches, "No matches provided"
 
-        print "Doing photocal"
+        self.log.log(self.log.INFO, "Doing photocal")
         zp = photocal.calcPhotoCal(matches, log=self.log, goodFlagValue=0)
         self.log.log(self.log.INFO, "Photometric zero-point: %f" % zp.getMag(1.0))
         exposure.getCalib().setFluxMag0(zp.getFlux(0))

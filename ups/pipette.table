@@ -8,6 +8,10 @@ setupOptional(obs_subaru)
 setupOptional(obs_cfht)
 setupOptional(obs_lsstSim)
 
+# HSC products
+setupOptional(solvetansip)
+setupOptional(distEst)
+
 setupOptional(matplotlib)
 
 pathPrepend(PATH, ${PRODUCT_DIR}/bin)

@@ -53,8 +53,8 @@ class OptionParser(optparse.OptionParser):
         return
 
     def parse_args(self,                # OptionParser
-                   *overrides,          # List of particlar configuration(s) to override the defaults
-                   argv=None):
+                   argv=None,           # Arguments, or None for sys.argv
+                   *overrides):         # List of particlar configuration(s) to override the defaults
         """Set up configuration for pipette LSST Algorithms testing from option parsing.
 
         @params overrides Configurations to override default configuration

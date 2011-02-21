@@ -22,14 +22,16 @@ def getMapper(mapper, root=None, calibRoot=None, registry=None):
         mapperBuffer[mapper] = dict()
     thisMapperBuffer = mapperBuffer[mapper]
     if not thisMapperBuffer.has_key(key):
-        thisMapperBuffer[key] = mapper(root=root, calibRoot=calibRoot, registry=registry)
+        thisMapperBuffer[key] = mapper(root=root, registry=registry)
     return thisMapperBuffer[key]
 
 
 def initMapper(mapper, config, log, inMap=True):
     """Utility function to initialize an input or output mapper"""
     
-    if issubclass(mapper, dafPersist.Mapper):
+    if isinstance(mapper, dafPersist.Mapper):
+        mapp = mapper
+    elif issubclass(mapper, dafPersist.Mapper):
         # It's a class that we're to instantiate
         if config is None:
             # We'll try this, but don't expect it will work...
@@ -37,13 +39,12 @@ def initMapper(mapper, config, log, inMap=True):
             mapp = getMapper(mapper)
         else:
             roots = config['roots']
-            dataRoot = roots['data']
-            calibRoot = roots['calib'] if roots.has_key('calib') else None
-            outRoot = roots['output']
+            dataRoot = roots['data'] if roots.has_key('data') else None
+            # UNUSED calibRoot = roots['calib'] if roots.has_key('calib') else None
             if inMap:
-                mapp = getMapper(mapper, root=dataRoot, calibRoot=calibRoot)
+                mapp = getMapper(mapper, root=dataRoot)
             else:
-
+                outRoot = roots['output'] if roots.has_key('output') else None
                 # if there's no output registry, use the input registry
                 outRegistry = os.path.join(outRoot, "registry.sqlite3")
                 inRegistry = os.path.join(dataRoot, "registry.sqlite3")
@@ -57,8 +58,6 @@ def initMapper(mapper, config, log, inMap=True):
                 
                 mapp = getMapper(mapper, root=outRoot, registry=registry)
 
-    elif isinstance(mapper, dafPersist.Mapper):
-        self.mapp = mapper
     else:
         raise RuntimeError("Unable to interpret provided mapper.")
 
@@ -139,7 +138,11 @@ class ReadWrite(object):
         @param dataId Data identifier for butler
         @returns Raw exposures
         """
+        self.log.log(self.log.INFO, "Looking for: %s" % (dataId))
         identifiers = self.lookup(dataId)
+        if not identifiers:
+            raise RuntimeError("No raw data found for dataId %s" % (dataId))
+        
         exposures = list()
         for ident in identifiers:
             ident.update(dataId)

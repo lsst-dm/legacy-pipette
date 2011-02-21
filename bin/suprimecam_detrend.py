@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "MasterProcessDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam_detrend.paf")
-    config, opts, args = parser.parse_args(default, overrides)
+    config, opts, args = parser.parse_args([default, overrides])
     if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or opts.frames is None or opts.ccds is None:
         parser.print_help()
         sys.exit(1)

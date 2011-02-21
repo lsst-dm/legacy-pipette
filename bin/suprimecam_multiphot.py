@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "MultiPhotProcessDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam_multiphot.paf")
-    config, opts, args = parser.parse_args(default, overrides)
+    config, opts, args = parser.parse_args([default, overrides])
     if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or opts.reference is None or \
            opts.measure is None or opts.skytile is None:
         parser.print_help()

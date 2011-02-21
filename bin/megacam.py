@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     default = os.path.join(os.getenv("PIPETTE_ENGINE_DIR"), "policy", "ProcessCcdDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_RUN_DIR"), "policy", "megacam.paf")
-    config, opts, args = parser.parse_args(default, overrides)
+    config, opts, args = parser.parse_args([default, overrides])
     if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or \
            opts.visit is None or opts.ccd is None:
         parser.print_help()

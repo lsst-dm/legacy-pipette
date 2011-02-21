@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
     defaults = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam.paf")
-    config, opts, args = parser.parse_args(defaults, overrides)
+    config, opts, args = parser.parse_args([defaults, overrides])
     frame1 = args[0]
     frame2 = args[1]
     outName = args[2]

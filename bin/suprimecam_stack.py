@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
     default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "WarpProcessDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam_warp.paf")
-    config, opts, args = parser.parse_args(default, overrides)
+    config, opts, args = parser.parse_args([default, overrides])
     if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or opts.frames is None or opts.ccds is None \
        or opts.skytile is None or opts.coords is None or opts.scale is None or opts.sizes is None:
         parser.print_help()

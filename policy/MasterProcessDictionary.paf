@@ -69,6 +69,13 @@ definitions: {
             }
         }
     }
+    defects: {
+        type: Policy
+        description: "Policy for handling defects"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "defectsDictionary.paf"
+    }
     background: {
         type: Policy
         description: "Background measurement policy"

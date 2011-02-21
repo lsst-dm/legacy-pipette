@@ -21,6 +21,7 @@
 # see <http://www.lsstcorp.org/LegalNotices/>.
 #
 
+import sys
 import optparse
 import lsst.pex.logging as pexLog
 import lsst.pipette.config as pipConfig
@@ -53,14 +54,17 @@ class OptionParser(optparse.OptionParser):
         return
 
     def parse_args(self,                # OptionParser
-                   argv=None,           # Arguments, or None for sys.argv
+                   argv=None,           # Arguments
                    *overrides):         # List of particlar configuration(s) to override the defaults
         """Set up configuration for pipette LSST Algorithms testing from option parsing.
 
         @params overrides Configurations to override default configuration
         """
         config = pipConfig.configuration(*overrides)
-        opts, args = super(OptionParser, self).parse_args(args=argv)
+        if argv is not None:
+            opts, args = optparse.OptionParser.parse_args(self)
+        else:
+            opts, args = optparse.OptionParser.parse_args(self, args=argv)
         config.merge(opts.config)
 
         if opts.log is not None:

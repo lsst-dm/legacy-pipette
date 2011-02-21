@@ -29,6 +29,8 @@ class Isr(pipProc.Process):
         """
         assert exposureList, "No exposure provided"
         do = self.config['do']['isr']
+        if not isinstance(exposureList, list):
+            exposureList = [exposureList]
 
         for exp in exposureList:
             self.processAmp(exp)

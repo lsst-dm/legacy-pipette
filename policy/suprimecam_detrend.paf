@@ -1,9 +1,20 @@
 #<?cfg paf policy>
 
 do: {
-    saturation: true
-    overscan: true
-    flat: false
+    isr: {
+        processAmp: {
+            saturation: true
+            overscan: true
+        }
+        assembly: true
+        bias: false
+        variance: true
+        dark: false
+        flat: false
+        fringe: false
+        defects: true
+        background: false
+    }
     cr: true
     phot: true
     scale: NONE

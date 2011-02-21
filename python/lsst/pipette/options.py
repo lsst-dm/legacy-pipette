@@ -61,6 +61,8 @@ class OptionParser(optparse.OptionParser):
 
         @params overrides Configurations to override default configuration
         """
+        if isinstance(overrides, basestring):
+            overrides = [overrides]
         config = pipConfig.configuration(*overrides)
         opts, args = optparse.OptionParser.parse_args(self, args=argv)
         config.merge(opts.config)

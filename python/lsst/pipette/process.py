@@ -38,7 +38,7 @@ class Process(object):
         gotten = list()
         for product in productList:
             if product == "detrends":
-                do = self.config['do']
+                do = self.config['do']['isr']
                 detrends = dict()
                 if do['bias']:
                     self.log.log(self.log.INFO, "Reading bias for %s" % (ident))

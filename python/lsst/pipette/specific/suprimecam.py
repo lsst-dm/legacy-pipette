@@ -59,3 +59,8 @@ class IsrSuprimeCam(pipIsr.Isr):
             exposure.setMaskedImage(good)
 
         return
+
+class ProcessCcdSuprimeCam(pipProcCcd.ProcessCcd):
+    def __init__(*args, **kwargs):
+        super(ProcessCcdSuprimeCam, self).__init__(Isr=IsrSuprimeCam, *args, **kwargs)
+    

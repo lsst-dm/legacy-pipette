@@ -54,17 +54,15 @@ class OptionParser(optparse.OptionParser):
         return
 
     def parse_args(self,                # OptionParser
+                   overrides, # List of particlar configuration(s) to override the defaults
                    argv=None,           # Arguments
-                   *overrides):         # List of particlar configuration(s) to override the defaults
+                   ):
         """Set up configuration for pipette LSST Algorithms testing from option parsing.
 
         @params overrides Configurations to override default configuration
         """
         config = pipConfig.configuration(*overrides)
-        if argv is not None:
-            opts, args = optparse.OptionParser.parse_args(self)
-        else:
-            opts, args = optparse.OptionParser.parse_args(self, args=argv)
+        opts, args = optparse.OptionParser.parse_args(self, args=argv)
         config.merge(opts.config)
 
         if opts.log is not None:

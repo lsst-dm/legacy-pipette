@@ -19,68 +19,11 @@ definitions: {
         dictionary: {
             target: Config
             definitions: {
-                saturation: {
-                    type: boolean
-                    description: "Mask saturated pixels?"
-                    minOccurs: 1
+                isr: {
+                    type: Policy
+                    description: "Instrumental Signature Removal"
                     maxOccurs: 1
-                    default: false
-                }
-                overscan: {
-                    type: boolean
-                    description: "Perform overscan correction?"
-                    minOccurs: 1
-                    maxOccurs: 1
-                    default: false
-                }
-                bias: {
-                    type: boolean
-                    description: "Perform bias correction?"
-                    minOccurs: 1
-                    maxOccurs: 1
-                    default: false
-                }
-                dark: {
-                    type: boolean
-                    description: "Perform dark correction?"
-                    minOccurs: 1
-                    maxOccurs: 1
-                    default: false
-                }
-                flat: {
-                    type: boolean
-                    description: "Perform flat correction?"
-                    minOccurs: 1
-                    maxOccurs: 1
-                    default: false
-                }
-                fringe: {
-                    type: boolean
-                    description: "Perform fringe correction?"
-                    minOccurs: 1
-                    maxOccurs: 1
-                    default: false
-                }
-                trim: {
-                    type: boolean
-                    description: "Trim bias sections?"
-                    minOccurs: 0
-                    maxOccurs: 1
-                    default: true
-                }
-                variance: {
-                    type: boolean
-                    description: "Calculate image variance"
-                    minOccurs: 0
-                    maxOccurs: 1
-                    default: true
-                }
-                assembly: {
-                    type: boolean
-                    description: "Assemble amplifiers into a single CCD image"
-                    minOccurs: 0
-                    maxOccurs: 1
-                    default: true
+                    dictionaryFile: "DoIsrDictionary.paf"
                 }
                 phot: {
                     type: boolean

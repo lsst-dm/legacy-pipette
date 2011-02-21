@@ -12,7 +12,7 @@ def magnitude(value):
 class Comparisons(object):
     def __init__(self, matches):
         self.keys = ['distance', 'ra', 'dec', 'psfDiff', 'psfAvg', 'apDiff',
-                     'apAvg', 'flags', 'first', 'second']
+                     'apAvg', 'flags', 'first', 'second', 'index']
         self.num = len(matches)
         self.first = list()
         self.second = list()
@@ -41,6 +41,7 @@ class Comparisons(object):
             self.flags1[index] = first.getFlagForDetection()
             self.flags2[index] = second.getFlagForDetection()
 
+        self.index = numpy.arange(len(matches))
         self.ra = (self.ra1 + self.ra2) / 2.0
         self.dec = (self.dec1 + self.dec2) / 2.0
         self.psf1 = -2.5 * numpy.log10(self.psf1)

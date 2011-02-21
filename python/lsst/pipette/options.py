@@ -60,7 +60,7 @@ class OptionParser(optparse.OptionParser):
         @params overrides Configurations to override default configuration
         """
         config = pipConfig.configuration(*overrides)
-        opts, args = optparse.OptionParser.parse_args(args=argv)
+        opts, args = super(OptionParser, self).parse_args(args=argv)
         config.merge(opts.config)
 
         if opts.log is not None:

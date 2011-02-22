@@ -47,14 +47,15 @@ class Master(pipProc.Process):
             bgList = list()
             bgMatrix.append(bgList)
             for ident in identList:
-                exposure, detrends = self.read(inButler, ident, ['raw', 'detrends'])
-                isrProc.run(exposure, detrends=detrends)
-                del detrends
-                bg = bgProc.run(exposure)
-                bgList.append(bg)
-                # XXX photometry so we can mask objects?
-                self.write(outButler, ident, {'postISRCCD': exposure})
-                del exposure
+                if not inButler.datasetExists('postISRCCD', ident):
+                    exposure, detrends = self.read(inButler, ident, ['raw', 'detrends'])
+                    isrProc.run(exposure, detrends=detrends)
+                    del detrends
+                    bg = bgProc.run(exposure)
+                    bgList.append(bg)
+                    # XXX photometry so we can mask objects?
+                    self.write(outButler, ident, {'postISRCCD': exposure})
+                    del exposure
 
         if do['scale'] != "NONE":
             compScales, expScales = self.scale(bgMatrix)

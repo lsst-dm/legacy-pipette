@@ -1,35 +1,53 @@
 #<?cfg paf policy>
 
+roots: {
+    data: /path/to/data
+    calib: /path/to/calib
+    output: /path/for/output
+}
+
 do: {
+
     isr: {
         processAmp: {
-           saturation: true
-           overscan: true
-        }
-        bias: true
+            saturation: true
+            overscan: true
+        }   
+        assembly: true
+        bias: false
+        variance: true
+        dark: false
         flat: true
+        fringe: false
         defects: true
         background: true
-    }
+    }   
     calibrate: {
         repair: {
             interpolate: true
             cosmicray: true
-        }
+        }   
         psf: true
         apcorr: true
+        background: false
+        distortion: false
         astrometry: true
         zeropoint: true
-    }
+    }   
     phot: true
+
 }
 
 background: {
     binsize: 128
 }
 
-bootstrap: {                            # detect bright objects
-    thresholdValue: 60.0
+distortion: {
+    radial: { 
+        coeffs: 0.0 0.0   0.0 0.0   1.0 0.0
+        actualToIdeal: false
+        step: 10.0
+    }
 }
 
 detect: {
@@ -43,7 +61,20 @@ cosmicray: {
     nCrPixelMax: 200000
 }
 
+#filters: {
+#    # Translation table for astrometry.net matching, and therefore photometric calibration
+#    B: G
+#    r: R
+#    i: I
+#    z: Z
+#    y: Z
+#}
+
 astrometry: {
     defaultFilterName: i
-    numBrightStars: 100
+    numBrightStars: 200
+    sipOrder: 2
+#    starGalaxyColumnName: "STARNOTGAL"
+#    magErrorColumnPattern: "%(filter)s_ERR"
 }
+

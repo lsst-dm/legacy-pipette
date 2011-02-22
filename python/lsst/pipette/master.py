@@ -47,7 +47,7 @@ class Master(pipProc.Process):
             bgList = list()
             bgMatrix.append(bgList)
             for ident in identList:
-                if not inButler.datasetExists('postISRCCD', ident):
+                if not outButler.datasetExists('postISRCCD', ident):
                     exposure, detrends = self.read(inButler, ident, ['raw', 'detrends'])
                     isrProc.run(exposure, detrends=detrends)
                     del detrends

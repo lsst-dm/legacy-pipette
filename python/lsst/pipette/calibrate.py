@@ -90,7 +90,7 @@ class Calibrate(pipProc.Process):
         if do['zeropoint']:
             self.zeropoint(exposure, matches)
 
-        self.display('calibrate', exposure=exposure, sources=sources)
+        self.display('calibrate', exposure=exposure, sources=sources, matches=matches)
         return psf, apcorr, sources, matches
 
 
@@ -265,6 +265,8 @@ class Calibrate(pipProc.Process):
             yMin = int(yMin)
             offsetSources(distSources, -xMin, -yMin)
             size = (int(xMax - xMin + 0.5), int(yMax - yMin + 0.5))
+            order = self.config['astrometry']['sipOrder']
+            self.config['astrometry']['sipOrder'] = 2
         else:
             distSources = sources
             size = (exposure.getWidth(), exposure.getHeight())
@@ -287,8 +289,11 @@ class Calibrate(pipProc.Process):
             source.setRa(sky[0])
             source.setDec(sky[1])
 
+        self.display('astrometry', exposure=exposure, sources=sources, matches=matches, pause=True)
+
         # Undo distortion in matches
         if distortion is not None:
+            self.config['astrometry']['sipOrder'] = order
             self.log.log(self.log.INFO, "Removing distortion correction.")
             first = map(lambda match: match.first, matches)
             second = map(lambda match: match.second, matches)
@@ -296,6 +301,8 @@ class Calibrate(pipProc.Process):
             offsetSources(second, xMin, yMin)
             distortion.idealToActual(first, copy=False)
             distortion.idealToActual(second, copy=False)
+
+        self.display('astrometry', exposure=exposure, sources=sources, matches=matches)
 
         # Re-fit the WCS with the distortion undone
         if self.config['astrometry']['calculateSip']:

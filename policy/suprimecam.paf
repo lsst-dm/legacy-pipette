@@ -30,11 +30,6 @@ do: {
     phot: true
 }
 
-fringe: {
-    filters: W-S-ZR
-    filters: y
-}
-
 detect: {
     thresholdValue: 5.0
     thresholdType: stdev

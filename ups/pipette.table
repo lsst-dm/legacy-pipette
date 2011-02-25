@@ -1,4 +1,4 @@
-setupRequired(coadd_utils)
+setupOptional(coadd_utils)
 setupRequired(ip_isr)
 setupRequired(ip_utils)
 setupRequired(sdqa)

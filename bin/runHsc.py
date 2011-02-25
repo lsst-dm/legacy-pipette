@@ -1,0 +1,1 @@
+../python/lsst/pipette/runHsc.py

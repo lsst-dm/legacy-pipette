@@ -1,0 +1,79 @@
+#<?cfg paf policy>
+
+do: {
+    isr: {
+        processAmp: {
+            saturation: true
+            overscan: true
+        }
+        assembly: true
+        bias: false
+        variance: true
+        dark: false
+        flat: true
+        fringe: false
+        defects: true
+        background: true
+    }
+    calibrate: {
+        repair: {
+            interpolate: true
+            cosmicray: true
+        }
+        psf: true
+        apcorr: true
+        background: false
+        distortion: true
+        astrometry: true
+        zeropoint: true
+    }
+    phot: true
+}
+
+detect: {
+    thresholdValue: 5.0
+    thresholdType: stdev
+}
+
+measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
+
+defects: {
+    grow: 2
+}
+
+cosmicray: {
+    nCrPixelMax: 200000
+}
+
+filters: {
+    # Translation table for astrometry.net matching, and therefore photometric calibration
+    B: g
+    g: g
+    r: r
+    i: i
+    z: z
+    y: z
+}
+#filters: {
+#    # Translation table for astrometry.net matching, and therefore photometric calibration
+#    B: G
+#    g: G
+#    r: R
+#    i: I
+#    z: Z
+#    y: Z
+#}
+
+distortion: {
+    class: "hsc.meas.match.hscDistortion.HscDistortion"
+}
+
+astrometry: {
+    defaultFilterName: R
+    numBrightStars: 200
+    sipOrder: 2
+    calculateSip: false
+    starGalaxyColumnName: "starnotgal"
+    #magErrorColumnPattern: "%(filter)s_ERR"
+}
+

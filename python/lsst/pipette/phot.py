@@ -80,6 +80,7 @@ class Photometry(pipProc.Process):
             muMeasurement.computeSkyCoords(wcs, sources)
 
         if apcorr is not None:
+            self.log.log(self.log.INFO, "Applying aperture correction")
             for source in sources:
                 x, y = source.getXAstrom(), source.getYAstrom()
                 flux = source.getPsfFlux()

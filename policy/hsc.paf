@@ -77,3 +77,8 @@ astrometry: {
     #magErrorColumnPattern: "%(filter)s_ERR"
 }
 
+psf: {
+    measure: {
+        nEigenComponents: 2
+    }
+}

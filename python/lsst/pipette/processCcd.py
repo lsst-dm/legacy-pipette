@@ -31,7 +31,7 @@ class ProcessCcd(pipProc.Process):
 
         exposure, defects, background = self.isr(exposureList, detrendsList)
 
-        psf, apcorr, sources, matches = self.calibrate(exposure)
+        psf, apcorr, sources, matches = self.calibrate(exposure, defects=defects)
 
 
         if self.config['do']['phot']:

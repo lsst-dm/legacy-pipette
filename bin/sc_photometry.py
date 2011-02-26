@@ -68,9 +68,9 @@ def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=N
         data2['ccd'] = ccd
 
     sources1 = io.read('src', data1)
-    md1 = io.read('postISRCCD_md', data1)
+    md1 = io.read('calexp_md', data1)
     sources2 = io.read('src', data2)
-    md2 = io.read('postISRCCD_md', data2)
+    md2 = io.read('calexp_md', data2)
 
 
     assert len(sources1) == len(md1)

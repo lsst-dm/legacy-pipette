@@ -30,9 +30,8 @@ def run(rerun,                          # Rerun name
     """ """
 
     # Make our own mappers for now
-    inMapper = obsHsc.HscSimMapper()
-    outMapper = obsHsc.HscSimMapper(rerun=rerun)
-    io = pipReadWrite.ReadWrite([inMapper, outMapper],
+    mapper = obsHsc.HscSimMapper(rerun=rerun)
+    io = pipReadWrite.ReadWrite(mapper,
                                 ['visit', 'ccd'],
                                 config=config)
     roots = config['roots']

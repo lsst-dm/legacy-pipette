@@ -50,9 +50,9 @@ class ProcessCcd(pipProc.Process):
         isr = self._Isr(config=self.config, log=self.log)
         return isr.run(exposureList, detrendsList)
 
-    def calibrate(self, exposure):
+    def calibrate(self, *args, **kwargs):
         calibrate = self._Calibrate(config=self.config, log=self.log)
-        return calibrate.run(exposure)
+        return calibrate.run(*args, **kwargs)
 
     def phot(self, exposure, psf, apcorr, wcs=None):
         phot = self._Photometry(config=self.config, log=self.log)

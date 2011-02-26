@@ -78,7 +78,7 @@ astrometry: {
 }
 
 psf: {
-    measure: {
+    algorithm: {
         nEigenComponents: 2
     }
 }

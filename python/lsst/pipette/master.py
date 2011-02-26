@@ -47,14 +47,14 @@ class Master(pipProc.Process):
             bgList = list()
             bgMatrix.append(bgList)
             for ident in identList:
-                if outButler.datasetExists('postISRCCD', ident):
-                    exposure, = self.read(outButler, ident, ['postISRCCD'])
+                if outButler.datasetExists('calexp', ident):
+                    exposure, = self.read(outButler, ident, ['calexp'])
                 else:
                     exposure, detrends = self.read(inButler, ident, ['raw', 'detrends'])
                     isrProc.run(exposure, detrends=detrends)
                     del detrends
                     # XXX photometry so we can mask objects?
-                    self.write(outButler, ident, {'postISRCCD': exposure})
+                    self.write(outButler, ident, {'calexp': exposure})
                 bg = bgProc.run(exposure)
                 bgList.append(bg)
                 del exposure
@@ -74,7 +74,7 @@ class Master(pipProc.Process):
             for index, identList in enumerate(identMatrix):
                 flag = None
                 for ident in identList:
-                    expList = self.read(outButler, ident, ["postISRCCD"])
+                    expList = self.read(outButler, ident, ["calexp"])
                     flag = self.flag(flag, expList[0], masterList[index])
                 mask = self.mask(flag, len(identList))
                 masterList[index] = mask
@@ -170,7 +170,7 @@ class Master(pipProc.Process):
 
         height, width = 0,0             # Size of image
         for i in identList:
-            exp = butler.get('postISRCCD', i)
+            exp = butler.get('calexp', i)
             if height == 0 and width == 0:
                 height, width = exp.getHeight(), exp.getWidth()
             elif height != exp.getHeight() or width != exp.getWidth():
@@ -190,7 +190,7 @@ class Master(pipProc.Process):
             box = afwImage.BBox(afwImage.PointI(0, start), width, rows)
             for index, id in enumerate(identList):
                 data = afwImage.MaskedImageF(width, rows)
-                exp = butler.get('postISRCCD', id)
+                exp = butler.get('calexp', id)
                 image = exp.getMaskedImage()
                 data <<= afwImage.MaskedImageF(image, box)
 

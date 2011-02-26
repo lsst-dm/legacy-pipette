@@ -213,7 +213,7 @@ class ReadWrite(object):
         """
         if exposure is not None:
             self.log.log(self.log.INFO, "Writing exposure: %s" % (dataId))
-            self.outButler.put(exposure, 'postISRCCD', dataId)
+            self.outButler.put(exposure, 'calexp', dataId)
         if psf is not None:
             self.log.log(self.log.INFO, "Writing PSF: %s" % (dataId))
             self.outButler.put(psf, 'psf', dataId)

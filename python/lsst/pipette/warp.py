@@ -91,7 +91,7 @@ class Warp(pipProc.Process):
         weight = afwImage.ImageF(xSize, ySize)
         
         for ident in identList:
-            exp = self.read(butler, ident, ["postISRCCD"])[0]
+            exp = self.read(butler, ident, ["calexp"])[0]
             width, height = exp.getWidth(), exp.getHeight()
             expWcs = exp.getWcs()
             xSkycell = list()

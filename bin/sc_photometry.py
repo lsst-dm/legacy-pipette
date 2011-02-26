@@ -52,8 +52,8 @@ def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=N
 
     sources1 = io.read('src', data1)
     sources2 = io.read('src', data2)
-    exp1 = io.read('postISRCCD_md', data1)
-    exp2 = io.read('postISRCCD_md', data2)
+    exp1 = io.read('calexp_md', data1)
+    exp2 = io.read('calexp_md', data2)
     for index, (sources, exp) in enumerate(zip(sources1, exp1)):
         if index >= 100:
             continue

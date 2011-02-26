@@ -154,6 +154,7 @@ class Calibrate(pipProc.Process):
         self.log.log(self.log.INFO, "Measuring PSF")
         psfStars, cellSet = maPsfSel.selectPsfSources(exposure, sources, selPolicy)
         psf, cellSet, psfStars = maPsfAlg.getPsf(exposure, psfStars, cellSet, algPolicy, sdqaRatings)
+        exposure.setPsf(psf)
         return psf, cellSet
 
     def apCorr(self, exposure, cellSet):

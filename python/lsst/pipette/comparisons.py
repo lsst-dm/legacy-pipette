@@ -13,7 +13,7 @@ def magnitude(value):
     return value
 
 class Comparisons(object):
-    def __init__(self, sources1, sources2, calib=None, matchTol=1.0, flags=0x80, bright=None):
+    def __init__(self, sources1, sources2, calib1, calib2, matchTol=1.0, flags=0x80, bright=None):
         self.keys = ['distance', 'ra', 'dec', 'ra1', 'ra2', 'dec1', 'dec2', 'x1', 'y1', 'x2', 'y2',
                      'psfDiff', 'psfAvg', 'psf1', 'psf2',
                      'apDiff', 'apAvg', 'ap1', 'ap2',
@@ -33,8 +33,11 @@ class Comparisons(object):
             array = ma.MaskedArray(array)
             setattr(self, name, array)
 
-        if bright is not None and calib is not None:
-            bright = 10.0**(-0.4*bright)
+        if bright is not None:
+            if calib1 is not None:
+                bright1 = 10.0**(-0.4*bright)
+            if calib2 is not None:
+                bright2 = 10.0**(-0.4*bright)
 
         # Fill arrays
         index = 0
@@ -50,17 +53,23 @@ class Comparisons(object):
             ap2 = second.getApFlux()
             psf1 = first.getPsfFlux()
             psf2 = second.getPsfFlux()
-            if calib is not None:
+            if calib1 is not None:
                 try:
                     ap1 = calib.getMagnitude(ap1)
-                    ap2 = calib.getMagnitude(ap2)
                     psf1 = calib.getMagnitude(psf1)
+                except:
+                    continue
+                if bright is not None and ap1 > bright:
+                    continue
+            if calib2 is not None:
+                try:
+                    ap2 = calib.getMagnitude(ap2)
                     psf2 = calib.getMagnitude(psf2)
                 except:
                     continue
-                if bright is not None and (ap1 > bright or ap2 > bright):
+                if bright is not None and ap2 > bright:
                     continue
-            elif if bright is not None and (ap1 < bright or ap2 < bright):
+            elif if bright is not None and (ap1 < bright1 or ap2 < bright2):
                 continue
 
             self.flags1[index] = flags1

@@ -16,13 +16,26 @@ import lsst.pipette.readwrite as pipReadWrite
 import lsst.pipette.comparisons as pipCompare
 import lsst.pipette.plotter as plotter
     
-def setRaDec(sources, exposure):
+def filterSources(sources, md, bright, flags=0x80):
     if isinstance(sources, afwDet.PersistableSourceVector):
         sources = sources.getSources()
-    exposure # Evaluate to force read of proxy
-    wcs = afwImage.makeWcs(exposure)
+    calib = afwImage.Calib(md)
+    wcs = afwImage.makeWcs(md)
     offsets = numpy.ndarray(len(sources))
+    outSources = afwDet.SourceSet()
     for i, src in enumerate(sources):
+        try:
+            psfMag = calib.getMagnitude(src.getPsfFlux())
+            apMag = calib.getMagnitude(src.getPsfFlux())
+        except:
+            continue
+
+        if src.getFlagForDetection() & ~flags:
+            continue
+
+        src.setPsfFlux(psfMag)
+        src.setApFlux(apMag)
+
         x, y = src.getXAstrom(), src.getYAstrom()
         #if x < 5 or x > 2043 or y < 5 or y > 4172:
         #    src.setRa(4.32)
@@ -31,12 +44,11 @@ def setRaDec(sources, exposure):
         sky = wcs.pixelToSky(x, y)
         src.setRa(sky[0])
         src.setDec(sky[1])
-
-        x1, y1 = src.getXAstrom(), src.getYAstrom()
-        sky = wcs.pixelToSky(x1, y1)
-        pix = wcs.skyToPixel(sky)
-        offsets[i] = math.hypot(pix.getX()-x1, pix.getY()-y1)
-    print offsets.mean(), offsets.std()
+#        x1, y1 = src.getXAstrom(), src.getYAstrom()
+#        sky = wcs.pixelToSky(x1, y1)
+#        pix = wcs.skyToPixel(sky)
+#        offsets[i] = math.hypot(pix.getX()-x1, pix.getY()-y1)
+#    print offsets.mean(), offsets.std()
 
 def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=None):
     io = pipReadWrite.ReadWrite(hscSim.HscSimMapper(rerun=rerun),
@@ -52,45 +64,46 @@ def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=N
 
     sources1 = io.read('src', data1)
     sources2 = io.read('src', data2)
-    exp1 = io.read('calexp_md', data1)
-    exp2 = io.read('calexp_md', data2)
-    for index, (sources, exp) in enumerate(zip(sources1, exp1)):
-        if index >= 100:
+    md1 = io.read('calexp_md', data1)
+    md2 = io.read('calexp_md', data2)
+    calib1, calib2 = [], []
+
+    assert len(sources1) == len(sources2) == len(md1) == len(md2)
+    for i in range(len(sources1))
+        if i >= 100:
             continue
-        exp
-        setRaDec(sources, exp)
-        
-    for index, (sources, exp) in enumerate(zip(sources2, exp2)):
-        if index >= 100:
-            continue
-        exp
-        setRaDec(sources, exp)
+        sources1[i] = filterSources(sources1[i], md1[i], bright)
+        sources2[i] = filterSources(sources2[i], md2[i], bright)
            
     sources1 = concatenate(sources1)
     sources2 = concatenate(sources2)
 
-    print len(sources1), "sources read from", frame1
-    print len(sources2), "sources read from", frame2
+    print len(sources1), "sources filtered from", frame1
+    print len(sources2), "sources filtered from", frame2
 
-    comp = pipCompare.Comparisons(sources1, sources2, matchTol=matchTol, bright=bright)
+    comp = pipCompare.Comparisons(sources1, sources2, matchTol=matchTol)
     print "%d matches" % comp.num
 
-    plot = plotter.Plotter(output)
-    plot.xy(comp['ra'], comp['dec'], title="Detections")
-    plot.xy(comp['psfAvg'], comp['psfDiff'], axis=[-16, -7, -0.25, 0.25], title="PSF photometry")
-    plot.xy(comp['apAvg'], comp['apDiff'], axis=[-16, -7, -0.25, 0.25], title="Aperture photometry")
-    plot.histogram(comp['psfDiff'], range=[-0.25, 0.25], bins=51, mean=0.0, sigma=0.02, title="PSF photometry")
-    plot.histogram(comp['apDiff'], range=[-0.25, 0.25], bins=51, mean=0.0, sigma=0.02, title="Aperture photometry")
+    ra = (comp['ra1'] + comp['ra2']) / 2.0
+    dec = (comp['dec1'] + comp['dec2']) / 2.0
+    psfAvg = (comp['psf1'] + comp['psf2']) / 2.0
+    psfDiff = comp['psf1'] - comp['psf2']
+    apAvg = (comp['ap1'] + comp['ap2']) / 2.0
+    apDiff = (comp['ap1'] - comp['ap2'])
 
-    plot.xy2(comp['ra'], comp['distance'],
-             comp['dec'], comp['distance'],
-             axis1=[comp['ra'].min(), comp['ra'].max(), 0, matchTol],
-             axis2=[comp['dec'].min(), comp['dec'].max(), 0, matchTol],
+
+    plot = plotter.Plotter(output)
+    plot.xy(ra, dec, title="Detections")
+    plot.xy(psfAvg, psfDiff, title="PSF photometry")
+    plot.xy(apAvg, apDiff, title="Aperture photometry")
+    plot.histogram(psfDiff, range=[-0.25, 0.25], mean=0.0, sigma=0.02, title="PSF photometry")
+    plot.histogram(apDiff, range=[-0.25, 0.25], mean=0.0, sigma=0.02, title="Aperture photometry")
+
+    plot.xy2(ra, comp['distance'], dec, comp['distance'],
+             axis1=[ram.min(), ra.max(), 0, matchTol], axis2=[dec.min(), dec.max(), 0, matchTol],
              title1="Right ascension", title2="Declination")
 
-    plot.quivers(comp['ra'], comp['dec'],
-                 comp['ra1'] - comp['ra2'], comp['dec1'] - comp['dec2'],
-                 title="Astrometry")
+    plot.quivers(ra, dec, comp['ra1'] - comp['ra2'], comp['dec1'] - comp['dec2'], title="Astrometry")
 
     plot.close()
 

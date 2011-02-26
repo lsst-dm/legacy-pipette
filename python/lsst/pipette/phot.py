@@ -51,7 +51,7 @@ class Photometry(pipProc.Process):
         numNeg = len(negSources.getFootprints()) if negSources is not None else 0
         if numNeg > 0:
             self.log.log(self.log.WARN, "%d negative sources found and ignored" % numNeg)
-        self.log.log(self.log.INFO, "Detected %d sources to %f." % (numPos, policy['thresholdValue']))
+        self.log.log(self.log.INFO, "Detected %d sources to %g sigma." % (numPos, policy['thresholdValue']))
         if self._threshold is not None:
             policy['thresholdValue'] = oldThreshold
         return posSources

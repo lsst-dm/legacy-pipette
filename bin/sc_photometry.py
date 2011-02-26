@@ -26,15 +26,18 @@ def filterSources(sources, md, bright, flags=0x80):
     for i, src in enumerate(sources):
         try:
             psfMag = calib.getMagnitude(src.getPsfFlux())
-            apMag = calib.getMagnitude(src.getPsfFlux())
+            apMag = calib.getMagnitude(src.getApFlux())
         except:
             continue
 
-        if src.getFlagForDetection() & ~flags:
+        if bright is not None and apMag > bright:
             continue
 
-        src.setPsfFlux(psfMag)
-        src.setApFlux(apMag)
+        if src.getFlagForDetection() & flags == 0:
+            continue
+
+#        src.setPsfFlux(psfMag)
+#        src.setApFlux(apMag)
 
         x, y = src.getXAstrom(), src.getYAstrom()
         #if x < 5 or x > 2043 or y < 5 or y > 4172:
@@ -48,7 +51,9 @@ def filterSources(sources, md, bright, flags=0x80):
 #        sky = wcs.pixelToSky(x1, y1)
 #        pix = wcs.skyToPixel(sky)
 #        offsets[i] = math.hypot(pix.getX()-x1, pix.getY()-y1)
+        outSources.push_back(src)
 #    print offsets.mean(), offsets.std()
+    return outSources
 
 def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=None):
     io = pipReadWrite.ReadWrite(hscSim.HscSimMapper(rerun=rerun),
@@ -63,22 +68,25 @@ def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=N
         data2['ccd'] = ccd
 
     sources1 = io.read('src', data1)
+    md1 = io.read('postISRCCD_md', data1)
     sources2 = io.read('src', data2)
-    md1 = io.read('calexp_md', data1)
-    md2 = io.read('calexp_md', data2)
-    calib1, calib2 = [], []
+    md2 = io.read('postISRCCD_md', data2)
 
-    assert len(sources1) == len(sources2) == len(md1) == len(md2)
-    for i in range(len(sources1))
+
+    assert len(sources1) == len(md1)
+    for i in range(len(sources1)):
         if i >= 100:
             continue
         sources1[i] = filterSources(sources1[i], md1[i], bright)
-        sources2[i] = filterSources(sources2[i], md2[i], bright)
-           
     sources1 = concatenate(sources1)
-    sources2 = concatenate(sources2)
-
     print len(sources1), "sources filtered from", frame1
+
+    assert len(sources2) == len(md2)
+    for i in range(len(sources2)):
+        if i >= 100:
+            continue
+        sources2[i] = filterSources(sources2[i], md2[i], bright)
+    sources2 = concatenate(sources2)
     print len(sources2), "sources filtered from", frame2
 
     comp = pipCompare.Comparisons(sources1, sources2, matchTol=matchTol)
@@ -86,21 +94,30 @@ def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=N
 
     ra = (comp['ra1'] + comp['ra2']) / 2.0
     dec = (comp['dec1'] + comp['dec2']) / 2.0
-    psfAvg = (comp['psf1'] + comp['psf2']) / 2.0
-    psfDiff = comp['psf1'] - comp['psf2']
-    apAvg = (comp['ap1'] + comp['ap2']) / 2.0
-    apDiff = (comp['ap1'] - comp['ap2'])
+
+    if False:
+        psfAvg = (comp['psf1'] + comp['psf2']) / 2.0
+        psfDiff = comp['psf1'] - comp['psf2']
+        apAvg = (comp['ap1'] + comp['ap2']) / 2.0
+        apDiff = (comp['ap1'] - comp['ap2'])
+    else:
+        psfAvg = (-2.5*numpy.log10(comp['psf1']) -2.5*numpy.log10(comp['psf2'])) / 2.0
+        psfDiff = -2.5*numpy.log10(comp['psf1']) + 2.5*numpy.log10(comp['psf2'])
+        apAvg = (-2.5*numpy.log10(comp['ap1']) - 2.5*numpy.log10(comp['ap2'])) / 2.0
+        apDiff = (-2.5*numpy.log10(comp['ap1']) + 2.5*numpy.log10(comp['ap2']))
 
 
     plot = plotter.Plotter(output)
     plot.xy(ra, dec, title="Detections")
-    plot.xy(psfAvg, psfDiff, title="PSF photometry")
-    plot.xy(apAvg, apDiff, title="Aperture photometry")
+    plot.xy(psfAvg, psfDiff, axis=[comp['psf1'].min(), comp['psf1'].max(), -0.25, 0.25],
+            title="PSF photometry")
+    plot.xy(apAvg, apDiff, axis=[comp['ap1'].min(), comp['ap1'].max(), -0.25, 0.25],
+            title="Aperture photometry")
     plot.histogram(psfDiff, range=[-0.25, 0.25], mean=0.0, sigma=0.02, title="PSF photometry")
     plot.histogram(apDiff, range=[-0.25, 0.25], mean=0.0, sigma=0.02, title="Aperture photometry")
 
     plot.xy2(ra, comp['distance'], dec, comp['distance'],
-             axis1=[ram.min(), ra.max(), 0, matchTol], axis2=[dec.min(), dec.max(), 0, matchTol],
+             axis1=[ra.min(), ra.max(), 0, matchTol], axis2=[dec.min(), dec.max(), 0, matchTol],
              title1="Right ascension", title2="Declination")
 
     plot.quivers(ra, dec, comp['ra1'] - comp['ra2'], comp['dec1'] - comp['dec2'], title="Astrometry")

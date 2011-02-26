@@ -33,8 +33,8 @@ class Comparisons(object):
             array1 = numpy.ndarray(self.num)
             array2 = numpy.ndarray(self.num)
             for i, m in enumerate(matches):
-                first = match.first
-                second = match.second
+                first = m.first
+                second = m.second
                 array1[i] = getattr(first, method)()
                 array2[i] = getattr(second, method)()
             setattr(self, name1, array1)

@@ -67,24 +67,20 @@ def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=N
         data1['ccd'] = ccd
         data2['ccd'] = ccd
 
-    sources1 = io.read('src', data1)
-    md1 = io.read('calexp_md', data1)
-    sources2 = io.read('src', data2)
-    md2 = io.read('calexp_md', data2)
+    sources1 = io.read('src', data1, ignore=True)
+    md1 = io.read('calexp_md', data1, ignore=True)
+    sources2 = io.read('src', data2, ignore=True)
+    md2 = io.read('calexp_md', data2, ignore=True)
 
 
     assert len(sources1) == len(md1)
     for i in range(len(sources1)):
-        if i >= 100:
-            continue
         sources1[i] = filterSources(sources1[i], md1[i], bright)
     sources1 = concatenate(sources1)
     print len(sources1), "sources filtered from", frame1
 
     assert len(sources2) == len(md2)
     for i in range(len(sources2)):
-        if i >= 100:
-            continue
         sources2[i] = filterSources(sources2[i], md2[i], bright)
     sources2 = concatenate(sources2)
     print len(sources2), "sources filtered from", frame2
@@ -113,8 +109,8 @@ def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=N
             title="PSF photometry")
     plot.xy(apAvg, apDiff, axis=[comp['ap1'].min(), comp['ap1'].max(), -0.25, 0.25],
             title="Aperture photometry")
-    plot.histogram(psfDiff, range=[-0.25, 0.25], mean=0.0, sigma=0.02, title="PSF photometry")
-    plot.histogram(apDiff, range=[-0.25, 0.25], mean=0.0, sigma=0.02, title="Aperture photometry")
+    plot.histogram(psfDiff, [-0.25, 0.25], title="PSF photometry")
+    plot.histogram(apDiff, [-0.25, 0.25], title="Aperture photometry")
 
     plot.xy2(ra, comp['distance'], dec, comp['distance'],
              axis1=[ra.min(), ra.max(), 0, matchTol], axis2=[dec.min(), dec.max(), 0, matchTol],
@@ -131,8 +127,6 @@ def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=N
 def concatenate(listOfLists):
     newList = list()
     for index, eachList in enumerate(listOfLists):
-        if index >= 100:
-            continue
         if isinstance(eachList, afwDet.PersistableSourceVector):
             eachList = eachList.getSources()
         for thing in eachList:

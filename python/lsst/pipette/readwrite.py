@@ -155,7 +155,7 @@ class ReadWrite(object):
             exposures.append(exp)
         return exposures
 
-    def read(self, which, dataId):
+    def read(self, which, dataId, ignore=False):
         """Read some data.
 
         @param which Type of data to read
@@ -167,9 +167,11 @@ class ReadWrite(object):
         for ident in identifiers:
             ident.update(dataId)
             if not self.inButler.datasetExists(which, ident):
-                raise RuntimeError("Data type %s does not exist for %s" % (which, ident))
-            self.log.log(self.log.INFO, "Reading %s: %s" % (which, ident))
-            data.append(self.inButler.get(which, ident))
+                if not ignore:
+                    raise RuntimeError("Data type %s does not exist for %s" % (which, ident))
+            else:
+                self.log.log(self.log.INFO, "Reading %s: %s" % (which, ident))
+                data.append(self.inButler.get(which, ident))
         return data
 
     def detrends(self, dataId, config):

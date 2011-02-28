@@ -146,6 +146,8 @@ class ReadWrite(object):
         exposures = list()
         for ident in identifiers:
             ident.update(dataId)
+            if not self.inButler.datasetExists('raw', ident):
+                raise RuntimeError("Raw data does not exist for %s" % ident)
             self.log.log(self.log.INFO, "Reading: %s" % (ident))
             exp = self.inButler.get('raw', ident)
             if isinstance(exp, afwImage.ExposureU):
@@ -164,6 +166,8 @@ class ReadWrite(object):
         data = list()
         for ident in identifiers:
             ident.update(dataId)
+            if not self.inButler.datasetExists(which, ident):
+                raise RuntimeError("Data type %s does not exist for %s" % (which, ident))
             self.log.log(self.log.INFO, "Reading %s: %s" % (which, ident))
             data.append(self.inButler.get(which, ident))
         return data
@@ -183,6 +187,8 @@ class ReadWrite(object):
                 detList = list()
                 for ident in identifiers:
                     ident.update(dataId)
+                    if not self.inButler.datasetExists(which, ident):
+                        raise RuntimeError("Data type %s does not exist for %s" % (which, ident))
                     self.log.log(self.log.INFO, "Reading %s for %s" % (kind, ident))
                     detrend = self.inButler.get(kind, ident)
                     detList.append(detrend)
@@ -196,6 +202,9 @@ class ReadWrite(object):
                 assert len(filterList) == 1, "Filter query is non-unique: %s" % filterList
                 filtName = filterList[0]
                 if filtName in config['fringe']['filters']:
+                    if not self.inButler.datasetExists('fringe', ident):
+                        raise RuntimeError("Data type fringe does not exist for %s" % ident)
+                    self.log.log(self.log.INFO, "Reading fringe for %s" % (ident))
                     fringe = self.inButler.get("fringe", ident)
                     fringeList.append(fringe)
             if len(fringeList) > 0:

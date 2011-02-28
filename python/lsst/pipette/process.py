@@ -40,20 +40,38 @@ class Process(object):
             if product == "detrends":
                 do = self.config['do']['isr']
                 detrends = dict()
-                if do['bias']:
-                    self.log.log(self.log.INFO, "Reading bias for %s" % (ident))
-                    detrends['bias'] = butler.get('bias', ident)
-                if do['dark']:
-                    self.log.log(self.log.INFO, "Reading dark for %s" % (ident))
-                    detrends['dark'] = butler.get('dark', ident)
-                if do['flat']:
-                    self.log.log(self.log.INFO, "Reading flat for %s" % (ident))
-                    detrends['flat'] = butler.get('flat', ident)
+
+                for kind in ('bias', 'dark', 'flat'):
+                    if do[kind]:
+                        detList = list()
+                        for ident in identifiers:
+                            ident.update(dataId)
+                            if not butler.datasetExists(which, ident):
+                                raise RuntimeError("Data type %s does not exist for %s" % (which, ident))
+                            self.log.log(self.log.INFO, "Reading %s for %s" % (kind, ident))
+                            detrend = butler.get(kind, ident)
+                            detList.append(detrend)
+                        detrends[kind] = detList
+                # Fringe depends on the filter
                 if do['fringe']:
-                    self.log.log(self.log.INFO, "Reading fringe for %s" % (ident))
-                    detrends['fringe'] = butler.get('fringe', ident)
+                    fringeList = list()
+                    for ident in identifiers:
+                        ident.update(dataId)
+                        filterList = butler.queryMetadata("raw", None, "filter", ident)
+                        assert len(filterList) == 1, "Filter query is non-unique: %s" % filterList
+                        filtName = filterList[0]
+                        if filtName in config['fringe']['filters']:
+                            if not butler.datasetExists('fringe', ident):
+                                raise RuntimeError("Data type fringe does not exist for %s" % ident)
+                            self.log.log(self.log.INFO, "Reading fringe for %s" % (ident))
+                            fringe = butler.get("fringe", ident)
+                            fringeList.append(fringe)
+                    if len(fringeList) > 0:
+                        detrends['fringe'] = fringeList
                 gotten.append(detrends)
             else:
+                if not butler.datasetExists('fringe', ident):
+                    raise RuntimeError("Data type %s does not exist for %s" % (product, ident))
                 self.log.log(self.log.INFO, "Reading %s for %s" % (product, ident))
                 data = butler.get(product, ident)
 

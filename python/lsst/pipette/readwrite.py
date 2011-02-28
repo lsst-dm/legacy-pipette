@@ -216,7 +216,7 @@ class ReadWrite(object):
                     continue
                 ref[i].setXAstrom(x)
                 ref[i].setYAstrom(y)
-                if stargal[i]:
+                if stargal is not None and stargal[i]:
                     ref[i].setFlagForDetection(ref[i].getFlagForDetection() | fdict["STAR"])
                 keepref.append(ref[i])
                 keepi.append(i)
@@ -241,14 +241,7 @@ class ReadWrite(object):
                 args['offset'] = -1
             measAstrom.joinMatchList(matchList, sourceList, first=False, log=self.log, **args)
             output.append(matchList)
-
-
-
-
-
-
-
-
+        return output
 
 
     def read(self, which, dataId, ignore=False):

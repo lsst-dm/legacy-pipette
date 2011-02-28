@@ -79,6 +79,9 @@ class Photometry(pipProc.Process):
         if wcs is not None:
             muMeasurement.computeSkyCoords(wcs, sources)
 
+        if not self.config['do']['calibrate']['applyApcorr']: # actually apply the aperture correction?
+            apcorr = None
+
         if apcorr is not None:
             self.log.log(self.log.INFO, "Applying aperture correction")
             for source in sources:

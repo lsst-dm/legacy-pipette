@@ -40,7 +40,9 @@ class Isr(pipProc.Process):
             if detrends is not None:
                 for kind in detrends.keys():
                     detrends[kind] = self.assembly(detrends[kind])
-        self.display('assembly', exposure=exposure)
+            self.display('assembly', exposure=exposure)
+        else:
+            exposure = None
 
         if do['bias']:
             self.bias(exposure, detrends['bias'])
@@ -55,7 +57,8 @@ class Isr(pipProc.Process):
             if filtName in self.config['fringe']['filters']:
                 self.fringe(exposure, detrends['fringe'])
 
-        self.display('flattened', exposure=exposure)
+        if exposure:
+            self.display('flattened', exposure=exposure)
 
         if do['defects']:
             defects = self.defects(exposure)
@@ -67,7 +70,9 @@ class Isr(pipProc.Process):
         else:
             bg = None
 
-        self.display('isr', exposure=exposure)
+        if exposure:
+            self.display('isr', exposure=exposure)
+            
         return exposure, defects, bg
 
     def processAmp(self, exposure):

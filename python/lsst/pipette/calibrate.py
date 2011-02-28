@@ -62,7 +62,7 @@ class Calibrate(pipProc.Process):
             psf, cellSet = None, None
 
         if do['psf'] and do['apcorr']:
-            apcorr = self.apCorr(exposure, cellSet)
+            apcorr = self.apCorr(exposure, cellSet) # calculate the aperture correction; we may use it later
         else:
             apcorr = None
 
@@ -335,8 +335,6 @@ class Calibrate(pipProc.Process):
         self.log.log(self.log.INFO, "Photometric zero-point: %f" % zp.getMag(1.0))
         exposure.getCalib().setFluxMag0(zp.getFlux(0))
         return
-
-
 
 def offsetSources(sources,              # List of sources to offset
                   dx,                   # x offset

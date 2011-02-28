@@ -21,6 +21,12 @@ definitions: {
         maxOccurs: 1
         default: false
     }
+    applyApcorr: {
+        type: boolean
+        description: "Apply the aperture correction?"
+        maxOccurs: 1
+        default: false
+    }
     background: {
         type: boolean
         description: "Subtract background?"

@@ -10,6 +10,7 @@ import lsst.afw.image as afwImage
 import lsst.afw.detection as afwDet
 import lsst.afw.coord as afwCoord
 import lsst.meas.astrom as measAstrom
+import lsst.meas.algorithms.utils as maUtils
 
 """This module provides I/O for pipette (LSST algorithms testing)"""
 
@@ -177,7 +178,7 @@ class ReadWrite(object):
             sourceList = sourceList.getSources()
             wcs = afwImage.makeWcs(header)
 
-            filter = header.get('FILTER')
+            filter = header.get('FILTER').strip()
             width, height = header.get('NAXIS1'), header.get('NAXIS2')
             xc, yc = 0.5 * width, 0.5 * height
             radec = wcs.pixelToSky(xc, yc)
@@ -185,17 +186,15 @@ class ReadWrite(object):
             dec = radec.getLatitude(afwCoord.DEGREES)
             radius = wcs.pixelScale() * math.hypot(xc, yc) * 1.1
 
-            print meta.toString()
-
             policy = pexPolicy.Policy()
             policy.set('matchThreshold', 30)
             solver = measAstrom.createSolver(policy, self.log)
-            idName = meta.getId()
+            idName = 'id'
             anid = meta.getInt('ANINDID')
 
             cat = solver.getCatalogue(ra, dec, radius, filter, idName, anid)
-            ref = cat.first
-            indices = cat.second
+            ref = cat.refsources
+            inds = cat.inds
 
             referrs, stargal = None, None
             colnames = [c.name for c in solver.getTagAlongColumns(anid)]
@@ -213,7 +212,7 @@ class ReadWrite(object):
             keepi = []
             for i in xrange(len(ref)):
                 x, y = wcs.skyToPixel(ref[i].getRa(), ref[i].getDec())
-                if x < 0 or y < 0 or x > W or y > H:
+                if x < 0 or y < 0 or x > width or y > height:
                     continue
                 ref[i].setXAstrom(x)
                 ref[i].setYAstrom(y)
@@ -232,16 +231,16 @@ class ReadWrite(object):
             stargal = stargal
             referrs = referrs
 
-            measAstrom.joinMatchList(matches, ref, first=True, log=log)
+            measAstrom.joinMatchList(matchList, ref, first=True, log=self.log)
             args = {}
-            if fixup:
+            if True:
                 # ugh, mask and offset req'd because source ids are assigned at write-time
                 # and match list code made a deep copy before that.
                 # (see svn+ssh://svn.lsstcorp.org/DMS/meas/astrom/tickets/1491-b r18027)
                 args['mask'] = 0xffff
                 args['offset'] = -1
-            measAstrom.joinMatchList(matches, sources, first=False, log=log, **args)
-            outputs.append(matches)
+            measAstrom.joinMatchList(matchList, sourceList, first=False, log=self.log, **args)
+            output.append(matchList)
 
 
 

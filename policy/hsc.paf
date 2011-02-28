@@ -68,6 +68,15 @@ distortion: {
     class: "hsc.meas.match.hscDistortion.HscDistortion"
 }
 
+#solvetansip: @@solvetansip:policy:WCS_MAKEAPROP.paf
+#solvetansip: {
+#	SIPORDER:	9  # 7?
+#	SIPORDER:	9
+#	NCCD:	      100
+#}
+
+
+
 astrometry: {
     defaultFilterName: R
     numBrightStars: 200

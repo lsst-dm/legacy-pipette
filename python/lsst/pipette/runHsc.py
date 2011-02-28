@@ -10,6 +10,11 @@ import lsst.pipette.options as pipOptions
 import lsst.pipette.catalog as pipCatalog
 import lsst.pipette.readwrite as pipReadWrite
 
+import lsst.pipette.ioHacks as pipExtraIO
+
+#from IPython.core.debugger import Tracer;
+#debug_here = Tracer()
+
 class DeferredHSCState(object):
     def __init__(self, dataId, io, matchlist, sources, exposure):
         self.dataId = dataId
@@ -58,15 +63,19 @@ def run(rerun,                          # Rerun name
     catPolicy = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "catalog.paf")
     catalog = pipCatalog.Catalog(catPolicy, allowNonfinite=False)
 
-    if not "needs to use outMapper":
-        basename = os.path.join(roots['output'], '%s-%d%d' % (rerun, frame, ccd))
-        if sources is not None:
-            catalog.writeSources(basename + '.sources', sources, 'sources')
-        if matches is not None:
-            catalog.writeMatches(basename + '.matches', matches, 'sources')
+    # Write SRC....fits files here, until we can push the scheme into a butler.
+    metadata = exposure.getMetadata()
+    hdrInfo = dict([(m, metadata.get(m)) for m in metadata.names()])
 
+    filename = io.outButler.get('source_filename', dataId)[0]
+    io.log.log(io.log.INFO, "writing sources to: %s" % (filename))
+    pipExtraIO.writeSourceSetAsFits(sources, filename, hdrInfo=hdrInfo, clobber=True)
+
+    #filename = io.outButler.get('match_filename', dataId)[0]
+    #io.log.log(io.log.INFO, "writing matches to: %s" % (filename))
+    #pipExtraIO.writeSourceSetAsFits(sources, filename, hdrInfo=hdrInfo, clobber=True)
+            
     deferredState = DeferredHSCState(dataId, io, matches, sources, exposure)
-    io.log.log(io.log.WARN, "state: %s" % (deferredState))
     return deferredState
 
 def doMergeWcs(deferredState, wcs):

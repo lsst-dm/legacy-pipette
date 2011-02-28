@@ -38,7 +38,7 @@ detect: {
 measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
 
 defects: {
-    grow: 2
+    grow: 0
 }
 
 cosmicray: {

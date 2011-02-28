@@ -1,11 +1,15 @@
 #!/usr/bin/env python
 import os
+import math
 import lsst.pex.logging as pexLog
+import lsst.pex.policy as pexPolicy
 import lsst.daf.persistence as dafPersist
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.afw.cameraGeom.utils as cameraGeomUtils
 import lsst.afw.image as afwImage
 import lsst.afw.detection as afwDet
+import lsst.afw.coord as afwCoord
+import lsst.meas.astrom as measAstrom
 
 """This module provides I/O for pipette (LSST algorithms testing)"""
 
@@ -155,6 +159,99 @@ class ReadWrite(object):
             exposures.append(exp)
         return exposures
 
+    def readMatches(self, dataId, ignore=False):
+        """Read matches, sources and catalogue; combine.
+
+        @param dataId Data identifier for butler
+        @param ignore Ignore non-existent data?
+        @returns Matches
+        """
+        sources = self.read('src', dataId, ignore=ignore)
+        matches = self.read('matches', dataId, ignore=ignore)
+        headers = self.read('calexp_md', dataId, ignore=ignore)
+
+        output = []
+        for sourceList, matchList, header in zip(sources, matches, headers):
+            meta = matchList.getSourceMatchMetadata()
+            matchList = matchList.getSourceMatches()
+            sourceList = sourceList.getSources()
+            wcs = afwImage.makeWcs(header)
+
+            filter = header.get('FILTER')
+            width, height = header.get('NAXIS1'), header.get('NAXIS2')
+            xc, yc = 0.5 * width, 0.5 * height
+            radec = wcs.pixelToSky(xc, yc)
+            ra = radec.getLongitude(afwCoord.DEGREES)
+            dec = radec.getLatitude(afwCoord.DEGREES)
+            radius = wcs.pixelScale() * math.hypot(xc, yc) * 1.1
+
+            print meta.toString()
+
+            policy = pexPolicy.Policy()
+            policy.set('matchThreshold', 30)
+            solver = measAstrom.createSolver(policy, self.log)
+            idName = meta.getId()
+            anid = meta.getInt('ANINDID')
+
+            cat = solver.getCatalogue(ra, dec, radius, filter, idName, anid)
+            ref = cat.first
+            indices = cat.second
+
+            referrs, stargal = None, None
+            colnames = [c.name for c in solver.getTagAlongColumns(anid)]
+
+            col = 'starnotgal'
+            if col in colnames:
+                stargal1 = solver.getTagAlongBool(anid, col, inds)
+                stargal = []
+                for i in range(len(stargal1)):
+                    stargal.append(stargal1[i])
+
+            fdict = maUtils.getDetectionFlags()
+
+            keepref = []
+            keepi = []
+            for i in xrange(len(ref)):
+                x, y = wcs.skyToPixel(ref[i].getRa(), ref[i].getDec())
+                if x < 0 or y < 0 or x > W or y > H:
+                    continue
+                ref[i].setXAstrom(x)
+                ref[i].setYAstrom(y)
+                if stargal[i]:
+                    ref[i].setFlagForDetection(ref[i].getFlagForDetection() | fdict["STAR"])
+                keepref.append(ref[i])
+                keepi.append(i)
+
+            ref = keepref
+
+            if referrs is not None:
+                referrs = [referrs[i] for i in keepi]
+            if stargal is not None:
+                stargal = [stargal[i] for i in keepi]
+
+            stargal = stargal
+            referrs = referrs
+
+            measAstrom.joinMatchList(matches, ref, first=True, log=log)
+            args = {}
+            if fixup:
+                # ugh, mask and offset req'd because source ids are assigned at write-time
+                # and match list code made a deep copy before that.
+                # (see svn+ssh://svn.lsstcorp.org/DMS/meas/astrom/tickets/1491-b r18027)
+                args['mask'] = 0xffff
+                args['offset'] = -1
+            measAstrom.joinMatchList(matches, sources, first=False, log=log, **args)
+            outputs.append(matches)
+
+
+
+
+
+
+
+
+
+
     def read(self, which, dataId, ignore=False):
         """Read some data.
 
@@ -213,7 +310,7 @@ class ReadWrite(object):
                 detrends['fringe'] = fringeList
         return detrends
 
-    def write(self, dataId, exposure=None, psf=None, sources=None, matches=None, **kwargs):
+    def write(self, dataId, exposure=None, psf=None, sources=None, matches=None, matchMeta=None, **kwargs):
         """Write processed data.
 
         @param dataId Data identifier for butler
@@ -241,7 +338,7 @@ class ReadWrite(object):
                 smv = afwDet.SourceMatchVector()
                 for match in matches:
                     smv.push_back(match)
-                self.outButler.put(afwDet.PersistableSourceMatchVector(smv), 'matches', dataId)
+                self.outButler.put(afwDet.PersistableSourceMatchVector(smv, matchMeta), 'matches', dataId)
             except Exception, e:
                 self.log.log(self.log.WARN, "Unable to write matches: %s" % e)
         return

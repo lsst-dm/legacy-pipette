@@ -24,8 +24,8 @@ def run(rerun,                          # Rerun name
 
     raws = io.readRaw(dataId)
     detrends = io.detrends(dataId, config)
-    exposure, psf, apcorr, sources, matches = ccdProc.run(raws, detrends)
-    io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches)
+    exposure, psf, apcorr, sources, matches, matchMeta = ccdProc.run(raws, detrends)
+    io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches, matchMeta=matchMeta)
 
     catPolicy = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "catalog.paf")
     catalog = pipCatalog.Catalog(catPolicy, allowNonfinite=False)

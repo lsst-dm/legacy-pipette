@@ -83,15 +83,15 @@ class Calibrate(pipProc.Process):
             dist = None
 
         if do['astrometry'] or do['zeropoint']:
-            matches, wcs = self.astrometry(exposure, sources, distortion=dist)
+            matches, matchMeta, wcs = self.astrometry(exposure, sources, distortion=dist)
         else:
-            matches, wcs = None, None
+            matches, matchMeta, wcs = None, None, None
 
         if do['zeropoint']:
             self.zeropoint(exposure, matches)
 
         self.display('calibrate', exposure=exposure, sources=sources, matches=matches)
-        return psf, apcorr, sources, matches
+        return psf, apcorr, sources, matches, matchMeta
 
 
 
@@ -277,8 +277,9 @@ class Calibrate(pipProc.Process):
                                       log=log, forceImageSize=size, filterName=filterName)
         if astrom is None:
             raise RuntimeError("Unable to solve astrometry")
-        wcs = astrom.wcs
-        matches = astrom.matches
+        wcs = astrom.getWcs()
+        matches = astrom.getMatches()
+        matchMeta = astrom.getMatchMetadata()
         if matches is None or len(matches) == 0:
             raise RuntimeError("No astrometric matches")
         self.log.log(self.log.INFO, "%d astrometric matches" % len(matches))
@@ -320,7 +321,7 @@ class Calibrate(pipProc.Process):
 
         exposure.setWcs(wcs)
 
-        return matches, wcs
+        return matches, matchMeta, wcs
 
     def zeropoint(self, exposure, matches):
         """Photometric calibration

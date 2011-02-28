@@ -53,10 +53,10 @@ def run(rerun,                          # Rerun name
     dataId['filter'] = raws[0].getMetadata().getAsString('FILTER01').strip()
     dataId['pointing'] = frame / 10
     
-    exposure, psf, apcorr, sources, matches = ccdProc.run(raws, detrends)
+    exposure, psf, apcorr, sources, matches, matchMeta = ccdProc.run(raws, detrends)
     defer = True
     if defer:
-        io.write(dataId, exposure=None, psf=psf, sources=None, matches=matches)
+        io.write(dataId, exposure=None, psf=psf, sources=None, matches=matches, matchMeta=matchMeta)
     else:
         io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches)
 

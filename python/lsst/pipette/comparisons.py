@@ -15,7 +15,7 @@ def magnitude(value):
 class Comparisons(object):
     def __init__(self, sources1, sources2, matchTol=1.0):
         self.keys = ['distance', 'ra1', 'ra2', 'dec1', 'dec2', 'x1', 'y1', 'x2', 'y2',
-                     'psf1', 'psf2', 'ap1', 'ap2', 'flags1', 'flags2', 'index']
+                     'psf1', 'psf2', 'ap1', 'ap2', 'model1', 'model2', 'flags1', 'flags2', 'index']
         matches = afwDet.matchRaDec(sources1, sources2, matchTol)
         self.num = len(matches)
 
@@ -25,6 +25,7 @@ class Comparisons(object):
                              ('x', 'getXAstrom'),
                              ('y', 'getYAstrom'),
                              ('psf', 'getPsfFlux'),
+                             ('model', 'getModelFlux'),
                              ('ap', 'getApFlux'),
                              ('flags', 'getFlagForDetection'),
                              ):

@@ -15,7 +15,7 @@ import lsst.pipette.options as pipOptions
 import lsst.pipette.readwrite as pipReadWrite
 import lsst.pipette.comparisons as pipCompare
 import lsst.pipette.plotter as plotter
-    
+
 def filterSources(sources, md, bright, flags=0x80):
     if isinstance(sources, afwDet.PersistableSourceVector):
         sources = sources.getSources()
@@ -95,12 +95,16 @@ def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=N
         psfAvg = (comp['psf1'] + comp['psf2']) / 2.0
         psfDiff = comp['psf1'] - comp['psf2']
         apAvg = (comp['ap1'] + comp['ap2']) / 2.0
-        apDiff = (comp['ap1'] - comp['ap2'])
+        apDiff = comp['ap1'] - comp['ap2']
+        modelAvg = (comp['model1'] + comp['model2']) / 2.0
+        modelDiff = comp['model1'] - comp['model2']
     else:
         psfAvg = (-2.5*numpy.log10(comp['psf1']) -2.5*numpy.log10(comp['psf2'])) / 2.0
         psfDiff = -2.5*numpy.log10(comp['psf1']) + 2.5*numpy.log10(comp['psf2'])
         apAvg = (-2.5*numpy.log10(comp['ap1']) - 2.5*numpy.log10(comp['ap2'])) / 2.0
         apDiff = (-2.5*numpy.log10(comp['ap1']) + 2.5*numpy.log10(comp['ap2']))
+        modelAvg = (-2.5*numpy.log10(comp['model1']) - 2.5*numpy.log10(comp['model2'])) / 2.0
+        modelDiff = (-2.5*numpy.log10(comp['model1']) + 2.5*numpy.log10(comp['model2']))
 
 
     plot = plotter.Plotter(output)
@@ -111,6 +115,7 @@ def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=N
             title="Aperture photometry")
     plot.histogram(psfDiff, [-0.25, 0.25], title="PSF photometry")
     plot.histogram(apDiff, [-0.25, 0.25], title="Aperture photometry")
+#    plot.histogram(modelDiff, [-0.25, 0.25], title="Model photometry")
 
     plot.xy2(ra, comp['distance'], dec, comp['distance'],
              axis1=[ra.min(), ra.max(), 0, matchTol], axis2=[dec.min(), dec.max(), 0, matchTol],

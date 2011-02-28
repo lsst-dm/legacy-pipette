@@ -23,7 +23,7 @@ class Process(object):
         raise NotImplementedError("This method needs to be provided by the subclass.")
 
 
-    def read(self, butler, ident, productList):
+    def read(self, butler, ident, productList, ignore=False):
         """Read products
 
         @param butler Data butler
@@ -47,10 +47,12 @@ class Process(object):
                         for ident in identifiers:
                             ident.update(dataId)
                             if not butler.datasetExists(which, ident):
-                                raise RuntimeError("Data type %s does not exist for %s" % (which, ident))
-                            self.log.log(self.log.INFO, "Reading %s for %s" % (kind, ident))
-                            detrend = butler.get(kind, ident)
-                            detList.append(detrend)
+                                if not ignore:
+                                    raise RuntimeError("Data type %s does not exist for %s" % (which, ident))
+                            else:
+                                self.log.log(self.log.INFO, "Reading %s for %s" % (kind, ident))
+                                detrend = butler.get(kind, ident)
+                                detList.append(detrend)
                         detrends[kind] = detList
                 # Fringe depends on the filter
                 if do['fringe']:
@@ -62,18 +64,22 @@ class Process(object):
                         filtName = filterList[0]
                         if filtName in config['fringe']['filters']:
                             if not butler.datasetExists('fringe', ident):
-                                raise RuntimeError("Data type fringe does not exist for %s" % ident)
-                            self.log.log(self.log.INFO, "Reading fringe for %s" % (ident))
-                            fringe = butler.get("fringe", ident)
-                            fringeList.append(fringe)
+                                if not ignore:
+                                    raise RuntimeError("Data type fringe does not exist for %s" % ident)
+                            else:
+                                self.log.log(self.log.INFO, "Reading fringe for %s" % (ident))
+                                fringe = butler.get("fringe", ident)
+                                fringeList.append(fringe)
                     if len(fringeList) > 0:
                         detrends['fringe'] = fringeList
                 gotten.append(detrends)
             else:
                 if not butler.datasetExists('fringe', ident):
-                    raise RuntimeError("Data type %s does not exist for %s" % (product, ident))
-                self.log.log(self.log.INFO, "Reading %s for %s" % (product, ident))
-                data = butler.get(product, ident)
+                    if not ignore:
+                        raise RuntimeError("Data type %s does not exist for %s" % (product, ident))
+                else:
+                    self.log.log(self.log.INFO, "Reading %s for %s" % (product, ident))
+                    data = butler.get(product, ident)
 
                 # Convert to floating-point
                 # XXX This also appears to read the image, stepping around problems in the daf_persistence

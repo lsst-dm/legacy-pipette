@@ -49,9 +49,6 @@ def run(rerun,                          # Rerun name
 
     raws = io.readRaw(dataId)
     detrends = io.detrends(dataId, config)
-    # I don't know how to get the full ID out of the butler, so reconstruct
-    dataId['filter'] = raws[0].getMetadata().getAsString('FILTER01').strip()
-    dataId['pointing'] = frame / 10
     
     exposure, psf, apcorr, sources, matches, matchMeta = ccdProc.run(raws, detrends)
     defer = True

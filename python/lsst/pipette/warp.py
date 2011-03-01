@@ -91,9 +91,10 @@ class Warp(pipProc.Process):
         weight = afwImage.ImageF(xSize, ySize)
         
         for ident in identList:
-            exp = self.read(butler, ident, ["calexp"])[0]
-            width, height = exp.getWidth(), exp.getHeight()
-            expWcs = exp.getWcs()
+            md = self.read(butler, ident, ["calexp_md"])[0]
+            width, height = md.get("NAXIS1"), md.get("NAXIS2")
+            expWcs = afwImage.makeWcs(md)
+
             xSkycell = list()
             ySkycell = list()
             for x, y in ((0.0, 0.0), (0.0, height), (width, 0.0), (width, height)):
@@ -109,8 +110,10 @@ class Warp(pipProc.Process):
             self.log.log(self.log.INFO, "Bounds of image: %d,%d --> %d,%d" % (xMin, yMin, xMax, yMax))
             if xMin < xSize and xMax >= 0 and yMin < ySize and yMax >= 0:
                 bbox = afwImage.BBox(afwImage.PointI(xMin, yMin), afwImage.PointI(xMax, yMax))
+                exp = self.read(butler, ident, ["calexp"])[0]
                 self.warpComponent(warp, weight, exp, bbox)
-            del exp
+                del exp
+            del md
 
         # XXX Check that every pixel in the weight is either 1 or 0
 

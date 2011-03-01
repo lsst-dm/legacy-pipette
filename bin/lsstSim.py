@@ -11,6 +11,7 @@ import lsst.pipette.options as pipOptions
 import lsst.pipette.catalog as pipCatalog
 import lsst.pipette.readwrite as pipReadWrite
 
+
 def run(rerun,                          # Rerun name
         visit,                          # Visit number
         snap,                           # Snap number
@@ -36,7 +37,7 @@ def run(rerun,                          # Rerun name
 
     exposure, psf, apcorr, sources, matches, matchMeta = ccdProc.run(raws, detrends)
     
-    io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches, matchMeta)
+    io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches, matchMeta=matchMeta)
 
     catPolicy = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "catalog.paf")
     catalog = pipCatalog.Catalog(catPolicy, allowNonfinite=False)
@@ -49,9 +50,9 @@ def run(rerun,                          # Rerun name
 def getConfig(overrideFile=None):
     """Return a proper config object, maybe given the name of policy file with an additional set of overrides"""
     
-    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "CcdProcessDictionary.paf")
+    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "lsstSim.paf")
-    config = pipConfig.configuration([default, overrides])
+    config = pipConfig.configuration(default, overrides)
     if overrideFile:
         config.merge(pipConfig.Config(overrideFile))
 

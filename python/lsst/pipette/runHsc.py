@@ -55,7 +55,7 @@ def run(rerun,                          # Rerun name
     if defer:
         io.write(dataId, exposure=None, psf=psf, sources=None, matches=matches, matchMeta=matchMeta)
     else:
-        io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches)
+        io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches, matchMeta=matchMeta)
 
     catPolicy = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "catalog.paf")
     catalog = pipCatalog.Catalog(catPolicy, allowNonfinite=False)

@@ -232,16 +232,7 @@ class ReadWrite(object):
             referrs = referrs
 
             measAstrom.joinMatchList(matchList, ref, first=True, log=self.log)
-            args = {}
-            if True:
-                # ugh, mask and offset req'd because source ids are assigned at write-time
-                # and match list code made a deep copy before that.
-                # (see svn+ssh://svn.lsstcorp.org/DMS/meas/astrom/tickets/1491-b r18027)
-                args['mask'] = 0xffff
-                args['offset'] = -1
-#            self.log.setThreshold(self.log.DEBUG)
-            print len(matchList), len(sourceList)
-            measAstrom.joinMatchList(matchList, sourceList, first=False, log=self.log, **args)
+            measAstrom.joinMatchList(matchList, sourceList, first=False, log=self.log)
             output.append(matchList)
         return output
 
@@ -336,7 +327,7 @@ class ReadWrite(object):
 
                 matchSources = afwDet.SourceSet()
                 for match in matches:
-                    matchSources.push_back(match.first)
+                    matchSources.push_back(match.second)
                 self.outButler.put(afwDet.PersistableSourceVector(matchSources), 'matchedsources', dataId)
                 
             except Exception, e:

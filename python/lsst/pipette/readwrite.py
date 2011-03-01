@@ -167,7 +167,7 @@ class ReadWrite(object):
         @param ignore Ignore non-existent data?
         @returns Matches
         """
-        sources = self.read('src', dataId, ignore=ignore)
+        sources = self.read('matchedsources', dataId, ignore=ignore)
         matches = self.read('matches', dataId, ignore=ignore)
         headers = self.read('calexp_md', dataId, ignore=ignore)
 
@@ -239,6 +239,8 @@ class ReadWrite(object):
                 # (see svn+ssh://svn.lsstcorp.org/DMS/meas/astrom/tickets/1491-b r18027)
                 args['mask'] = 0xffff
                 args['offset'] = -1
+#            self.log.setThreshold(self.log.DEBUG)
+            print len(matchList), len(sourceList)
             measAstrom.joinMatchList(matchList, sourceList, first=False, log=self.log, **args)
             output.append(matchList)
         return output
@@ -331,6 +333,12 @@ class ReadWrite(object):
                 for match in matches:
                     smv.push_back(match)
                 self.outButler.put(afwDet.PersistableSourceMatchVector(smv, matchMeta), 'matches', dataId)
+
+                matchSources = afwDet.SourceSet()
+                for match in matches:
+                    matchSources.push_back(match.first)
+                self.outButler.put(afwDet.PersistableSourceVector(matchSources), 'matchedsources', dataId)
+                
             except Exception, e:
                 self.log.log(self.log.WARN, "Unable to write matches: %s" % e)
         return

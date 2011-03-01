@@ -74,7 +74,7 @@ class Process(object):
                         detrends['fringe'] = fringeList
                 gotten.append(detrends)
             else:
-                if not butler.datasetExists('fringe', ident):
+                if not butler.datasetExists(product, ident):
                     if not ignore:
                         raise RuntimeError("Data type %s does not exist for %s" % (product, ident))
                 else:

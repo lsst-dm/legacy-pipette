@@ -69,3 +69,8 @@ astrometry: {
     starGalaxyColumnName: "STARNOTGAL"
     magErrorColumnPattern: "%(filter)s_ERR"
 }
+
+fringe: {
+    filters: y
+    filters: W-S-ZR
+}

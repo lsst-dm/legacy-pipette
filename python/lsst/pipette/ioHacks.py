@@ -2,8 +2,15 @@ import re
 import os, sys
 import numpy
 import pyfits
+import math
 
 import lsst.afw.detection        as afwDet
+
+try:
+    from IPython.core.debugger import Tracer;
+    debug_here = Tracer()
+except:
+    pass
 
 ###################################################################
 #
@@ -14,48 +21,7 @@ import lsst.afw.detection        as afwDet
 #
 ###################################################################
 
-def getOutputListHsc(addRefFlux=False, simple=False):
-
-    # We have pulled all the schema-based entries out. There re still a few stragglers:
-    outlistSimple = [
-        ["objId",    "getId",          "setId", "%5s",     "%06d",       int,   32,   "K"],
-        ["objFlags", "getFlagForDetection", "setFlagForDetection", "%6s",        "0x%04x",      int,     16,   "I"],
-        ["ra",     "getRa",           "setRa",           "%10s",       "%10.6f",     float,   32,   "E"],
-        ["dec",    "getDec",          "setDec",          "%10s",       "%10.6f",     float,   32,   "E"],
-        #["raErr",  "getRaErrForWcs",  "setRaErrForWcs",  "%10s",       "%10.6f",     float,   32,   "E"],
-        #["decErr", "getDecErrForWcs", "setDecErrForWcs", "%10s",       "%10.6f",     float,   32,   "E"],
-
-        ]
-
-    outlist1 = [
-        # label    get method        set method       headformat   dataformat   pytype   bits  fitstype
-        ["id",     "getId",          "setId",         "%5s",       "%06d",       int,   32,   "K"],
-        ["amp",    "getAmpExposureId","setAmpExposureId", "%4s",       "%04d",   int,   32,   "I"],
-        ["x",      "getXAstrom",     "setXAstrom",    "%8s",       "%8.3f",     float,   32,   "E"],
-        ["xerr",   "getXAstromErr",  "setXAstromErr", "%8s",       "%8.3f",     float,   32,   "E"],
-        ["y",      "getYAstrom",     "setYAstrom",    "%8s",       "%8.3f",     float,   32,   "E"],
-        ["yerr",   "getYAstromErr",  "setYAstromErr", "%8s",       "%8.3f",     float,   32,   "E"],
-
-        ["Ixx",    "getIxx",         "setIxx",        "%9s",       "%9.3f",     float,   32,   "E"],
-        ["Ixy",    "getIxy",         "setIxy",        "%9s",       "%9.3f",     float,   32,   "E"],
-        ["Iyy",    "getIyy",         "setIyy",        "%9s",       "%9.3f",     float,   32,   "E"],
-        ["f_psf",  "getPsfFlux",     "setPsfFlux",    "%11s",      "%11.1f",    float,   32,   "E"],
-        ["f_ap",   "getApFlux",      "setApFlux",     "%11s",      "%11.1f",    float,   32,   "E"],
-        ["flags",  "getFlagForDetection", "setFlagForDetection",
-         "%6s",        "0x%04x",      int,     16,   "I"],
-        ]
-
-    outlistRef = [
-        ["f_ref_psf",  "getPsfFlux",     "setPsfFlux",    "%11s",      "%g",    float,   32,   "E"],
-        ]
-
-    if simple:
-        outlist = outlistSimple[:]
-    else:
-        outlist = outlist1[:]
-    if addRefFlux:
-        outlist.extend(outlistRef[:])
-
+def genOutputDict(outlist):
     # lets put the entries in a dictionary,
     # ... we'll never remember which index has, say, the 'get' method stored.
     dictList = []
@@ -69,17 +35,77 @@ def getOutputListHsc(addRefFlux=False, simple=False):
                     "dtype": out[5].__name__ + str(out[6]),  # the dtype string (eg int32) for fits header
                     "bits": out[6],      # the number of bits for the value (needed as flags are 16 bit)
                     "fitstype": out[7],  # The fits type (I, E, etc) to write file
+                    "side": out[8],      # For matchlists, the side to call
+                    "convertRadians": out[9], # Whether we need to convert from/to radians
                     }
         dictList.append(outdict)
     return dictList
 
+def getSourceOutputListHsc(addRefFlux=False, simple=False):
 
-def writeMatchListFits(matchList, fileName, outputStyle="hsc"):
+    # We have pulled all the schema-based entries out. There re still a few stragglers:
+    outlistSimple = [
+        ["objId",    "getId",          "setId", "%5s",     "%06d",       int,   32,   "K",0,0],
+        ["objFlags", "getFlagForDetection", "setFlagForDetection", "%6s",        "0x%04x",      int,     16,   "I",0,0],
+        ["ra",     "getRa",           "setRa",           "%10s",       "%10.6f",     float,   32,   "E",0,1],
+        ["dec",    "getDec",          "setDec",          "%10s",       "%10.6f",     float,   32,   "E",0,1],
+        #["raErr",  "getRaErrForWcs",  "setRaErrForWcs",  "%10s",       "%10.6f",     float,   32,   "E",0,0],
+        #["decErr", "getDecErrForWcs", "setDecErrForWcs", "%10s",       "%10.6f",     float,   32,   "E",0,0],
+        
+        ]
+    
+    outlist1 = [
+        # label    get method        set method       headformat   dataformat   pytype   bits  fitstype
+        ["amp",    "getAmpExposureId","setAmpExposureId", "%4s",       "%04d",   int,   32,   "I",0,0],
+        ["x",      "getXAstrom",     "setXAstrom",    "%8s",       "%8.3f",     float,   32,   "E",0,0],
+        ["xerr",   "getXAstromErr",  "setXAstromErr", "%8s",       "%8.3f",     float,   32,   "E",0,0],
+        ["y",      "getYAstrom",     "setYAstrom",    "%8s",       "%8.3f",     float,   32,   "E",0,0],
+        ["yerr",   "getYAstromErr",  "setYAstromErr", "%8s",       "%8.3f",     float,   32,   "E",0,0],
+        
+        ["Ixx",    "getIxx",         "setIxx",        "%9s",       "%9.3f",     float,   32,   "E",0,0],
+        ["Ixy",    "getIxy",         "setIxy",        "%9s",       "%9.3f",     float,   32,   "E",0,0],
+        ["Iyy",    "getIyy",         "setIyy",        "%9s",       "%9.3f",     float,   32,   "E",0,0],
+        ["f_psf",  "getPsfFlux",     "setPsfFlux",    "%11s",      "%11.1f",    float,   32,   "E",0,0],
+        ["f_ap",   "getApFlux",      "setApFlux",     "%11s",      "%11.1f",    float,   32,   "E",0,0],
+        ["flags",  "getFlagForDetection", "setFlagForDetection",
+         "%6s",        "0x%04x",      int,     16,   "I",0,0],
+        ]
+    
+    outlistRef = [
+        ["f_ref_psf",  "getPsfFlux",     "setPsfFlux",    "%11s",      "%g",    float,   32,   "E",0,0],
+        ]
+    
+    
+    outlist = outlistSimple[:]
+    if not simple:
+        outlist.extend(outlist1[:])
+    if addRefFlux:
+        outlist.extend(outlistRef[:])
+    return genOutputDict(outlist)
+
+def getMatchOutputList():
+    outlist = [
+        ["catId",     "getId",           None,           "%8s",        "%08df",     int,   32,   "K",1,0],
+        ["catRa",     "getRa",           None,           "%10s",       "%10.6f",     float,   32,   "E",1,0],
+        ["catDec",    "getDec",          None,           "%10s",       "%10.6f",     float,   32,   "E",1,0],
+        ["catFlux",   "getPsfFlux",      None,            "%8s",       "%8.3f",     float,   32,   "E",0,0],
+        ["objId",     "getId",          "setId",          "%6s",       "%06d",       int,   32,   "K",0,0],
+        ["objFlags",  "getFlagForDetection", "setFlagForDetection", "%6s",        "0x%04x",      int,     16,   "I",0,0],
+        ["ra",        "getRa",           "setRa",           "%10s",       "%10.6f",     float,   32,   "E",0,1],
+        ["dec",       "getDec",          "setDec",          "%10s",       "%10.6f",     float,   32,   "E",0,1],
+        ["x",         "getXAstrom",     "setXAstrom",    "%8s",       "%8.3f",     float,   32,   "E",0,0],
+        ["xerr",      "getXAstromErr",  "setXAstromErr", "%8s",       "%8.3f",     float,   32,   "E",0,0],
+        ["y",         "getYAstrom",     "setYAstrom",    "%8s",       "%8.3f",     float,   32,   "E",0,0],
+        ["yerr",      "getYAstromErr",  "setYAstromErr", "%8s",       "%8.3f",     float,   32,   "E",0,0],
+        ]
+    return genOutputDict(outlist)
+        
+def writeMatchListAsFits(matchList, fileName):
     """ write matchList to a given filename with pyfits. """
 
     if matchList != None and len(matchList) > 0:
         nSource = len(matchList)
-        outputs = getOutputList(outputStyle)
+        outputs = getMatchOutputList()
         nOut = len(outputs)
 
         # create the arrays and fill them
@@ -90,16 +116,19 @@ def writeMatchListFits(matchList, fileName, outputStyle="hsc"):
 
         for i in range(nOut):
             columnName = outputs[i]["label"]
+            convertRadians = outputs[i]["convertRadians"] == 1
             j = 0
             for sourceMatch in matchList:
                 s1 = sourceMatch.first
                 s2 = sourceMatch.second
-                if re.search("^(ra|dec)$", columnName):
-                    s = s1
+                if outputs[i]['side'] == 1:
+                    s = s1              # catalog
                 else:
-                    s = s2
+                    s = s2              # source
                 getMethod = getattr(s, outputs[i]["get"])
-                arrays[columnName][j]  = getMethod()
+                arrays[columnName][j] = getMethod()
+                if convertRadians:
+                   arrays[columnName][j] *= 180.0 / math.pi
                 j += 1
 
         # create the column defs
@@ -112,15 +141,6 @@ def writeMatchListFits(matchList, fileName, outputStyle="hsc"):
 
         tabhdu = pyfits.new_table(columnDefs, nrows=nSource)
         hdulist = pyfits.HDUList([pyfits.PrimaryHDU(), tabhdu])
-
-        if isinstance(baseName, str):
-            fileName = "%s.match.fits" % baseName
-            if os.path.exists(fileName):
-                os.unlink(fileName)
-        else:
-            # baseName is actually an file-like object
-            fileName = baseName
-
         hdulist.writeto(fileName, clobber=True)
 
 
@@ -397,9 +417,9 @@ def writeSourceSetAsFits(sourceSet, filename, hdrInfo=[], clobber=False):
     columns = []
 
     # Start with hacky manual columns
-    columns.extend(getFitsColumns(sourceSet, getOutputListHsc(addRefFlux=True, simple=True)))
+    columns.extend(getFitsColumns(sourceSet, getSourceOutputListHsc(addRefFlux=True, simple=True)))
                    
-    # Add in schema-based columns
+    # Add in nice schema-based columns
     for measureType, getterName in measurementTypes:
         fitsCols = schema2pyfits(sourceSet, measureType, getterName)
         columns.extend(fitsCols)

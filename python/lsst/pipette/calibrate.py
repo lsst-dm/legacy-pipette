@@ -251,7 +251,7 @@ class Calibrate(pipProc.Process):
             self.log.log(self.log.INFO, "Applying distortion correction.")
             distSources = distortion.actualToIdeal(sources)
 
-            # Get distorted image size, and remove offset
+            # Get distorted image size so that astrometry_net does not clip.
             xMin, xMax, yMin, yMax = 0, exposure.getWidth(), 0, exposure.getHeight()
             for x, y in ((0.0, 0.0), (0.0, exposure.getHeight()), (exposure.getWidth(), 0.0),
                          (exposure.getWidth(), exposure.getHeight())):
@@ -264,10 +264,8 @@ class Calibrate(pipProc.Process):
                 if y > yMax: yMax = y
             xMin = int(xMin)
             yMin = int(yMin)
-            offsetSources(distSources, -xMin, -yMin)
-            size = (int(xMax - xMin + 0.5), int(yMax - yMin + 0.5))
-            order = self.config['astrometry']['sipOrder']
-            self.config['astrometry']['sipOrder'] = 2
+            size = (int(xMax - xMin + 0.5),
+                    int(yMax - yMin + 0.5))
         else:
             distSources = sources
             size = (exposure.getWidth(), exposure.getHeight())
@@ -295,12 +293,9 @@ class Calibrate(pipProc.Process):
 
         # Undo distortion in matches
         if distortion is not None:
-            self.config['astrometry']['sipOrder'] = order
             self.log.log(self.log.INFO, "Removing distortion correction.")
             first = map(lambda match: match.first, matches)
             second = map(lambda match: match.second, matches)
-            offsetSources(first, xMin, yMin)
-            offsetSources(second, xMin, yMin)
             distortion.idealToActual(first, copy=False)
             distortion.idealToActual(second, copy=False)
 
@@ -312,7 +307,9 @@ class Calibrate(pipProc.Process):
             wcs = sip.getNewWcs()
             self.log.log(self.log.INFO, "Astrometric scatter: %f (%s non-linear terms)" %
                          (sip.getScatterInArcsec(), "with" if wcs.hasDistortion() else "without"))
-
+        else:
+            self.log.log(self.log.WARN, "not calculating a sip solution; matches may be suspect")
+            
         verify = dict()                    # Verification parameters
         verify.update(astromSip.sourceMatchStatistics(matches))
         verify.update(astromVerify.checkMatches(matches, exposure, log=log))
@@ -336,14 +333,3 @@ class Calibrate(pipProc.Process):
         self.log.log(self.log.INFO, "Photometric zero-point: %f" % zp.getMag(1.0))
         exposure.getCalib().setFluxMag0(zp.getFlux(0))
         return
-
-def offsetSources(sources,              # List of sources to offset
-                  dx,                   # x offset
-                  dy,                   # y offset
-                  ):
-    for source in sources:
-        x, y = source.getXAstrom(), source.getYAstrom()
-        source.setXAstrom(x + dx)
-        source.setYAstrom(y + dy)
-    return
-

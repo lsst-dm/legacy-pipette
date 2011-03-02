@@ -25,7 +25,7 @@ definitions: {
         type: boolean
         description: "Apply the aperture correction?"
         maxOccurs: 1
-        default: false
+        default: true
     }
     background: {
         type: boolean

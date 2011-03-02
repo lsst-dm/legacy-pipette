@@ -305,7 +305,7 @@ class Calibrate(pipProc.Process):
         if self.config['astrometry']['calculateSip']:
             sip = astromSip.CreateWcsWithSip(matches, wcs, self.config['astrometry']['sipOrder'])
             wcs = sip.getNewWcs()
-            self.log.log(self.log.INFO, "Astrometric scatter: %f (%s non-linear terms)" %
+            self.log.log(self.log.INFO, "Astrometric scatter: %f arcsec (%s non-linear terms)" %
                          (sip.getScatterInArcsec(), "with" if wcs.hasDistortion() else "without"))
         else:
             self.log.log(self.log.WARN, "not calculating a sip solution; matches may be suspect")

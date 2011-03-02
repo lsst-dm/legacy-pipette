@@ -12,6 +12,8 @@ import lsst.pipette.readwrite as pipReadWrite
 
 import lsst.pipette.ioHacks as pipExtraIO
 
+from hscCalibrate import HscCalibrate
+
 #from IPython.core.debugger import Tracer;
 #debug_here = Tracer()
 
@@ -44,7 +46,7 @@ def run(rerun,                          # Rerun name
     if oldUmask != 2:
         io.log.log(io.log.WARN, "pipette umask started as: %s" % (os.umask(2)))
 
-    ccdProc = pipCcd.ProcessCcd(config=config)
+    ccdProc = pipCcd.ProcessCcd(config=config, Calibrate=HscCalibrate)
     dataId = { 'visit': frame, 'ccd': ccd }
 
     raws = io.readRaw(dataId)

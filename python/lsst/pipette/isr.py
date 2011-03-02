@@ -291,6 +291,10 @@ class Isr(pipProc.Process):
 
         science = exposure.getMaskedImage()
         fringe = fringe.getMaskedImage()
+
+        # XXX Fringe can have mask bits set, because afwMath.statisticsStack propagates them
+        fringe.getMask().set(0)
+        
         width, height = exposure.getWidth(), exposure.getHeight()
 
         policy = self.config['fringe']

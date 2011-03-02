@@ -52,7 +52,7 @@ class Isr(pipProc.Process):
             self.dark(exposure, detrends['dark'])
         if do['flat']:
             self.flat(exposure, detrends['flat'])
-        if do['fringe']:
+        if do['fringe'] and self.config['fringe'].has_key('filters'):
             filtName = exposure.getFilter().getName()
             if filtName in self.config['fringe']['filters']:
                 self.fringe(exposure, detrends['fringe'])

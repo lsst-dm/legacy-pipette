@@ -53,7 +53,7 @@ def simpleCoadd(idList, butler, coaddWcs, coaddBBox, policy):
         exposure = butler.get("calexp", id)
         psf = butler.get("psf", id)
         exposure.setPsf(psf)
-        warpedExposure = warper.warpExposure(coaddWcs, exposure, maxBBox = coaddBBox)
+        exposure = warper.warpExposure(coaddWcs, exposure, maxBBox = coaddBBox)
         coadd.addExposure(exposure)
 
     coaddExposure = coadd.getCoadd()
@@ -62,9 +62,9 @@ def simpleCoadd(idList, butler, coaddWcs, coaddBBox, policy):
     return coaddExposure, weightMap
 
 if __name__ == "__main__":
-    parser = lsst.pipette.coaddOptions.CoaddOptionParser("lsstSim")
-    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "lsstSim_coadd.paf")
-    config, opts, args = parser.parse_args(default)
+    parser = lsst.pipette.coaddOptions.CoaddOptionParser()
+    policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "simpleCoaddDictionary.paf")
+    config, opts, args = parser.parse_args(policyPath)
     
     coaddExposure, weightMap = simpleCoadd(
         idList = parser.getIdList(),
@@ -74,5 +74,5 @@ if __name__ == "__main__":
         policy = config.getPolicy())
 
     coaddBasePath = parser.getCoaddBasePath()
-    coaddExposure.writeFits(coaddBasePath + "SimpleCoadd.fits")
-    weightMap.writeFits(coaddBasePath + "SimpleWeightMap.fits")
+    coaddExposure.writeFits(coaddBasePath + "simpleCoadd.fits")
+    weightMap.writeFits(coaddBasePath + "simpleWeightMap.fits")

@@ -29,18 +29,4 @@ definitions: {
         minOccurs: 1
         maxOccurs: 1
     }
-    bboxMin: {
-        description: "Lower left corner of bounding box used to subframe to all input images"
-        type: "int"
-        default: 0 0
-        minOccurs: 2
-        maxOccurs: 2
-    }
-    bboxSize: {
-        description: "Size of bounding box used to subframe all input images; 0 0 for full input images"
-        type: "int"
-        default: 0 0
-        minOccurs: 2
-        maxOccurs: 2
-    }
 }

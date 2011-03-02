@@ -41,10 +41,11 @@ class CoaddOptionParser(options.OptionParser):
         options.OptionParser.__init__(self, *args, **kwargs)
         self._dataType = None
     
-    def parse_args(self, policyPath):
+    def parse_args(self, policyPath, requiredArgs=()):
         """Parse the arguments
         
         @param[in] policyPath: path to main policy dictionary
+        @param[in] requiredArgs: list of required arguments, in addition to the standard ones
         
         @return
         - config: a Configuration object
@@ -53,6 +54,10 @@ class CoaddOptionParser(options.OptionParser):
         
         Must be called before calling getReadWrite, getWcs, getWcsBBox, getIdList
         """
+        if requiredArgs:
+            requiredArgs = tuple(requiredArgs)
+        else:
+            requiredArgs = ()
         # dataType must be the first (non-option) argument
         for arg in sys.argv[1:]:
             if arg.startswith("-"):
@@ -106,7 +111,7 @@ class CoaddOptionParser(options.OptionParser):
 
         config, opts, args = options.OptionParser.parse_args(self, policyPath)
     
-        for reqArg in ("rerun", "radec", "scale", "size"):
+        for reqArg in ("rerun", "radec", "scale", "size") + requiredArgs:
             if getattr(opts, reqArg) == None:
                 sys.stderr.write("Error: must specify --%s\n" % (reqArg,))
                 sys.exit(1)

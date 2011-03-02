@@ -179,7 +179,9 @@ class Master(pipProc.Process):
             del exp
 
         master = afwImage.MaskedImageF(width, height)
-        stats = afwMath.StatisticsControl()
+
+        maskVal = ~0x0                  # Mask everything, because even objects are bad
+        stats = afwMath.StatisticsControl(andMask=maskVal)
 
         self.log.log(self.log.INFO, "Combining image %dx%d in chunks of %d rows" % (width, height, numRows))
         for start in range(0, height, numRows):

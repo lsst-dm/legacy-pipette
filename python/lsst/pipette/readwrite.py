@@ -153,7 +153,7 @@ class ReadWrite(object):
             ident.update(dataId)
             if not self.inButler.datasetExists('raw', ident):
                 raise RuntimeError("Raw data does not exist for %s" % ident)
-            self.log.log(self.log.INFO, "Reading: %s" % (ident))
+            self.log.log(self.log.DEBUG, "Reading: %s" % (ident))
             exp = self.inButler.get('raw', ident)
             if isinstance(exp, afwImage.ExposureU):
                 exp = exp.convertF()
@@ -260,7 +260,7 @@ class ReadWrite(object):
                 if not ignore:
                     raise RuntimeError("Data type %s does not exist for %s" % (which, ident))
             else:
-                self.log.log(self.log.INFO, "Reading %s: %s" % (which, ident))
+                self.log.log(self.log.DEBUG, "Reading %s: %s" % (which, ident))
                 data.append(self.inButler.get(which, ident))
         return data
 
@@ -281,7 +281,7 @@ class ReadWrite(object):
                     ident.update(dataId)
                     if not self.inButler.datasetExists(kind, ident):
                         raise RuntimeError("Data type %s does not exist for %s" % (which, ident))
-                    self.log.log(self.log.INFO, "Reading %s for %s" % (kind, ident))
+                    self.log.log(self.log.DEBUG, "Reading %s for %s" % (kind, ident))
                     detrend = self.inButler.get(kind, ident)
                     detList.append(detrend)
                 detrends[kind] = detList
@@ -296,14 +296,15 @@ class ReadWrite(object):
                 if filtName in config['fringe']['filters']:
                     if not self.inButler.datasetExists('fringe', ident):
                         raise RuntimeError("Data type fringe does not exist for %s" % ident)
-                    self.log.log(self.log.INFO, "Reading fringe for %s" % (ident))
+                    self.log.log(self.log.DEBUG, "Reading fringe for %s" % (ident))
                     fringe = self.inButler.get("fringe", ident)
                     fringeList.append(fringe)
             if len(fringeList) > 0:
                 detrends['fringe'] = fringeList
         return detrends
 
-    def write(self, dataId, exposure=None, psf=None, sources=None, matches=None, matchMeta=None, **kwargs):
+    def write(self, dataId, exposure=None, psf=None, sources=None,
+              matches=None, matchMeta=None, **kwargs):
         """Write processed data.
 
         @param dataId Data identifier for butler

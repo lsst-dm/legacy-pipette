@@ -27,7 +27,7 @@ def getMapper(mapper, root=None, calibRoot=None, registry=None):
         mapperBuffer[mapper] = dict()
     thisMapperBuffer = mapperBuffer[mapper]
     if not thisMapperBuffer.has_key(key):
-        thisMapperBuffer[key] = mapper(root=root, registry=registry)
+        thisMapperBuffer[key] = mapper(root=root, registry=registry, calibRoot=calibRoot)
     return thisMapperBuffer[key]
 
 
@@ -45,9 +45,9 @@ def initMapper(mapper, config, log, inMap=True):
         else:
             roots = config['roots']
             dataRoot = roots['data'] if roots.has_key('data') else None
-            # UNUSED calibRoot = roots['calib'] if roots.has_key('calib') else None
+            calibRoot = roots['calib'] if roots.has_key('calib') else None
             if inMap:
-                mapp = getMapper(mapper, root=dataRoot)
+                mapp = getMapper(mapper, root=dataRoot, calibRoot=calibRoot)
             else:
                 outRoot = roots['output'] if roots.has_key('output') else None
                 # if there's no output registry, use the input registry
@@ -61,7 +61,7 @@ def initMapper(mapper, config, log, inMap=True):
                     log.log(log.WARN, "Unable to find a registry for output mapper")
                     registry = None
                 
-                mapp = getMapper(mapper, root=outRoot, registry=registry)
+                mapp = getMapper(mapper, root=outRoot, registry=registry, calibRoot=calibRoot)
 
     else:
         raise RuntimeError("Unable to interpret provided mapper.")
@@ -231,9 +231,17 @@ class ReadWrite(object):
             stargal = stargal
             referrs = referrs
 
+            #self.log.setThreshold(self.log.DEBUG)
             measAstrom.joinMatchList(matchList, ref, first=True, log=self.log)
             measAstrom.joinMatchList(matchList, sourceList, first=False, log=self.log)
-            output.append(matchList)
+            #self.log.setThreshold(self.log.INFO)
+
+            cleanList = [m for m in matchList if m.first is not None and m.second is not None]
+            if len(cleanList) != len(matchList):
+                self.log.log(self.log.WARN, "Missing entries after joining match list: %d of %d joined" % 
+                             (len(cleanList), len(matchList)))
+            
+            output.append(cleanList)
         return output
 
 
@@ -278,7 +286,7 @@ class ReadWrite(object):
                     detList.append(detrend)
                 detrends[kind] = detList
         # Fringe depends on the filter
-        if do['fringe']:
+        if do['fringe'] and config['fringe'].has_key('filters'):
             fringeList = list()
             for ident in identifiers:
                 ident.update(dataId)

@@ -79,14 +79,13 @@ distortion: {
 #	NCCD:	      100
 #}
 
-
-
 astrometry: {
     defaultFilterName: R
     numBrightStars: 200
     sipOrder: 2
-    calculateSip: false
+    calculateSip: true
     starGalaxyColumnName: "starnotgal"
+    #blindSolve: true
     #magErrorColumnPattern: "%(filter)s_ERR"
 }
 

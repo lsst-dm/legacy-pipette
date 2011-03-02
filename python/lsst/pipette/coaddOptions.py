@@ -1,3 +1,24 @@
+#
+# LSST Data Management System
+# Copyright 2008, 2009, 2010 LSST Corporation.
+#
+# This product includes software developed by the
+# LSST Project (http://www.lsst.org/).
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the LSST License Statement and
+# the GNU General Public License along with this program.  If not,
+# see <http://www.lsstcorp.org/LegalNotices/>.
+#
 import os
 import sys
 
@@ -7,17 +28,42 @@ import options
 import readwrite
 
 class CoaddOptionParser(options.OptionParser):
-    """OptionParser is an options.OptionParser specialized for coaddition.
+    """OptionParser is an lsst.pipette.options.OptionParser specialized for coaddition.
+    
+    @todo:
+    - Add support for more cameras
+    - Correct default scale for suprimecam
+    - Change to using skymap sky tiles
     """
-    def __init__(self, dataType):
+    def __init__(self, *args, **kwargs):
         """Construct an option parser
-
-        @input dataType: type of data you are processing, e.g. "lsstSim"
-            Warning: not all data types are supported yet
         """
-        options.OptionParser.__init__(self)
+        options.OptionParser.__init__(self, *args, **kwargs)
+        self._dataType = None
+    
+    def parse_args(self, policyPath):
+        """Parse the arguments
         
-        if dataType == "lsstSim":
+        @param[in] policyPath: path to main policy dictionary
+        
+        @return
+        - config: a Configuration object
+        - opts: command-line options, as from optparse
+        - args: command-line arguments, as from optparse
+        
+        Must be called before calling getReadWrite, getWcs, getWcsBBox, getIdList
+        """
+        # dataType must be the first (non-option) argument
+        for arg in sys.argv[1:]:
+            if arg.startswith("-"):
+                continue
+            self._dataType = arg
+            break
+        else:
+            sys.stderr.write("Must specify the data type as the first argument\n")
+            sys.exit(1)
+            
+        if self._dataType == "lsstSim":
             import lsst.obs.lsstSim
             self._mappers = lsst.obs.lsstSim.LsstSimMapper
             self._idNameCharTypeList = (
@@ -27,46 +73,42 @@ class CoaddOptionParser(options.OptionParser):
                 ("sensor", "s", str),
             )
             self._extraFileKeys = ["channel"]
+            self._defaultScale = 0.14 # arcsec/pixel
+        elif self._dataType == "suprimecam":
+            import lsst.obs.suprimecam
+            self._mappers = lsst.obs.suprimecam.SuprimecamMapper
+            self._idNameCharTypeList = (
+                ("visit",  "V", int),
+                ("ccd", "c", str),
+            )
+            self._extraFileKeys = []
+            self._defaultScale = 0.14 # arcsec/pixel
         else:
-            raise RuntimeError("Unsupported dataType type: %s" % dataType)
+            sys.stderr.write("Unsupported dataType type: %s\n" % self._dataType)
+            sys.exit(1)
             
         self.add_option("-R", "--rerun", default=os.getenv("USER", default="rerun"), dest="rerun",
                           help="rerun name (default=%default)")
         for idName, idChar, idType in self._idNameCharTypeList:
             if idChar:
                 self.add_option("-%s" % (idChar,), "--%ss" % (idName,), dest=idName,
-                    help="%ss to run, colon-delimited" % (idName,))
+                                help="%ss to run, colon-delimited" % (idName,))
             else:
                 self.add_option("--%ss" % (idName,), dest=idName,
-                    help="%s to run, colon-delimited" % (idName,))
+                                help="%s to run, colon-delimited" % (idName,))
         self.add_option("--radec", dest="radec", type="float", nargs=2,
                           help="RA, Dec of center of skycell, degrees")
         self.add_option("--scale", dest="scale", type="float",
-                          help="Pixel scale for skycell, arcsec/pixel")
+                        default = self._defaultScale,
+                        help="Pixel scale for skycell, arcsec/pixel")
         self.add_option("--size", dest="size", nargs=2, type="int",
-                          help="Size in x and y for skycell, pixels")
+                        help="Size in x and y for skycell, pixels")
+
+        config, opts, args = options.OptionParser.parse_args(self, policyPath)
     
-        default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "lsstSim_coadd.paf")
-    
-    def parse_args(self, default):
-        """Parse the arguments
-        
-        @return
-        - config: a Configuration object
-        - opts: command-line options, as from optparse
-        - args: command-line arguments, as from optparse
-        
-        Must be called before calling getReadWrite, getWcs, getWcsBBox, getIdList
-        """
-        config, opts, args = options.OptionParser.parse_args(self, default)
-    
-#         if len(args) > 0 or len(sys.argv) == 1:
-#             self.print_help()
-#             sys.exit(1)
         for reqArg in ("rerun", "radec", "scale", "size"):
             if getattr(opts, reqArg) == None:
-                print "Error: must specify --%s" % (reqArg,)
-                self.print_help()
+                sys.stderr.write("Error: must specify --%s\n" % (reqArg,))
                 sys.exit(1)
     
         idNameList = [item[0] for item in self._idNameCharTypeList]
@@ -111,7 +153,7 @@ class CoaddOptionParser(options.OptionParser):
         self._coaddBBox = afwGeom.BoxI(afwGeom.makePointI(0,0), afwGeom.makeExtentI(opts.size[0], opts.size[1]))
         
         roots = config["roots"]
-        self._coaddBaseName = os.path.join(roots["output"], opts.rerun)
+        self._coaddBasePath = os.path.join(roots["output"], opts.rerun)
         
         return config, opts, args
     
@@ -120,10 +162,10 @@ class CoaddOptionParser(options.OptionParser):
         """
         return self._readWrite
     
-    def getCoaddBasename(self):
-        """Return the coadd base name. You must call parse_args first.
+    def getCoaddBasePath(self):
+        """Return the coadd base path. You must call parse_args first.
         """
-        return self._coadBaseName
+        return self._coaddBasePath
         
     def getCoaddWcs(self):
         """Return WCS for coadd. You must call parse_args first.
@@ -136,6 +178,6 @@ class CoaddOptionParser(options.OptionParser):
         return self._coaddBBox
         
     def getIdList(self):
-        """Return a list of data IDs for the input butler
+        """Return a list of IDs of data to process
         """
         return self._idList

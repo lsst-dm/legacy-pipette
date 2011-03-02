@@ -7,14 +7,10 @@ import lsst.afw.detection as afwDet
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.sdqa as sdqa
-import lsst.ip.isr as ipIsr
-import lsst.meas.algorithms as measAlg
 import lsst.meas.algorithms.psfSelectionRhl as maPsfSel
 import lsst.meas.algorithms.psfAlgorithmRhl as maPsfAlg
 import lsst.meas.algorithms.ApertureCorrection as maApCorr
-import lsst.meas.utils.sourceDetection as muDetection
 import lsst.meas.astrom as measAst
-import lsst.meas.astrom.net as astromNet
 import lsst.meas.astrom.sip as astromSip
 import lsst.meas.astrom.verifyWcs as astromVerify
 import lsst.meas.photocal as photocal
@@ -250,7 +246,7 @@ class Calibrate(pipProc.Process):
         if distortion is not None:
             self.log.log(self.log.INFO, "Applying distortion correction.")
             distSources = distortion.actualToIdeal(sources)
-
+            
             # Get distorted image size so that astrometry_net does not clip.
             xMin, xMax, yMin, yMax = 0, exposure.getWidth(), 0, exposure.getHeight()
             for x, y in ((0.0, 0.0), (0.0, exposure.getHeight()), (exposure.getWidth(), 0.0),
@@ -307,6 +303,13 @@ class Calibrate(pipProc.Process):
             wcs = sip.getNewWcs()
             self.log.log(self.log.INFO, "Astrometric scatter: %f arcsec (%s non-linear terms)" %
                          (sip.getScatterInArcsec(), "with" if wcs.hasDistortion() else "without"))
+            
+            # Apply WCS to sources
+            for index, source in enumerate(sources):
+                distSource = distSources[index]
+                sky = wcs.pixelToSky(distSource.getXAstrom(), distSource.getYAstrom())
+                source.setRa(sky[0])
+                source.setDec(sky[1])
         else:
             self.log.log(self.log.WARN, "not calculating a sip solution; matches may be suspect")
             

@@ -3,6 +3,7 @@
 import lsst.afw.image as afwImage
 import lsst.pipette.isr as pipIsr
 import lsst.pipette.util as pipUtil
+import lsst.pipette.processCcd as pipProcCcd
 
 class IsrSuprimeCam(pipIsr.Isr):
     def defects(self, exposure):

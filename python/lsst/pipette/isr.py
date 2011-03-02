@@ -333,7 +333,7 @@ class Isr(pipProc.Process):
         measScience = ma.zeros(num)
         measFringe = ma.zeros(num)
         for i in range(num):
-            x, y = xList[i], yList[i]
+            x, y = int(xList[i]), int(yList[i])
             bbox = afwImage.BBox(afwImage.PointI(x, y), afwImage.PointI(x + size - 1, y + size - 1))
 
             subScience = science.Factory(science, bbox)

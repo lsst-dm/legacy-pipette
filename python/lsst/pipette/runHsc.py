@@ -158,7 +158,7 @@ def getConfig(argv=None):
 def main(argv=None):
     config, opts, args = getConfig(sys.argv)
     
-    if (len(args) > 0 or or opts.instrument is None
+    if (len(args) > 0 or opts.instrument is None
         or opts.rerun is None
         or opts.frame is None
         or opts.ccd is None):

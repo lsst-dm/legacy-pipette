@@ -91,8 +91,23 @@ astrometry: {
     #magErrorColumnPattern: "%(filter)s_ERR"
 }
 
+
 psf: {
+    select: {
+        sizeCellX: 512
+        sizeCellY: 512
+        fluxLim: 200.0
+        clumpNSigma: 1.5
+    }
     algorithm: {
-        nEigenComponents: 2
+        nIterForPsf: 10
+        constantWeight: true
+        lambda: 0.5
+        reducedChi2ForPsfCandidates: 1.2
+        nEigenComponents: 4
+        kernelSize:       21
+        spatialOrder: 2
+        nStarPerCell: 0                 # unlimited
+        nStarPerCellSpatialFit: 10
     }
 }

@@ -84,9 +84,25 @@ class Plotter(object):
         self.pdf.savefig()
         plot.close()
 
-    def quivers(self, x, y, dx, dy, title=None):
+    def quivers(self, x, y, dx, dy, title=None, addUnitQuiver=0.0):
+        def placeUnitQuiver(x,y):
+            return (min(x) + 0.05 * (max(x)-min(x)),
+                    min(y) + 0.05 * (max(y)-min(y)))
+        
         plot.figure()
-        plot.quiver(x, y, dx, dy)
+        if addUnitQuiver:
+            qx, qy = placeUnitQuiver(x,y)
+            if False:
+                plot.quiver(x, y, dx, dy)
+                plot.quiver([qx], [qy], [addUnitQuiver], [addUnitQuiver])
+            else:
+                fx = numpy.concatenate([x, [qx]])
+                fy = numpy.concatenate([y, [qy]])
+                fdx = numpy.concatenate([dx, [addUnitQuiver]])
+                fdy = numpy.concatenate([dy, [addUnitQuiver]])
+                plot.quiver(fx, fy, fdx, fdy, units='x')
+        else:
+            plot.quiver(x, y, dx, dy)
         if title is not None:
             plot.title(title)
         self.pdf.savefig()

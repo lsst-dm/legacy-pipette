@@ -4,6 +4,7 @@ import os
 import sys
 
 import lsst.obs.hscSim as obsHsc
+import lsst.obs.suprimecam as obsSc
 import lsst.pipette.config as pipConfig
 import lsst.pipette.processCcd as pipCcd
 import lsst.pipette.options as pipOptions
@@ -35,10 +36,12 @@ def run(rerun,                          # Rerun name
     """ """
 
     # Make our own mappers for now
-    mapper = obsHsc.HscSimMapper(rerun=rerun)
-    io = pipReadWrite.ReadWrite(mapper,
-                                ['visit', 'ccd'],
-                                config=config)
+    camera = config['camera']
+    if camera.lower() in ("hsc"):
+        mapper = obsHsc.HscSimMapper(rerun=rerun)
+    elif camera.lower() in ("suprimecam", "suprime-cam", "sc"):
+        mapper = obsSc.SuprimecamMapper(rerun=rerun)
+    io = pipReadWrite.ReadWrite(mapper, ['visit', 'ccd'], config=config)
     roots = config['roots']
     oldUmask = os.umask(2)
     if oldUmask != 2:
@@ -114,17 +117,15 @@ def doMergeWcs(deferredState, wcs):
                            matches=matchlist,
                            matchMeta=deferredState.matchMeta)
 
-def getConfig():
+def getConfig(*overrides):
     default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
-    overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "hsc.paf")
-    config = pipConfig.configuration(default, overrides)
+    return pipConfig.configuration(default, *overrides)
 
-    return config
-
-def doRun(rerun=None, frameId=None, ccdId=None, doMerge=False, doBreak=False):
+def doRun(overrides=os.path.join(os.getenv("PIPETTE_DIR"), "policy", "hsc.paf"),
+          rerun=None, frameId=None, ccdId=None, doMerge=False, doBreak=False):
     if doBreak:
         import pdb; pdb.set_trace()
-    config = getConfig()
+    config = getConfig(overrides)
     state = run(rerun, frameId, ccdId, config)
 
     if doMerge:
@@ -143,8 +144,8 @@ def main(argv=None):
                       help="CCD to run (default=%default)")
 
     default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
-    overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "hsc.paf")
-    config, opts, args = parser.parse_args([default, overrides], argv=argv)
+    #overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "hsc.paf")
+    config, opts, args = parser.parse_args([default], argv=argv)
     if len(args) > 0 or opts.rerun is None or opts.frame is None or opts.ccd is None:
         parser.print_help()
         sys.exit(1)

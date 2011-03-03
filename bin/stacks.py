@@ -41,6 +41,7 @@ def run(rerun,                          # Rerun name
         cmd += " --scale %f" % scale
         cmd += " --sizes %d %d" % (size, size)
         cmd += " --frames %s" % ":".join(map(str, visits))
+        cmd += " --ignore"
         print cmd
 
 

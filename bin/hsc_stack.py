@@ -19,6 +19,7 @@ def run(rerun,                          # Rerun name
         coords,                         # Skycell centre coordinates
         scale,                          # Pixel scale
         sizes,                          # Skycell size
+        ignore=False,                   # Ignore missing files?
         ):
     io = pipReadWrite.ReadWrite(hsc.HscSimMapper(rerun=rerun), ['visit', 'ccd'], config=config)
     roots = config['roots']
@@ -60,6 +61,8 @@ if __name__ == "__main__":
                       help="Pixel scale for skycell, arcsec/pixel")
     parser.add_option("--sizes", dest="sizes", nargs=2, type="int",
                       help="Sizes in x and y for skycell, pixels")
+    parser.add_option("--ignore", dest="ignore", default=False, action="store_true",
+                      help="Ignore missing files?")
 
     default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "WarpProcessDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam_warp.paf")
@@ -71,4 +74,4 @@ if __name__ == "__main__":
         sys.exit(1)
 
     run(opts.rerun, map(int, opts.frames.split(":")), map(int, opts.ccds.split(":")), opts.stack, opts.patch,
-        opts.filter, config, opts.coords, opts.scale, opts.sizes)
+        opts.filter, config, opts.coords, opts.scale, opts.sizes, ignore=opts.ignore)

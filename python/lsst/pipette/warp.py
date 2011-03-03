@@ -75,12 +75,13 @@ class Warp(pipProc.Process):
         wcs = afwImage.createWcs(crval, crpix, scale / 3600.0, 0.0, 0.0, scale / 3600.0)
         return Skycell(wcs, xSize, ySize)
 
-    def warp(self, identList, butler, skycell):
+    def warp(self, identList, butler, skycell, ignore=False):
         """Warp an exposure to a nominated skycell
 
         @param[in] identList List of data identifiers
         @param[in] butler Data butler
         @param[in] skycell Skycell specification
+        @param[in] ignore Ignore missing files?
         @return Warped exposure
         """
 
@@ -92,7 +93,9 @@ class Warp(pipProc.Process):
         weight.set(0)
         
         for ident in identList:
-            md = self.read(butler, ident, ["calexp_md"])[0]
+            md = self.read(butler, ident, ["calexp_md"], ignore=ignore)[0]
+            if md is None:
+                continue
             width, height = md.get("NAXIS1"), md.get("NAXIS2")
             expWcs = afwImage.makeWcs(md)
 

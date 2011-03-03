@@ -13,7 +13,7 @@ class Stack(pipProcess.Process):
         self._warp = Warp(**kwargs)
 
     
-    def run(self, identMatrix, butler, ra, dec, scale, xSize, ySize):
+    def run(self, identMatrix, butler, ra, dec, scale, xSize, ySize, ignore=False):
         """Warp and stack images
 
         @param[in] identMatrix Matrix of warp identifiers
@@ -22,7 +22,8 @@ class Stack(pipProcess.Process):
         @param[in] dec Declination (radians) of skycell centre
         @param[in] scale Scale (arcsec/pixel) of skycell
         @param[in] xSize Size in x
-        @parma[in] ySize Size in y
+        @param[in] ySize Size in y
+        @param[in] ignore Ignore missing files?
         @output Stacked exposure
         """
         assert identMatrix, "No identMatrix provided"
@@ -35,7 +36,7 @@ class Stack(pipProcess.Process):
 
         badpix = afwImage.MaskU.getPlaneBitMask("EDGE") # Allow everything else through
         for identList in identMatrix:
-            warp = self.warp(identList, butler, skycell)
+            warp = self.warp(identList, butler, skycell, ignore=ignore)
             # XXX Save for later?
             
             coaddUtils.addToCoadd(coadd.getMaskedImage(), weight, warp.getMaskedImage(), badpix, 1.0)
@@ -62,7 +63,7 @@ class Stack(pipProcess.Process):
         """
         return self._warp.skycell(ra, dec, scale, xSize, ySize)
 
-    def warp(self, identList, butler, skycell):
+    def warp(self, identList, butler, skycell, ignore=False):
         """Warp an exposure to a nominated skycell
 
         @param[in] identList List of data identifiers
@@ -70,4 +71,4 @@ class Stack(pipProcess.Process):
         @param[in] skycell Skycell specification
         @return Warped exposure
         """
-        return self._warp.warp(identList, butler, skycell)
+        return self._warp.warp(identList, butler, skycell, ignore=ignore)

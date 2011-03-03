@@ -136,8 +136,9 @@ def getConfig(argv=None):
         or opts.rerun is None
         or opts.frame is None
         or opts.ccd is None):
-        
+
         parser.print_help()
+        print "argv was: %s" % (argv)
         return None, None, None
 
     return config, opts, args
@@ -146,8 +147,7 @@ def doRun(rerun=None, frameId=None, ccdId=None,
           doMerge=True, doBreak=False,
           instrument="hsc"):
     argv = []
-    argv.extend(["runHsc",
-                 "--instrument=%s" % (instrument),
+    argv.extend(["--instrument=%s" % (instrument),
                  "--frame=%s" % (frameId),
                  "--ccd=%s" % (ccdId)])
     if rerun:

@@ -40,7 +40,7 @@ class Stack(pipProcess.Process):
             
             coaddUtils.addToCoadd(coadd.getMaskedImage(), weight, warp.getMaskedImage(), badpix, 1.0)
 
-        coaddUtils.setCoaddEdgeBits(warp.getMaskedImage().getMask(), weight)
+        coaddUtils.setCoaddEdgeBits(coadd.getMaskedImage().getMask(), weight)
 
         coaddImage = coadd.getMaskedImage()
         coaddImage /= weight

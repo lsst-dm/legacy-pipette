@@ -35,11 +35,11 @@ class CoaddOptionParser(options.OptionParser):
     - Correct default scale for suprimecam
     - Change to using skymap sky tiles
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, usage="usage: %prog dataSource [options]", **kwargs):
         """Construct an option parser
         """
-        options.OptionParser.__init__(self, *args, **kwargs)
-        self._dataType = None
+        options.OptionParser.__init__(self, usage=usage, **kwargs)
+        self._dataSource = None
     
     def parse_args(self, policyPath, requiredArgs=()):
         """Parse the arguments
@@ -58,17 +58,21 @@ class CoaddOptionParser(options.OptionParser):
             requiredArgs = tuple(requiredArgs)
         else:
             requiredArgs = ()
-        # dataType must be the first (non-option) argument
+        # dataSource must be the first (non-option) argument
         for arg in sys.argv[1:]:
             if arg.startswith("-"):
                 continue
-            self._dataType = arg
+            self._dataSource = arg
             break
         else:
-            sys.stderr.write("Must specify the data type as the first argument\n")
+            if len(sys.argv) == 2 and sys.argv[1] in ("-h", "--help"):
+                print "For detailed help specify dataSource (e.g. lsstSim or suprimecam) followed by --help"
+            else:            
+                sys.stderr.write("Error: must specify dataSource (e.g. lsstSim or suprimecam)\n")
+            self.print_usage()
             sys.exit(1)
             
-        if self._dataType == "lsstSim":
+        if self._dataSource == "lsstSim":
             import lsst.obs.lsstSim
             self._mappers = lsst.obs.lsstSim.LsstSimMapper
             self._idNameCharTypeList = (
@@ -79,7 +83,7 @@ class CoaddOptionParser(options.OptionParser):
             )
             self._extraFileKeys = ["channel"]
             self._defaultScale = 0.14 # arcsec/pixel
-        elif self._dataType == "suprimecam":
+        elif self._dataSource == "suprimecam":
             import lsst.obs.suprimecam
             self._mappers = lsst.obs.suprimecam.SuprimecamMapper
             self._idNameCharTypeList = (
@@ -89,7 +93,7 @@ class CoaddOptionParser(options.OptionParser):
             self._extraFileKeys = []
             self._defaultScale = 0.14 # arcsec/pixel
         else:
-            sys.stderr.write("Unsupported dataType type: %s\n" % self._dataType)
+            sys.stderr.write("Unsupported dataSource: %s\n" % self._dataSource)
             sys.exit(1)
             
         self.add_option("-R", "--rerun", default=os.getenv("USER", default="rerun"), dest="rerun",

@@ -176,11 +176,16 @@ def configuration(defaults,
     @param *overrides Configurations to override the defaults
     @returns Configuration
     """
+    import pdb ; pdb.set_trace()
     defaults = Config(defaults)
     if overrides is not None:
-        config = Config()
+        config = None
         for override in overrides:
             newConfig = override if isinstance(override, Config) else Config(override)
-            config.merge(newConfig)
-        defaults.merge(config)
+            if config is None:
+                config = newConfig
+            else:
+                config.merge(newConfig)
+        if config is not None:
+            defaults.merge(config)
     return defaults

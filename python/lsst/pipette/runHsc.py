@@ -11,18 +11,16 @@ import lsst.pipette.catalog as pipCatalog
 import lsst.pipette.readwrite as pipReadWrite
 
 import lsst.pipette.ioHacks as pipExtraIO
-
 from hscCalibrate import HscCalibrate
 
-#from IPython.core.debugger import Tracer;
-#debug_here = Tracer()
-
 class DeferredHSCState(object):
-    def __init__(self, dataId, io, matchlist, sources, exposure):
+    def __init__(self, dataId, io, matchlist, matchMeta, sources, brightSources, exposure):
         self.dataId = dataId
         self.io = io
         self.matchlist = matchlist
+        self.matchMeta = matchMeta
         self.sources = sources
+        self.brightSources = brightSources
         self.exposure = exposure
 
     def __str__(self):
@@ -52,36 +50,26 @@ def run(rerun,                          # Rerun name
     raws = io.readRaw(dataId)
     detrends = io.detrends(dataId, config)
     
-    exposure, psf, apcorr, sources, matches, matchMeta = ccdProc.run(raws, detrends)
-    defer = True
-    if defer:
-        io.write(dataId, exposure=None, psf=psf, sources=None, matches=matches, matchMeta=matchMeta)
-    else:
-        io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches, matchMeta=matchMeta)
+    exposure, psf, apcorr, brightSources, sources, matches, matchMeta = ccdProc.run(raws, detrends)
+    io.write(dataId, exposure=None, psf=psf, sources=None)
 
     catPolicy = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "catalog.paf")
     catalog = pipCatalog.Catalog(catPolicy, allowNonfinite=False)
 
-    # Write SRC....fits files here, until we can push the scheme into a butler.
-    metadata = exposure.getMetadata()
-    hdrInfo = dict([(m, metadata.get(m)) for m in metadata.names()])
-
-    filename = io.outButler.get('source_filename', dataId)[0]
-    io.log.log(io.log.INFO, "writing sources to: %s" % (filename))
-    pipExtraIO.writeSourceSetAsFits(sources, filename, hdrInfo=hdrInfo, clobber=True)
-
-    #filename = io.outButler.get('match_filename', dataId)[0]
-    #io.log.log(io.log.INFO, "writing matches to: %s" % (filename))
-    #pipExtraIO.writeSourceSetAsFits(sources, filename, hdrInfo=hdrInfo, clobber=True)
-            
-    deferredState = DeferredHSCState(dataId, io, matches, sources, exposure)
+    deferredState = DeferredHSCState(dataId, io, matches, matchMeta, sources, brightSources, exposure)
     return deferredState
 
 def doMergeWcs(deferredState, wcs):
+    dataId = deferredState.dataId
+    io = deferredState.io
     exposure = deferredState.exposure
+    matchlist = deferredState.matchlist
+    
     if not wcs:
         wcs = exposure.getWcs()
-        deferredState.io.log.log(deferredState.io.log.WARN, "!!!!! stuffing exposure with its own wcs.!!!")
+        io.log.log(deferredState.io.log.WARN, "!!!!! stuffing exposure with its own wcs.!!!")
+
+    exposure.setWcs(wcs)
 
     # Apply WCS to sources
     sources = deferredState.sources
@@ -89,9 +77,42 @@ def doMergeWcs(deferredState, wcs):
         sky = wcs.pixelToSky(source.getXAstrom(), source.getYAstrom())
         source.setRa(sky[0])
         source.setDec(sky[1])
-                                                            
-    exposure.setWcs(wcs)
-    deferredState.io.write(deferredState.dataId, sources=sources, exposure=exposure)
+
+    brightSources = deferredState.brightSources
+    for source in brightSources:
+        sky = wcs.pixelToSky(source.getXAstrom(), source.getYAstrom())
+        source.setRa(sky[0])
+        source.setDec(sky[1])
+
+    # The matchedList sources are _not_ the same as in the source lists.
+    for sourceMatch in matchlist:
+        # _Only_ convert the .second source, which is our measured source.
+        source = sourceMatch.second
+        sky = wcs.pixelToSky(source.getXAstrom(), source.getYAstrom())
+        source.setRa(sky[0])
+        source.setDec(sky[1])
+
+    # Write SRC....fits files here, until we can push the scheme into a butler.
+    if sources:
+        metadata = exposure.getMetadata()
+        hdrInfo = dict([(m, metadata.get(m)) for m in metadata.names()])
+        filename = io.outButler.get('source_filename', dataId)[0]
+        io.log.log(io.log.INFO, "writing sources to: %s" % (filename))
+        try:
+            pipExtraIO.writeSourceSetAsFits(sources, filename, hdrInfo=hdrInfo, clobber=True)
+        except Exception, e:
+            print "failed to write sources: %s" % (e)
+
+    filename = io.outButler.get('matchFull_filename', dataId)[0]
+    io.log.log(io.log.INFO, "writing match debugging info to: %s" % (filename))
+    try:
+        pipExtraIO.writeMatchListAsFits(matchlist, filename)
+    except Exception, e:
+        print "failed to write matchlist: %s" % (e)
+        
+    deferredState.io.write(deferredState.dataId, sources=sources, exposure=exposure,
+                           matches=matchlist,
+                           matchMeta=deferredState.matchMeta)
 
 def getConfig():
     default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
@@ -130,8 +151,6 @@ def main(argv=None):
 
     state = run(opts.rerun, int(opts.frame), int(opts.ccd), config)
     doMergeWcs(state, None)
-
-    
 
 if __name__ == "__main__":
     main()

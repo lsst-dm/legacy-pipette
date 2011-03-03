@@ -31,14 +31,14 @@ class ProcessCcd(pipProc.Process):
 
         exposure, defects, background = self.isr(exposureList, detrendsList)
 
-        psf, apcorr, sources, matches, matchMeta = self.calibrate(exposure, defects=defects)
+        psf, apcorr, brightSources, matches, matchMeta = self.calibrate(exposure, defects=defects)
 
         if self.config['do']['phot']:
             sources, footprints = self.phot(exposure, psf, apcorr, wcs=exposure.getWcs())
         else:
             sources, footprints = None, None
 
-        return exposure, psf, apcorr, sources, matches, matchMeta
+        return exposure, psf, apcorr, brightSources, sources, matches, matchMeta
             
     def isr(self, exposureList, detrendsList):
         """Perform Instrumental Signature Removal

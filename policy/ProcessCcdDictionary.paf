@@ -11,6 +11,13 @@ definitions: {
         dictionaryFile: "RootsDictionary.paf"
     }
 
+    camera: {
+        type: string
+        description: "Camera name"
+        minOccurs: 1
+        maxOccurs: 1
+    }
+
     do: {
         type: Policy
         description: "Do we do these tasks?"

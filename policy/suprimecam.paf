@@ -1,5 +1,7 @@
 #<?cfg paf policy>
 
+camera: suprimecam
+
 do: {
     isr: {
         processAmp: {

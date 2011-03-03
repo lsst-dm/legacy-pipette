@@ -1,5 +1,7 @@
 #<?cfg paf policy>
 
+camera: HSC
+
 do: {
     isr: {
         processAmp: {

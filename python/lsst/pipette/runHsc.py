@@ -118,16 +118,40 @@ def doMergeWcs(deferredState, wcs):
                            matchMeta=deferredState.matchMeta)
 
     
+def getConfig(argv=None):
+    parser = pipOptions.OptionParser()
+    parser.add_option("-r", "--rerun", default=os.getenv("USER", default="rerun"), dest="rerun",
+                      help="rerun name (default=%default)")
+    parser.add_option("-f", "--frame", dest="frame",
+                      help="visit to run (default=%default)")
+    parser.add_option("-c", "--ccd", dest="ccd",
+                      help="CCD to run (default=%default)")
+
+    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
+    #if argv == None:
+    #    argv = sys.argv
+
+    config, opts, args = parser.parse_args([default], argv=argv)
+    if (len(args) > 0 # or opts.instrument is None
+        or opts.rerun is None
+        or opts.frame is None
+        or opts.ccd is None):
+        
+        parser.print_help()
+        return None, None, None
+
+    return config, opts, args
+
 def doRun(rerun=None, frameId=None, ccdId=None,
           doMerge=True, doBreak=False,
           instrument="hsc"):
     argv = []
     argv.extend(["runHsc",
                  "--instrument=%s" % (instrument),
-                 "--frameId=%s" % (frameId),
-                 "--ccdId=%s" % (ccdId)])
+                 "--frame=%s" % (frameId),
+                 "--ccd=%s" % (ccdId)])
     if rerun:
-        argv.append("--rerun=" % (rerun))
+        argv.append("--rerun=%s" % (rerun))
                 
     if doBreak:
         import pdb; pdb.set_trace()
@@ -141,31 +165,11 @@ def doRun(rerun=None, frameId=None, ccdId=None,
     else:
         return state
 
-def getConfig(argv=None):
-    parser = pipOptions.OptionParser()
-    parser.add_option("-r", "--rerun", default=os.getenv("USER", default="rerun"), dest="rerun",
-                      help="rerun name (default=%default)")
-    parser.add_option("-f", "--frame", dest="frame",
-                      help="visit to run (default=%default)")
-    parser.add_option("-c", "--ccd", dest="ccd",
-                      help="CCD to run (default=%default)")
-
-    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
-    if argv == None:
-        argv = sys.argv
-    return parser.parse_args([default], argv=argv)
-
 def main(argv=None):
-    config, opts, args = getConfig(sys.argv)
+    config, opts, args = getConfig(argv=argv)
+    if not config:
+        raise SystemExit("argument parsing error")
     
-    if (len(args) > 0 or opts.instrument is None
-        or opts.rerun is None
-        or opts.frame is None
-        or opts.ccd is None):
-        
-        parser.print_help()
-        sys.exit(1)
-
     state = run(opts.rerun, int(opts.frame), int(opts.ccd), config)
     doMergeWcs(state, None)
 

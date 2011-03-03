@@ -29,6 +29,7 @@ import lsst.afw.detection as afwDetection
 import lsst.afw.image as afwImage
 import lsst.coadd.utils as coaddUtils
 import lsst.coadd.psfmatched as coaddPsfMatched
+import lsst.pex.logging as pexLog
 import lsst.pipette.coaddOptions
 
 FWHMPerSigma = 2 * math.sqrt(2 * math.log(2))
@@ -75,18 +76,17 @@ def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         coreSigma = desFwhm / FWHMPerSigma
         modelPsf = afwDetection.createPsf("DoubleGaussian", kernelWidth, kernelHeight,
             coreSigma, coreSigma * 2.5, 0.1)
-        kernelImage = afwImage.ImageD(kernelWidth, kernelHeight)
-        
-        # make sure PSF-matching kernel is small enough to work with the exposure's PSF kernel
-        # it must be less than half as big or PSF matching will fail
-        maxPsfMatchingKernelSize = 1 + (min(kernelWidth - 1, kernelHeight - 1) // 2)
-        if maxPsfMatchingKernelSize%2 == 0:
-            maxPsfMatchingKernelSize -= 1
-        desKernelSize = psfMatchPolicy.get("kernelSize")
-        if desKernelSize > maxPsfMatchingKernelSize:
-            print "Warning: reducing size of PSF matching kernel from %s to %s" % \
-                (desKernelSize, maxPsfMatchingKernelSize)
-            psfMatchPolicy.set("kernelSize", maxPsfMatchingKernelSize)
+#         
+#         # make sure PSF-matching kernel is small enough to work with the exposure's PSF kernel
+#         # it must be less than half as big or PSF matching will fail
+#         maxPsfMatchingKernelSize = 1 + (min(kernelWidth - 1, kernelHeight - 1) // 2)
+#         if maxPsfMatchingKernelSize%2 == 0:
+#             maxPsfMatchingKernelSize -= 1
+#         desKernelSize = psfMatchPolicy.get("kernelSize")
+#         if desKernelSize > maxPsfMatchingKernelSize:
+#             print "Warning: reducing size of PSF matching kernel from %s to %s" % \
+#                 (desKernelSize, maxPsfMatchingKernelSize)
+#             psfMatchPolicy.set("kernelSize", maxPsfMatchingKernelSize)
     
     psfMatcher = coaddPsfMatched.PsfMatchToModel(psfMatchPolicy)
     warper = coaddUtils.Warp.fromPolicy(warpPolicy)
@@ -107,6 +107,9 @@ def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     return coaddExposure, weightMap
 
 if __name__ == "__main__":
+    pexLog.Trace.setVerbosity('lsst.coadd', 5)
+    pexLog.Trace.setVerbosity('lsst.ip.diffim', 1)
+
     parser = lsst.pipette.coaddOptions.CoaddOptionParser()
     parser.add_option("--fwhm", dest="fwhm", type="float", help="Desired FWHM, in science exposure pixels")
     policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "psfMatchedCoaddDictionary.paf")

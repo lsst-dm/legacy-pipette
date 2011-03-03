@@ -3,7 +3,6 @@
 import math
 import matplotlib
 matplotlib.use('pdf')
-import matplotlib.backends.backend_pdf
 import matplotlib.pyplot as plot
 import numpy
 import numpy.ma as ma
@@ -16,23 +15,32 @@ def gaussian(param, x):
     width = param[2]
     return norm * numpy.exp(-0.5*((x - offset)/width)**2)    
 
+class FakePdf(object):
+    def close(self): pass
+    def savefig(self):
+        plot.draw()
+        plot.show()
+
 class Plotter(object):
     def __init__(self, name):
         self.name = name
         if not self.name.endswith(".pdf"):
             self.name += ".pdf"
         self.pdf = matplotlib.backends.backend_pdf.PdfPages(self.name)
+#        self.pdf = FakePdf()
 
     def close(self):
         self.pdf.close()
 
     def xy(self, x, y, axis=None, title=None):
         plot.figure()
-        plot.scatter(x, y, marker='x')
         if axis is not None:
             plot.axis(axis)
         if title is not None:
             plot.title(title)
+        print x
+        print y
+        plot.plot(x, y, ',')
         self.pdf.savefig()
         plot.close()
 
@@ -84,25 +92,9 @@ class Plotter(object):
         self.pdf.savefig()
         plot.close()
 
-    def quivers(self, x, y, dx, dy, title=None, addUnitQuiver=0.0):
-        def placeUnitQuiver(x,y):
-            return (min(x) + 0.05 * (max(x)-min(x)),
-                    min(y) + 0.05 * (max(y)-min(y)))
-        
+    def quivers(self, x, y, dx, dy, title=None, scale=None):
         plot.figure()
-        if addUnitQuiver:
-            qx, qy = placeUnitQuiver(x,y)
-            if False:
-                plot.quiver(x, y, dx, dy)
-                plot.quiver([qx], [qy], [addUnitQuiver], [addUnitQuiver])
-            else:
-                fx = numpy.concatenate([x, [qx]])
-                fy = numpy.concatenate([y, [qy]])
-                fdx = numpy.concatenate([dx, [addUnitQuiver]])
-                fdy = numpy.concatenate([dy, [addUnitQuiver]])
-                plot.quiver(fx, fy, fdx, fdy, units='x')
-        else:
-            plot.quiver(x, y, dx, dy)
+        plot.quiver(x, y, dx, dy, scale=scale, headwidth=2, headlength=3)
         if title is not None:
             plot.title(title)
         self.pdf.savefig()

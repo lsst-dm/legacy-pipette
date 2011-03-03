@@ -13,6 +13,7 @@ import lsst.skypix as skypix
 def run(rerun,                          # Rerun name
         stack,                          # Stack identifier
         filter,                         # Filter name
+        field,                          # Field name
         scale,                          # Scale, arcsec/pix
         ):
     io = pipReadWrite.ReadWrite(hsc.HscSimMapper(rerun=rerun), ['visit', 'ccd'])
@@ -21,9 +22,13 @@ def run(rerun,                          # Rerun name
     print skyPolicy.toString()
     sky = skypix.QuadSpherePixelization(skyPolicy.get('resolutionPix'), skyPolicy.get('paddingArcsec') / 3600.0)
 
-    skytiles = io.inButler.queryMetadata('calexp', None, 'skyTile', {'filter': filter})
+    dataId = {'filter': filter}
+    if field is not None:
+        dataId['field'] = field
+    skytiles = io.inButler.queryMetadata('calexp', None, 'skyTile', dataId)
     for tile in skytiles:
-        visits = io.inButler.queryMetadata('calexp', None, 'visit', {'skyTile': tile, 'filter': filter})
+        dataId['skyTile'] = tile
+        visits = io.inButler.queryMetadata('calexp', None, 'visit', dataId)
         if len(visits) == 0:
             continue
 
@@ -50,10 +55,9 @@ if __name__ == "__main__":
     parser = optparse.OptionParser()
     parser.add_option("-r", "--rerun", default=os.getenv("USER", default="rerun"), dest="rerun",
                       help="rerun name (default=%default)")
-    parser.add_option("-s", "--stack", dest="stack", type="int",
-                      help="Stack identifier")
-    parser.add_option("-f", "--filter", dest="filter", type="string",
-                      help="Filter name")
+    parser.add_option("-s", "--stack", dest="stack", type="int", help="Stack identifier")
+    parser.add_option("--filter", dest="filter", type="string", help="Filter name")
+    parser.add_option("--field", dest="field", type="string", help="Field name")
     parser.add_option("--scale", dest="scale", type="float", help="Scale, arcsec/pix")
 
     opts, args = parser.parse_args()
@@ -62,4 +66,4 @@ if __name__ == "__main__":
         parser.print_help()
         sys.exit(1)
 
-    run(opts.rerun, opts.stack, opts.filter, opts.scale)
+    run(opts.rerun, opts.stack, opts.filter, opts.field, opts.scale)

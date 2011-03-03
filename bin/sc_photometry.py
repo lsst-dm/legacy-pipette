@@ -25,8 +25,9 @@ def filterSources(sources, md, bright, flags=0x80):
     outSources = afwDet.SourceSet()
     for i, src in enumerate(sources):
         try:
-            psfMag = calib.getMagnitude(src.getPsfFlux())
+#            psfMag = calib.getMagnitude(src.getPsfFlux())
             apMag = calib.getMagnitude(src.getApFlux())
+#            modelMag = calib.getMagnitude(src.getModelFlux())
         except:
             continue
 
@@ -38,6 +39,7 @@ def filterSources(sources, md, bright, flags=0x80):
 
 #        src.setPsfFlux(psfMag)
 #        src.setApFlux(apMag)
+#        src.setModelFlux(modelMag)
 
         x, y = src.getXAstrom(), src.getYAstrom()
         #if x < 5 or x > 2043 or y < 5 or y > 4172:
@@ -59,7 +61,7 @@ def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=N
     io = pipReadWrite.ReadWrite(hscSim.HscSimMapper(rerun=rerun),
                                 ['visit'], fileKeys=['visit', 'ccd'], config=config)
     roots = config['roots']
-    output = os.path.join(roots['output'], '%s.pdf' % outName)
+    outName = os.path.join(roots['output'], '%s.pdf' % outName) if outName is not None else None
 
     data1 = {'visit': frame1}
     data2 = {'visit': frame2}
@@ -107,7 +109,7 @@ def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=N
         modelDiff = (-2.5*numpy.log10(comp['model1']) + 2.5*numpy.log10(comp['model2']))
 
 
-    plot = plotter.Plotter(output)
+    plot = plotter.Plotter(outName)
     plot.xy(ra, dec, title="Detections")
     plot.xy(psfAvg, psfDiff, axis=[comp['psf1'].min(), comp['psf1'].max(), -0.25, 0.25],
             title="PSF photometry")
@@ -115,13 +117,16 @@ def run(outName, rerun, frame1, frame2, config, matchTol=1.0, bright=None, ccd=N
             title="Aperture photometry")
     plot.histogram(psfDiff, [-0.25, 0.25], title="PSF photometry")
     plot.histogram(apDiff, [-0.25, 0.25], title="Aperture photometry")
-#    plot.histogram(modelDiff, [-0.25, 0.25], title="Model photometry")
+    plot.histogram(modelDiff, [-0.25, 0.25], title="Model photometry")
+
+    plot.xy(psfAvg, modelAvg - psfAvg, title="PSF vs Model")
+    plot.histogram(modelAvg - psfAvg, [-0.6, 0.2], bins=81, title="PSF vs Model")
 
     plot.xy2(ra, comp['distance'], dec, comp['distance'],
              axis1=[ra.min(), ra.max(), 0, matchTol], axis2=[dec.min(), dec.max(), 0, matchTol],
              title1="Right ascension", title2="Declination")
 
-    plot.quivers(ra, dec, comp['ra1'] - comp['ra2'], comp['dec1'] - comp['dec2'], title="Astrometry")
+    plot.quivers(ra, dec, comp['ra1'] - comp['ra2'], comp['dec1'] - comp['dec2'], title="Astrometry", addUnitQuiver=1.0/3600.0)
 
     plot.close()
 
@@ -153,13 +158,13 @@ if __name__ == "__main__":
     parser.add_option("-m", "--match", type='float', default=None, dest="match",
                       help="Match radius (arcsec)")
     parser.add_option("-c", "--ccd", type='int', default=None, dest="ccd", help="CCD to use")
+    parser.add_option("--save", type="string", default=None, dest="output", help="Output name for plot")
 
     defaults = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam.paf")
     config, opts, args = parser.parse_args([defaults, overrides])
     frame1 = args[0]
     frame2 = args[1]
-    outName = args[2]
 
-    run(outName, opts.rerun, int(frame1), int(frame2), config,
+    run(opts.output, opts.rerun, int(frame1), int(frame2), config,
         matchTol=opts.match, bright=opts.bright, ccd=opts.ccd)

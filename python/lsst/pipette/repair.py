@@ -5,6 +5,8 @@ import lsst.afw.detection as afwDet
 import lsst.meas.algorithms as measAlg
 import lsst.pipette.process as pipProc
 
+import lsst.afw.display.ds9 as ds9
+import lsst.afw.display.utils as displayUtils
 
 class Repair(pipProc.Process):
     def __init__(self, keepCRs=False, *args, **kwargs):
@@ -19,9 +21,16 @@ class Repair(pipProc.Process):
         @param psf Point spread function
         @param defects Defect list
         """
+        import lsstDebug
+        display = lsstDebug.Info(__name__).display
+
         assert exposure, "No exposure provided"
 
         do = self.config['do']['calibrate']['repair']
+
+        if display:
+            ds9.setDefaultFrame(0)
+            ds9.mtv(exposure, title="Pre-repair")
 
         if defects is not None and do['interpolate']:
             self.interpolate(exposure, psf, defects)
@@ -54,6 +63,10 @@ class Repair(pipProc.Process):
         @param exposure Exposure to process
         @param psf PSF
         """
+        import lsstDebug
+        display = lsstDebug.Info(__name__).display
+        displayCR = lsstDebug.Info(__name__).displayCR
+
         assert exposure, "No exposure provided"
         assert psf, "No psf provided"
         # Blow away old mask
@@ -73,6 +86,18 @@ class Repair(pipProc.Process):
             crBit = mask.getPlaneBitMask("CR")
             afwDet.setMaskFromFootprintList(mask, crs, crBit)
             num = len(crs)
+
+            if display and displayCR:
+                ds9.incrDefaultFrame()
+                ds9.mtv(exposure, title="Post-CR")
+                
+                ds9.cmdBuffer.pushSize()
+
+                for cr in crs:
+                    displayUtils.drawBBox(cr.getBBox(), borderWidth=0.55)
+
+                ds9.cmdBuffer.popSize()
+
         self.log.log(self.log.INFO, "Identified %d cosmic rays." % num)
         return
 

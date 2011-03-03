@@ -45,6 +45,8 @@ class Stack(pipProcess.Process):
         coaddImage = coadd.getMaskedImage()
         coaddImage /= weight
 
+        # XXX Coadd has NANs where weight=0
+
         return coadd
 
     def skycell(self, ra, dec, scale, xSize, ySize):

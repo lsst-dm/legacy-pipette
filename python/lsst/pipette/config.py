@@ -176,7 +176,6 @@ def configuration(defaults,
     @param *overrides Configurations to override the defaults
     @returns Configuration
     """
-    import pdb ; pdb.set_trace()
     defaults = Config(defaults)
     if overrides is not None:
         config = None

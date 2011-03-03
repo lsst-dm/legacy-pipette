@@ -12,7 +12,7 @@ import lsst.pipette.catalog as pipCatalog
 import lsst.pipette.readwrite as pipReadWrite
 
 import lsst.pipette.ioHacks as pipExtraIO
-from hscCalibrate import HscCalibrate
+from lsst.pipette.hscCalibrate import HscCalibrate
 
 class DeferredHSCState(object):
     def __init__(self, dataId, io, matchlist, matchMeta, sources, brightSources, exposure):

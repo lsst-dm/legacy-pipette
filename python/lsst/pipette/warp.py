@@ -93,9 +93,11 @@ class Warp(pipProc.Process):
         weight.set(0)
         
         for ident in identList:
-            md = self.read(butler, ident, ["calexp_md"], ignore=ignore)[0]
-            if md is None:
+            md = self.read(butler, ident, ["calexp_md"], ignore=ignore)
+            if md is None or len(md) == 0:
+                self.log.log(self.log.WARN, "Unable to read %s --- ignoring" % ident)
                 continue
+            md = md[0]
             width, height = md.get("NAXIS1"), md.get("NAXIS2")
             expWcs = afwImage.makeWcs(md)
 

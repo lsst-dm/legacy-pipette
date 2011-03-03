@@ -34,10 +34,11 @@ def run(rerun,                          # Rerun name
             identList.append(dataId)
         identMatrix.append(identList)
 
-    exp = stackProc.run(identMatrix, io.inButler, coords[0], coords[1], scale, sizes[0], sizes[1])
+    exp = stackProc.run(identMatrix, io.inButler,
+                        coords[0], coords[1], scale, sizes[0], sizes[1], ignore=ignore)
 
     #stack.writeFits(basename + ".fits")
-    stackProc.write(io.outButler, {'stack': stack, 'patch': patch, 'filter': 'X'}, {"stack": exp})
+    stackProc.write(io.outButler, {'stack': stack, 'patch': patch, 'filter': filter}, {"stack": exp})
 
 
 

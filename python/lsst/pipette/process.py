@@ -68,16 +68,15 @@ class Process(object):
                 if not butler.datasetExists(product, ident):
                     if not ignore:
                         raise RuntimeError("Data type %s does not exist for %s" % (product, ident))
-                else:
-                    self.log.log(self.log.INFO, "Reading %s for %s" % (product, ident))
-                    data = butler.get(product, ident)
+                    continue
+                self.log.log(self.log.INFO, "Reading %s for %s" % (product, ident))
+                data = butler.get(product, ident)
 
                 # Convert to floating-point
                 # XXX This also appears to read the image, stepping around problems in the daf_persistence
                 # readProxy
                 if isinstance(data, afwImage.ExposureU):
                     data = data.convertF()
-
                 gotten.append(data)
 
         return gotten

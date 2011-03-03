@@ -117,15 +117,23 @@ def doMergeWcs(deferredState, wcs):
                            matches=matchlist,
                            matchMeta=deferredState.matchMeta)
 
-def getConfig(*overrides):
-    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
-    return pipConfig.configuration(default, *overrides)
-
-def doRun(overrides=os.path.join(os.getenv("PIPETTE_DIR"), "policy", "hsc.paf"),
-          rerun=None, frameId=None, ccdId=None, doMerge=False, doBreak=False):
+    
+def doRun(rerun=None, frameId=None, ccdId=None,
+          doMerge=True, doBreak=False,
+          instrument="hsc"):
+    argv = []
+    argv.extend(["runHsc",
+                 "--instrument=%s" % (instrument),
+                 "--frameId=%s" % (frameId),
+                 "--ccdId=%s" % (ccdId)])
+    if rerun:
+        argv.append("--rerun=" % (rerun))
+                
     if doBreak:
         import pdb; pdb.set_trace()
-    config = getConfig(overrides)
+
+    config, opts, args = getConfig(argv=argv)
+
     state = run(rerun, frameId, ccdId, config)
 
     if doMerge:
@@ -133,8 +141,7 @@ def doRun(overrides=os.path.join(os.getenv("PIPETTE_DIR"), "policy", "hsc.paf"),
     else:
         return state
 
-def main(argv=None):
-    
+def getConfig(argv=None):
     parser = pipOptions.OptionParser()
     parser.add_option("-r", "--rerun", default=os.getenv("USER", default="rerun"), dest="rerun",
                       help="rerun name (default=%default)")
@@ -144,9 +151,18 @@ def main(argv=None):
                       help="CCD to run (default=%default)")
 
     default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
-    #overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "hsc.paf")
-    config, opts, args = parser.parse_args([default], argv=argv)
-    if len(args) > 0 or opts.rerun is None or opts.frame is None or opts.ccd is None:
+    if argv == None:
+        argv = sys.argv
+    return parser.parse_args([default], argv=argv)
+
+def main(argv=None):
+    config, opts, args = getConfig(sys.argv)
+    
+    if (len(args) > 0 or or opts.instrument is None
+        or opts.rerun is None
+        or opts.frame is None
+        or opts.ccd is None):
+        
         parser.print_help()
         sys.exit(1)
 

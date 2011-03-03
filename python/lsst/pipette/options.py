@@ -21,6 +21,8 @@
 # see <http://www.lsstcorp.org/LegalNotices/>.
 #
 
+import os
+import os.path
 import sys
 import optparse
 import lsst.pex.logging as pexLog
@@ -35,6 +37,8 @@ class OptionParser(optparse.OptionParser):
     """
     def __init__(self, *args, **kwargs):
         optparse.OptionParser.__init__(self, *args, **kwargs)
+        self.add_option("-I", "--instrument", type="string", action="callback", callback=optInstrument,
+                        help="Instrument name (specify first!)")
         self.add_option("-D", "--define", type="string", nargs=2,
                         action="callback", callback=optConfigDefinition,
                         help="Configuration definition (single value)")
@@ -73,6 +77,13 @@ class OptionParser(optparse.OptionParser):
 
         return config, opts, args
 
+
+# optparse callback to override configurations
+def optInstrument(option, opt, value, parser):
+    policy = os.path.join(os.getenv("PIPETTE_DIR"), "policy", value + ".paf")
+    override = pipConfig.Config(policy)
+    parser.values.config.merge(override)
+    return
 
 # optparse callback to set a configuration value
 def optConfigDefinition(option, opt, value, parser):

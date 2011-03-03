@@ -13,6 +13,10 @@ import lsst.pipette.readwrite as pipReadWrite
 
 import lsst.pipette.ioHacks as pipExtraIO
 from lsst.pipette.hscCalibrate import HscCalibrate
+try:
+    import lsst.meas.extensions.shapeHSM as shapeHSM
+except ImportError:
+    pass                                # an optional setup
 
 class DeferredHSCState(object):
     def __init__(self, dataId, io, matchlist, matchMeta, sources, brightSources, exposure):

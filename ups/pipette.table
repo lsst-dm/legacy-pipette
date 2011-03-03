@@ -12,6 +12,8 @@ setupOptional(solvetansip)
 setupOptional(distEst)
 
 setupOptional(matplotlib)
+# Extra algorithms
+setupOptional(meas_extensions_shapeHSM)
 
 pathPrepend(PATH, ${PRODUCT_DIR}/bin)
 pathPrepend(PYTHONPATH, ${PRODUCT_DIR}/bin)

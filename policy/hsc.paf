@@ -119,3 +119,26 @@ psf: {
         nStarPerCellSpatialFit: 10
     }
 }
+
+# measure: {
+#     source: {
+#         shape: HSM_KSB
+#     }
+#     shape: {
+#         HSM_BJ: {
+#               enabled: true
+#           }
+#           HSM_LINEAR: {
+#               enabled: true
+#           }
+#          HSM_KSB: {
+#              enabled: true
+#          }
+#          HSM_REGAUSS: {
+#              enabled: true
+#          }
+#          HSM_SHAPELET: {
+#              enabled: true
+#          }
+#     }
+# }

@@ -30,12 +30,12 @@ definitions: {
         }
     }
 
-    bootstrap: {
+    calibrate: {
         type: Policy
-        description: "Policy for bootstrapping the PSF"
+        description: "Policy for calibration"
         minOccurs: 0
         maxOccurs: 1
-        dictionaryFile: "bootstrapDictionary.paf"
+        dictionaryFile: "calibrateDictionary.paf"
     }
 
     background: {

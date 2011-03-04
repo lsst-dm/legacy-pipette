@@ -26,6 +26,13 @@ definitions: {
                     maxOccurs: 1
                     default: false
                 }
+                calibrate: {
+                    type: Policy
+                    description: "Perform background subtraction?"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    dictionaryFile: "DoCalibrateDictionary.paf"
+                }
             }
         }
     }

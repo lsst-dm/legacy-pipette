@@ -429,8 +429,12 @@ def writeSourceSetAsFits(sourceSet, filename, hdrInfo=[], clobber=False):
     primHdu = pyfits.PrimaryHDU()
     hdr = primHdu.header
     for key, value in hdrInfo.items():
-        cardName = key if len(key) <= 8 else "HIERARCH %s" % (key)
-        hdr.update(cardName, value, key)
+        if isinstance(value, str):
+            value = [value,]
+
+        for v in value:
+            cardName = key if len(key) <= 8 else "HIERARCH %s" % (key)
+            hdr.update(cardName, v, key)
     
     hdulist = pyfits.HDUList([primHdu, tblHdu])
     hdulist.writeto(filename, clobber=clobber)

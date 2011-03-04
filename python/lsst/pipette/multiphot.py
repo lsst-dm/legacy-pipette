@@ -5,14 +5,14 @@ import lsst.meas.algorithms as measAlg
 
 import lsst.pipette.process as pipProcess
 import lsst.pipette.phot as pipPhot
-import lsst.pipette.bootstrap as pipBootstrap
+import lsst.pipette.calibrate as pipCalibrate
 
 class MultiPhot(pipProcess.Process):
     """Matched photometry on multiple exposures"""
-    def __init__(self, Phot=pipPhot.Phot, Bootstrap=pipBootstrap.Bootstrap, **kwargs):
+    def __init__(self, Phot=pipPhot.Photometry, Calibrate=pipCalibrate.Calibrate, **kwargs):
         super(MultiPhot, self).__init__(**kwargs)
         self._Phot = Phot(**kwargs)
-        self._Bootstrap = Bootstrap(**kwargs)
+        self._Calibrate = Calibrate(**kwargs)
     
     def run(self, refExposure, exposureList):
         """Perform matched photometry on multiple exposures
@@ -43,7 +43,7 @@ class MultiPhot(pipProcess.Process):
         return sourceList
 
     def psf(self, exposure):
-        psf, wcs = self._Bootstrap.fakePsf(exposure)
+        psf, wcs = self._Calibrate.fakePsf(exposure)
 
         # Need to clobber NANs...
         # XXX Use a Pipette process for this
@@ -53,9 +53,9 @@ class MultiPhot(pipProcess.Process):
         nans = ipIsr.defectListFromMask(exposure, maskName='UNMASKEDNAN')
         measAlg.interpolateOverDefects(exposure.getMaskedImage(), psf, nans, 0.0)
         
-        sources = self._Bootstrap.phot(exposure, psf, wcs=wcs)
-        psf, cellSet = self._Bootstrap.psf(exposure, sources)
-        apcorr = self._Bootstrap.apCorr(exposure, cellSet)
+        sources = self._Calibrate.phot(exposure, psf)
+        psf, cellSet = self._Calibrate.psf(exposure, sources)
+        apcorr = self._Calibrate.apCorr(exposure, cellSet)
         return psf, apcorr
         
     def detect(self, exposure, psf):

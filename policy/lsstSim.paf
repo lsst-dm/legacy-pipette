@@ -1,5 +1,7 @@
 #<?cfg paf policy>
 
+camera: lsstSim
+
 roots: {
     data: /path/to/data
     calib: /path/to/calib

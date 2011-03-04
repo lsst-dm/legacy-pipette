@@ -37,7 +37,7 @@ detect: {
     thresholdType: stdev
 }
 
-measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
+#measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
 
 defects: {
     grow: 0
@@ -120,25 +120,57 @@ psf: {
     }
 }
 
-# measure: {
-#     source: {
-#         shape: HSM_KSB
-#     }
-#     shape: {
-#         HSM_BJ: {
-#               enabled: true
-#           }
-#           HSM_LINEAR: {
-#               enabled: true
-#           }
-#          HSM_KSB: {
-#              enabled: true
-#          }
-#          HSM_REGAUSS: {
-#              enabled: true
-#          }
-#          HSM_SHAPELET: {
-#              enabled: true
-#          }
-#     }
-# }
+measure: {
+    source: {
+        astrom:  "SDSS"
+        apFlux:  "SINC"
+        modelFlux: "GAUSSIAN"
+        psfFlux: "PSF"
+        shape: "HSM_REGAUSS"
+    }
+    shape: {
+        HSM_BJ: {
+            enabled: true
+        }
+        HSM_LINEAR: {
+            enabled: true
+        }
+        HSM_KSB: {
+            enabled: true
+        }
+        HSM_REGAUSS: {
+            enabled: true
+        }
+        HSM_SHAPELET: {
+            enabled: true
+        }
+    }
+    astrometry: {
+        GAUSSIAN: {
+            enabled: true
+        }
+        
+        NAIVE: {
+            enabled: true
+        }
+        
+        SDSS: {
+            enabled: true
+        }
+    }
+    photometry: {
+        GAUSSIAN: {
+            background: 0.0
+            shiftmax: 10
+        }
+        NAIVE: {
+            radius: 9.0
+        }
+        PSF: {
+            enabled: true
+        }
+        SINC: {
+            radius: 9.0
+        }
+    }
+}

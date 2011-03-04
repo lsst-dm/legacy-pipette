@@ -417,7 +417,7 @@ def writeSourceSetAsFits(sourceSet, filename, hdrInfo=[], clobber=False):
     columns = []
 
     # Start with hacky manual columns
-    columns.extend(getFitsColumns(sourceSet, getSourceOutputListHsc(addRefFlux=True, simple=True)))
+    columns.extend(getFitsColumns(sourceSet, getSourceOutputListHsc(addRefFlux=True)))
                    
     # Add in nice schema-based columns
     for measureType, getterName in measurementTypes:

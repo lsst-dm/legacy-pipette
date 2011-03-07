@@ -429,7 +429,7 @@ def writeSourceSetAsFits(sourceSet, filename, hdrInfo=[], clobber=False):
     primHdu = pyfits.PrimaryHDU()
     hdr = primHdu.header
     for key, value in hdrInfo.items():
-        if isinstance(value, str):
+        if not (isinstance(value, list) or isinstance(value, tuple)):
             value = [value,]
 
         for v in value:

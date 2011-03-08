@@ -42,6 +42,8 @@ class Diff(pipProc.Process):
         @return Subtracted exposure
         """
 
+        do = self.config['do']['diff']
+
         if do['match']:
             cellSet = self.stamps(inputExp, templateExp)
             kernel = self.kernel(inputExp, templateExp, cellSet)

@@ -1,0 +1,42 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    diff: {
+        type: Policy
+        description: "Image subtraction"
+        maxOccurs: 1
+        dictionary: {
+            target: Config
+            definitions: {
+                match: {
+                    type: boolean
+                    description: "Calculate PSF-matching kernel?"
+                    maxOccurs: 1
+                    default: true
+                }
+                convolve: {
+                    type: boolean    
+                    description: "Apply PSF-matching kernel?"
+                    maxOccurs: 1
+                    default: true
+                }
+            }
+        }
+    }
+
+    calibrate: {
+        type: Policy
+        description: "Exposure calibration"
+        maxOccurs: 1
+        dictionaryFile: "DoCalibrateDictionary.paf"
+    }
+    phot: {
+        type: boolean
+        description: "Perform photometry?"
+        maxOccurs: 1
+        default: false
+    }
+
+}

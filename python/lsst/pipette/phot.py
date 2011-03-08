@@ -111,3 +111,32 @@ class Rephotometry(Photometry):
 
     def detect(self, exposure, psf):
         raise NotImplementedError("This method is deliberately not implemented: it should never be run!")
+
+
+
+class PhotometryDiff(Photometry):
+    def detect(self, exposure, psf):
+        """Detect sources in a diff --- care about both positive and negative
+
+        @param exposure Exposure to process
+        @param psf PSF for detection
+        @return Source footprints
+        """
+        assert exposure, "No exposure provided"
+        assert psf, "No psf provided"
+        policy = self.config['detect']
+        if self._threshold is not None:
+            oldThreshold = policy['thresholdValue']
+            policy['thresholdValue'] = self._threshold
+        posSources, negSources = muDetection.detectSources(exposure, psf, policy.getPolicy())
+        numPos = len(posSources.getFootprints()) if posSources is not None else 0
+        numNeg = len(negSources.getFootprints()) if negSources is not None else 0
+        self.log.log(self.log.INFO, "Detected %d positive and %d negative sources to %g sigma." % 
+                     (numPos, numNeg, policy['thresholdValue']))
+        if self._threshold is not None:
+            policy['thresholdValue'] = oldThreshold
+
+        for f in negSources.getFootprints():
+            posSources.getFootprints().push_back(f)
+
+        return posSources

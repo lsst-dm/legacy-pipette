@@ -166,6 +166,11 @@ class Config(dict):
             self.__setitem__(key, val)
         return
 
+    def copy(self):
+        policy = pexPolicy.Policy(self._policy, deep=True)
+        return Config(policy)
+        
+
 
 def configuration(defaults,
                   *overrides            # List of particlar configuration(s) to override the defaults

@@ -336,3 +336,23 @@ class Calibrate(pipProc.Process):
         self.log.log(self.log.INFO, "Photometric zero-point: %f" % zp.getMag(1.0))
         exposure.getCalib().setFluxMag0(zp.getFlux(0))
         return
+
+
+class CalibratePsf(Calibrate):
+    """Calibrate only the PSF for an image.
+    Explicitly turns off other functions.
+    """
+    def run(*args, **kwargs):
+        oldDo = self.config['do']['calibrate'].copy()
+        newDo = self.config['do']['calibrate']
+
+        newDo['background'] = False
+        newDo['distortion'] = False
+        newDo['astrometry'] = False
+        newDo['zeropoint'] = False
+
+        values = super(CalibratePsf, self).run(*args, **kwargs)
+
+        self.config['do']['calibrate'] = oldDo
+
+        return values

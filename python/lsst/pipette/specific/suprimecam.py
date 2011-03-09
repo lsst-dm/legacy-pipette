@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.pipette.isr as pipIsr
 import lsst.pipette.util as pipUtil
@@ -44,9 +45,9 @@ class IsrSuprimeCam(pipIsr.Isr):
             # XXX This mask plane isn't respected by background subtraction or source detection or measurement
             self.log.log(self.log.INFO, "Masking autoguider shadow at y > %d" % maskLimit)
             mask = mi.getMask()
-            bbox = afwImage.BBox(afwImage.PointI(0, maskLimit - 1),
-                                 afwImage.PointI(mask.getWidth() - 1, height - 1))
-            badMask = mask.Factory(mask, bbox)
+            bbox = afwGeom.Box2I(afwGeom.Point2I(0, maskLimit - 1),
+                                 afwGeom.Point2I(mask.getWidth() - 1, height - 1))
+            badMask = mask.Factory(mask, bbox, afwImage.LOCAL)
             
             mask.addMaskPlane("GUIDER")
             badBitmask = mask.getPlaneBitMask("GUIDER")
@@ -55,8 +56,8 @@ class IsrSuprimeCam(pipIsr.Isr):
         else:
             # XXX Temporary solution until a mask plane is respected by downstream processes
             self.log.log(self.log.INFO, "Removing pixels affected by autoguider shadow at y > %d" % maskLimit)
-            bbox = afwImage.BBox(afwImage.PointI(0, 0), mi.getWidth(), maskLimit)
-            good = mi.Factory(mi, bbox)
+            bbox = afwGeom.Box2I(afwGeom.Point2I(0, 0), afwGeom.Extent2I(mi.getWidth(), maskLimit))
+            good = mi.Factory(mi, bbox, afwImage.LOCAL)
             exposure.setMaskedImage(good)
 
         return

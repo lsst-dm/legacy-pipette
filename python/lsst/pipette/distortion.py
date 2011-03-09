@@ -131,10 +131,10 @@ class RadialDistortion(CameraDistortion):
         self.y0 = position.getY() - center.getY()
 
         bbox = ccd.getAllPixels()
-        corners = ((bbox.getX0(), bbox.getY0()),
-                   (bbox.getX0(), bbox.getY1()),
-                   (bbox.getX1(), bbox.getY0()),
-                   (bbox.getX1(), bbox.getY1()))
+        corners = ((bbox.getMinX(), bbox.getMinY()),
+                   (bbox.getMinX(), bbox.getMaxY()),
+                   (bbox.getMaxX(), bbox.getMinY()),
+                   (bbox.getMaxX(), bbox.getMaxY()))
         cornerRadii = list()
         for c in corners:
             cornerRadii.append(math.hypot(c[0] + self.x0, c[1] + self.y0))

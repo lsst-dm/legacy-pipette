@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
 import math
+
 import numpy.random
 import numpy.ma as ma
-import lsst.afw.image as afwImage
 
+import lsst.afw.geom as afwGeom
+import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.ip.isr as ipIsr
@@ -138,11 +140,11 @@ class Isr(pipProc.Process):
         targetDataSec = amp.getDataSec(True)
         self.log.log(self.log.INFO, "Assembling amp %s: %s --> %s" %
                      (amp.getId(), sourceDataSec, targetDataSec))
-        sourceTrim = source.Factory(source, sourceDataSec)
+        sourceTrim = source.Factory(source, sourceDataSec, afwImage.LOCAL)
         sourceTrim = sourceTrim.Factory(amp.prepareAmpData(sourceTrim.getImage()),
                                         amp.prepareAmpData(sourceTrim.getMask()),
                                         amp.prepareAmpData(sourceTrim.getVariance()))
-        targetTrim = target.Factory(target, targetDataSec)
+        targetTrim = target.Factory(target, targetDataSec, afwImage.LOCAL)
         targetTrim <<= sourceTrim
         amp.setTrimmed(True)
 
@@ -316,10 +318,10 @@ class Isr(pipProc.Process):
         measFringe = ma.zeros(num)
         for i in range(num):
             x, y = int(xList[i]), int(yList[i])
-            bbox = afwImage.BBox(afwImage.PointI(x, y), afwImage.PointI(x + size - 1, y + size - 1))
+            bbox = afwGeom.Box2I(afwGeom.Point2I(x, y), afwGeom.Point2I(x + size - 1, y + size - 1))
 
-            subScience = science.Factory(science, bbox)
-            subFringe = fringe.Factory(fringe, bbox)
+            subScience = science.Factory(science, bbox, afwImage.LOCAL)
+            subFringe = fringe.Factory(fringe, bbox, afwImage.LOCAL)
 
             measScience[i] = afwMath.makeStatistics(subScience, afwMath.MEDIAN).getValue() - bgScience
             measFringe[i] = afwMath.makeStatistics(subFringe, afwMath.MEDIAN).getValue() - bgFringe

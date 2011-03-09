@@ -3,6 +3,7 @@
 import numpy
 
 import lsst.afw.math as afwMath
+import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.detection as afwDet
 
@@ -190,7 +191,7 @@ class Master(pipProc.Process):
             combine = afwImage.vectorMaskedImageF()
             stop = min(start + numRows, height)
             rows = stop - start
-            box = afwImage.BBox(afwImage.PointI(0, start), width, rows)
+            box = afwGeom.Box2I(afwGeom.Point2I(0, start), afwGeom.Extent2I(width, rows))
             for index, id in enumerate(identList):
                 data = afwImage.MaskedImageF(width, rows)
                 exp = butler.get('calexp', id)

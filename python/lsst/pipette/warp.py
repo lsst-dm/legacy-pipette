@@ -87,10 +87,8 @@ class Warp(pipProc.Process):
 
         skyWcs = skycell.getWcs()
         xSize, ySize = skycell.getDimensions()
-        warp = afwImage.ExposureF(xSize, ySize)
-        warp.setWcs(skyWcs)
-        weight = afwImage.ImageF(xSize, ySize)
-        weight.set(0)
+        warp = afwImage.ExposureF(skycell.getDimensions(), skyWcs)
+        weight = afwImage.ImageF(skycell.getDimensions())
         
         for ident in identList:
             md = self.read(butler, ident, ["calexp_md"], ignore=ignore)

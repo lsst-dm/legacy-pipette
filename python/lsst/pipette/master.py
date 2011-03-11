@@ -169,17 +169,17 @@ class Master(pipProc.Process):
             assert len(expScales) == len(identList), \
                 "Lengths of inputs (%d) and scales (%d) differ" % (len(expScales), len(identList))
 
-        height, width = 0,0             # Size of image
+        imageDim = None # Size of image
         for i in identList:
             exp = butler.get('calexp', i)
-            if height == 0 and width == 0:
-                height, width = exp.getHeight(), exp.getWidth()
-            elif height != exp.getHeight() or width != exp.getWidth():
-                raise RuntimeError("Height and width don't match: %dx%d vs %dx%d" % 
-                                   (exp.getHeight(), exp.getWidth(), height, width))
+            if imageDim == None:
+                imageDim = exp.getDimensions()
+            elif imageDim != exp.getDimensions():
+                raise RuntimeError("Dimensions don't match: %s != %s" % (exp.getDimensions(), imageDim)
             del exp
+        width, height = imageDim
 
-        master = afwImage.MaskedImageF(width, height)
+        master = afwImage.MaskedImageF(imageDim)
 
         maskVal = ~0x0                  # Mask everything, because even objects are bad
         stats = afwMath.StatisticsControl()
@@ -193,10 +193,10 @@ class Master(pipProc.Process):
             rows = stop - start
             box = afwGeom.Box2I(afwGeom.Point2I(0, start), afwGeom.Extent2I(width, rows))
             for index, id in enumerate(identList):
-                data = afwImage.MaskedImageF(width, rows)
+                data = afwImage.MaskedImageF(box.getDimensions())
                 exp = butler.get('calexp', id)
                 image = exp.getMaskedImage()
-                data <<= afwImage.MaskedImageF(image, box)
+                data <<= afwImage.MaskedImageF(image, box, afwImage.LOCAL)
 
                 # XXX This is a little sleazy, assuming the fringes aren't varying.
                 # What we really should do is remove the background and scale by the fringe amplitude
@@ -215,7 +215,7 @@ class Master(pipProc.Process):
 
             # Combine the inputs
             data = afwMath.statisticsStack(combine, afwMath.MEANCLIP, stats)
-            masterChunk = afwImage.MaskedImageF(master, box)
+            masterChunk = afwImage.MaskedImageF(master, box, afwImage.LOCAL)
             masterChunk <<= data
             
             del data

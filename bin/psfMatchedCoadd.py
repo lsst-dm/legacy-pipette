@@ -76,22 +76,10 @@ def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         coreSigma = desFwhm / FWHMPerSigma
         modelPsf = afwDetection.createPsf("DoubleGaussian", kernelWidth, kernelHeight,
             coreSigma, coreSigma * 2.5, 0.1)
-#         
-#         # make sure PSF-matching kernel is small enough to work with the exposure's PSF kernel
-#         # it must be less than half as big or PSF matching will fail
-#         maxPsfMatchingKernelSize = 1 + (min(kernelWidth - 1, kernelHeight - 1) // 2)
-#         if maxPsfMatchingKernelSize%2 == 0:
-#             maxPsfMatchingKernelSize -= 1
-#         desKernelSize = psfMatchPolicy.get("kernelSize")
-#         if desKernelSize > maxPsfMatchingKernelSize:
-#             print "Warning: reducing size of PSF matching kernel from %s to %s" % \
-#                 (desKernelSize, maxPsfMatchingKernelSize)
-#             psfMatchPolicy.set("kernelSize", maxPsfMatchingKernelSize)
     
     psfMatcher = coaddPsfMatched.PsfMatchToModel(psfMatchPolicy)
     warper = coaddUtils.Warp.fromPolicy(warpPolicy)
     coadd = coaddUtils.Coadd.fromPolicy(coaddBBox, coaddWcs, coaddPolicy)
-    isFirst = True
     for id in idList:
         print "Processing id=%s" % (id,)
         exposure = butler.get("calexp", id)

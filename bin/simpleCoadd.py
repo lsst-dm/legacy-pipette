@@ -25,6 +25,7 @@ import sys
 
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
+import lsst.afw.math as afwMath
 import lsst.coadd.utils as coaddUtils
 import lsst.pipette.coaddOptions
 
@@ -36,7 +37,7 @@ def simpleCoadd(idList, butler, coaddWcs, coaddBBox, policy):
     @param[in] coaddWcs: WCS for coadd
     @param[in] coaddBBox: bounding box for coadd
     @param[in] policy: a Policy object that must contain these policies:
-        warpPolicy: see coadd_utils/policy/WarpDictionary.paf
+        warpPolicy: see afw/policy/WarpDictionary.paf
         coaddPolicy: see coadd_utils/policy/CoaddDictionary.paf
     @output:
     - coaddExposure: coadd exposure
@@ -46,7 +47,7 @@ def simpleCoadd(idList, butler, coaddWcs, coaddBBox, policy):
     warpPolicy = policy.getPolicy("warpPolicy")
     coaddPolicy = policy.getPolicy("coaddPolicy")
     
-    warper = coaddUtils.Warp.fromPolicy(warpPolicy)
+    warper = afwMath.Warper.fromPolicy(warpPolicy)
     coadd = coaddUtils.Coadd.fromPolicy(coaddBBox, coaddWcs, coaddPolicy)
     for id in idList:
         print "Processing id=%s" % (id,)

@@ -18,7 +18,7 @@ definitions: {
     warpPolicy: {
         description: "Policy to control warping."
         type: "policy"
-        dictionary: @@coadd_utils:policy/WarpDictionary.paf
+        dictionary: @@afw:policy/WarpDictionary.paf
         minOccurs: 1
         maxOccurs: 1
     }

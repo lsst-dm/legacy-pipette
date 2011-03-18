@@ -27,6 +27,7 @@ import sys
 import lsst.afw.geom as afwGeom
 import lsst.afw.detection as afwDetection
 import lsst.afw.image as afwImage
+import lsst.afw.math as afwMath
 import lsst.coadd.utils as coaddUtils
 import lsst.coadd.psfmatched as coaddPsfMatched
 import lsst.pex.logging as pexLog
@@ -54,7 +55,7 @@ def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     @param[in] coaddBBox: bounding box for coadd
     @param[in] policy: a Policy object that must contain these policies:
         psfMatchPolicy: see ip_diffim/policy/PsfMatchingDictionary.paf
-        warpPolicy: see coadd_utils/policy/WarpDictionary.paf
+        warpPolicy: see afw/policy/WarpDictionary.paf
         coaddPolicy: see coadd_utils/policy/CoaddDictionary.paf
     @output:
     - coaddExposure: coadd exposure
@@ -78,7 +79,7 @@ def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
             coreSigma, coreSigma * 2.5, 0.1)
     
     psfMatcher = coaddPsfMatched.PsfMatchToModel(psfMatchPolicy)
-    warper = coaddUtils.Warp.fromPolicy(warpPolicy)
+    warper = afwMath.Warper.fromPolicy(warpPolicy)
     coadd = coaddUtils.Coadd.fromPolicy(coaddBBox, coaddWcs, coaddPolicy)
     for id in idList:
         print "Processing id=%s" % (id,)

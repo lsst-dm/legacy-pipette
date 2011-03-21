@@ -16,7 +16,7 @@ def run(rerun,                          # Rerun name
         ccd,                            # CCD number
         config,                         # Configuration
         ):
-    io = pipReadWrite.ReadWrite(suprimecam.SuprimecamMapper, ['visit', 'ccd'], config=config)
+    io = pipReadWrite.ReadWrite(suprimecam.SuprimecamMapper(rerun=rerun), ['visit', 'ccd'], config=config)
     roots = config['roots']
     basename = os.path.join(roots['output'], '%s-%d%d' % (rerun, frame, ccd))
     ccdProc = pipProcCcd.ProcessCcd(config=config, Isr=pipSuprimeCam.IsrSuprimeCam)

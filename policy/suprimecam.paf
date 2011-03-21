@@ -32,6 +32,11 @@ do: {
     phot: true
 }
 
+imports: {
+    HSM: lsst.meas.extensions.shapeHSM
+    KRON: lsst.meas.extensions.photometryKron
+}
+
 detect: {
     thresholdValue: 5.0
     thresholdType: stdev
@@ -89,6 +94,9 @@ measure: {
         SINC: {
             radius: 9.0
         }
+        KRON: {
+            enabled: true
+        }
     }
 }
 
@@ -110,7 +118,7 @@ distortion: {
 
 instrumentExtras: {
     solveTansip: {
-        CRPIXMODE: MANUAL #AUTO for A	UTO MODE, MANUAL for MANUAL MODE
+        CRPIXMODE: MANUAL #AUTO for AUTO MODE, MANUAL for MANUAL MODE
         CCDPMODE: 1       #1=DETERMINING CCD POSITION
         NCCD: 10         #NUMBER of CCD for analysis
         LSIPORDER: 3

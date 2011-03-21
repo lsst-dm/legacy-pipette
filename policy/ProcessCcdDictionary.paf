@@ -55,6 +55,10 @@ definitions: {
         maxOccurs: 1
         dictionary: @@meas_utils:policy:BackgroundDictionary.paf
     }
+    imports: {
+        type: Policy
+        description: "Modules to load"
+    }
     detect: {
         type: Policy
         description: "Source detection policy"

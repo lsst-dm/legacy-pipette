@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import lsst.sdqa as sdqa
-if False:
+if True:
     import lsst.meas.algorithms.psfSelectionRhl as maPsfSel
 else:
     import lsst.meas.algorithms.psfSelectionFromMatchList as maPsfSel

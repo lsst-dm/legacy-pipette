@@ -43,17 +43,17 @@ def run(rerun,                          # Rerun name
     camera = config['camera']
     if camera.lower() in ("hsc"):
         mapper = obsHsc.HscSimMapper(rerun=rerun)
+        ccdProc = pipCcd.ProcessCcd(config=config, Calibrate=HscCalibrate)
     elif camera.lower() in ("suprimecam", "suprime-cam", "sc"):
         mapper = obsSc.SuprimecamMapper(rerun=rerun)
+        ccdProc = pipCcd.ProcessCcd(config=config)
     io = pipReadWrite.ReadWrite(mapper, ['visit', 'ccd'], config=config)
     roots = config['roots']
     oldUmask = os.umask(2)
     if oldUmask != 2:
         io.log.log(io.log.WARN, "pipette umask started as: %s" % (os.umask(2)))
 
-    ccdProc = pipCcd.ProcessCcd(config=config, Calibrate=HscCalibrate)
     dataId = { 'visit': frame, 'ccd': ccd }
-
     raws = io.readRaw(dataId)
     detrends = io.detrends(dataId, config)
     

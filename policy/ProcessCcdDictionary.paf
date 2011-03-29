@@ -58,6 +58,7 @@ definitions: {
     imports: {
         type: Policy
         description: "Modules to load"
+	minOccurs: 0
     }
     detect: {
         type: Policy

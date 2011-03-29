@@ -3,6 +3,7 @@
 import os
 import sys
 
+import lsst.pex.logging as pexLog
 import lsst.obs.suprimecam as suprimecam
 import lsst.pipette.config as pipConfig
 import lsst.pipette.processCcd as pipProcCcd
@@ -15,11 +16,16 @@ def run(rerun,                          # Rerun name
         frame,                          # Frame number
         ccd,                            # CCD number
         config,                         # Configuration
+        log = pexLog.Log.getDefaultLog(), # Log object
         ):
-    io = pipReadWrite.ReadWrite(suprimecam.SuprimecamMapper(rerun=rerun), ['visit', 'ccd'], config=config)
+
     roots = config['roots']
-    basename = os.path.join(roots['output'], '%s-%d%d' % (rerun, frame, ccd))
-    ccdProc = pipProcCcd.ProcessCcd(config=config, Isr=pipSuprimeCam.IsrSuprimeCam)
+    registry = os.path.join(roots['data'], 'registry.sqlite3')
+    imapp = suprimecam.SuprimecamMapper(rerun=rerun, root=roots['data'], calibRoot=roots['calib'])
+    omapp = suprimecam.SuprimecamMapper(rerun=rerun, root=roots['output'], calibRoot=roots['calib'],
+					registry=registry)
+    io = pipReadWrite.ReadWrite([imapp, omapp], ['visit', 'ccd'], config=config)
+    ccdProc = pipProcCcd.ProcessCcd(config=config, Isr=pipSuprimeCam.IsrSuprimeCam, log=log)
     dataId = { 'visit': frame, 'ccd': ccd }
 
     raws = io.readRaw(dataId)
@@ -29,11 +35,24 @@ def run(rerun,                          # Rerun name
 
     catPolicy = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "catalog.paf")
     catalog = pipCatalog.Catalog(catPolicy, allowNonfinite=False)
+    basename = os.path.join(roots['output'], '%s-%d%d' % (rerun, frame, ccd))
     if sources is not None:
         catalog.writeSources(basename + '.sources', sources, 'sources')
     if matches is not None:
         catalog.writeMatches(basename + '.matches', matches, 'sources')
     return
+
+
+def getConfig(overrideFile=None):
+    """Return a proper config object, maybe given the name of policy file with an additional set of overrides"""
+    
+    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
+    overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam.paf")
+    config = pipConfig.configuration(default, overrides)
+    if overrideFile:
+        config.merge(pipConfig.Config(overrideFile))
+
+    return config
 
 
 if __name__ == "__main__":

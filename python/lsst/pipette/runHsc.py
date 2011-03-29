@@ -3,6 +3,7 @@
 import os
 import sys
 
+import lsst.pex.logging as pexLog
 import lsst.obs.hscSim as obsHsc
 import lsst.obs.suprimecam as obsSc
 import lsst.pipette.config as pipConfig
@@ -35,20 +36,28 @@ def run(rerun,                          # Rerun name
         frame,                          # Frame number
         ccd,                            # CCD number
         config,                         # Configuration
+        log = pexLog.Log.getDefaultLog(), # Log object
     ):
 
     """ """
 
     # Make our own mappers for now
+    roots = config['roots']
+    registry = os.path.join(roots['data'], 'registry.sqlite3')
     camera = config['camera']
     if camera.lower() in ("hsc"):
-        mapper = obsHsc.HscSimMapper(rerun=rerun)
-        ccdProc = pipCcd.ProcessCcd(config=config, Calibrate=HscCalibrate)
+        imapp = obsHsc.HscSimMapper(rerun=rerun, root=roots['data'], calibRoot=roots['calib'])
+        omapp = obsHsc.HscSimMapper(rerun=rerun, root=roots['output'], calibRoot=roots['calib'],
+                                    registry=registry)
+        ccdProc = pipCcd.ProcessCcd(config=config, Calibrate=HscCalibrate, log=log)
     elif camera.lower() in ("suprimecam", "suprime-cam", "sc"):
-        mapper = obsSc.SuprimecamMapper(rerun=rerun)
-        ccdProc = pipCcd.ProcessCcd(config=config)
-    io = pipReadWrite.ReadWrite(mapper, ['visit', 'ccd'], config=config)
-    roots = config['roots']
+        imapp = obsSc.SuprimecamMapper(rerun=rerun, root=roots['data'], calibRoot=roots['calib'])
+        omapp = obsSc.SuprimecamMapper(rerun=rerun, root=roots['output'], calibRoot=roots['calib'],
+                                       registry=registry)
+        ccdProc = pipCcd.ProcessCcd(config=config, log=log)
+        
+    io = pipReadWrite.ReadWrite([imapp, omapp], ['visit', 'ccd'], config=config)
+
     oldUmask = os.umask(2)
     if oldUmask != 2:
         io.log.log(io.log.WARN, "pipette umask started as: %s" % (os.umask(2)))
@@ -149,11 +158,24 @@ def getConfig(argv=None):
 
 def doRun(rerun=None, frameId=None, ccdId=None,
           doMerge=True, doBreak=False,
-          instrument="hsc"):
+          instrument="hsc",
+	  output=None,
+	  data=None,
+	  calib=None,
+          log = pexLog.Log.getDefaultLog() # Log object
+          ):
     argv = []
     argv.extend(["--instrument=%s" % (instrument),
                  "--frame=%s" % (frameId),
                  "--ccd=%s" % (ccdId)])
+
+    if output:
+	argv.append("--output=%s" % (output))
+    if data:
+	argv.append("--data=%s" % (data))
+    if calib:
+	argv.append("--calib=%s" % (calib))
+    
     if rerun:
         argv.append("--rerun=%s" % (rerun))
                 
@@ -162,7 +184,7 @@ def doRun(rerun=None, frameId=None, ccdId=None,
 
     config, opts, args = getConfig(argv=argv)
 
-    state = run(rerun, frameId, ccdId, config)
+    state = run(rerun, frameId, ccdId, config, log=log)
 
     if doMerge:
         doMergeWcs(state, None)

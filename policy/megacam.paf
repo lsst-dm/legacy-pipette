@@ -1,5 +1,10 @@
 #<?cfg paf policy>
 
+camera: megacam
+
+#imports: {
+#}
+
 do: {
     isr: {
         processAmp: {
@@ -31,11 +36,35 @@ detect: {
 
 measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
 
+defects: {
+    grow: 2
+}
+
 cosmicray: {
     nCrPixelMax: 200000
 }
 
+#distortion: {
+#    radial: {
+#}
+#}
+
+filters: {
+    g: G
+    i: I
+    r: R
+    z: Z
+}
+
 astrometry: {
-    defaultFilterName: MAG_R
-    numBrightStars: 100
+    defaultFilterName: i
+    numBrightStars: 200
+    sipOrder: 2
+    calculateSip: true
+    starGalaxyColumnName: "starnotgal"
+    #blindSolve: true
+    #magErrorColumnPattern: "%(filter)s_ERR"
+}
+fringe: {
+    filters: i
 }

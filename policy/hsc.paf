@@ -2,6 +2,9 @@
 
 camera: HSC
 
+#imports: {
+#}
+
 do: {
     isr: {
         processAmp: {

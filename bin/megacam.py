@@ -3,6 +3,7 @@
 import os
 import sys
 
+import lsst.pex.logging as pexLog
 import lsst.obs.cfht as cfht
 import lsst.pipette.config as pipConfig
 import lsst.pipette.processCcd as pipProcCcd
@@ -14,19 +15,20 @@ def run(rerun,                          # Rerun name
         visit,                          # Visit number
         ccd,                            # CCD number
         config,                         # Configuration
+        log = pexLog.Log.getDefaultLog(), # Log object
         ):
     io = pipReadWrite.ReadWrite(cfht.CfhtMapper, ['visit', 'ccd'], fileKeys=['amp'], config=config)
     roots = config['roots']
     basename = os.path.join(roots['output'], '%s-%d-%d' % (rerun, visit, ccd))
-    ccdProc = pipProcCcd.ProcessCcd(config=config)
+    ccdProc = pipProcCcd.ProcessCcd(config=config, log=log)
     dataId = {'visit': visit, 'ccd': ccd}
 
     raws = io.readRaw(dataId)
     detrends = io.detrends(dataId, config)
-    exposure, psf, apcorr, sources, matches, matchMeta = ccdProc.run(raws, detrends)
+    exposure, psf, brightSources, apcorr, sources, matches, matchMeta = ccdProc.run(raws, detrends)
     io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches, matchMeta=matchMeta)
 
-    catPolicy = os.path.join(os.getenv("PIPETTE_RUN_DIR"), "policy", "catalog.paf")
+    catPolicy = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "catalog.paf")
     catalog = pipCatalog.Catalog(catPolicy, allowNonfinite=False)
     if sources is not None:
         catalog.writeSources(basename + '.sources', sources, 'sources')
@@ -34,6 +36,17 @@ def run(rerun,                          # Rerun name
         catalog.writeMatches(basename + '.matches', matches, 'sources')
     return
 
+
+def getConfig(overrideFile=None):
+    """Return a proper config object, maybe given the name of policy file with an additional set of overrides"""
+    
+    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
+    overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "megacam.paf")
+    config = pipConfig.configuration(default, overrides)
+    if overrideFile:
+        config.merge(pipConfig.Config(overrideFile))
+
+    return config
 
 if __name__ == "__main__":
     parser = pipOptions.OptionParser()

@@ -2,11 +2,8 @@
 
 camera: lsstSim
 
-roots: {
-    data: /path/to/data
-    calib: /path/to/calib
-    output: /path/for/output
-}
+#imports: {
+#}
 
 do: {
 

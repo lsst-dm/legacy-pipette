@@ -35,7 +35,7 @@ def run(rerun,                          # Rerun name
         raws = io.read('calexp', dataId)
         detrends = None
 
-    exposure, psf, apcorr, sources, matches, matchMeta = ccdProc.run(raws, detrends)
+    exposure, psf, brightSources, apcorr, sources, matches, matchMeta = ccdProc.run(raws, detrends)
     
     io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches, matchMeta=matchMeta)
 

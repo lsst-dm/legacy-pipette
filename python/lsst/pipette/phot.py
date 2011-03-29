@@ -37,13 +37,14 @@ class Photometry(pipProc.Process):
 
     def imports(self):
         """Import modules (so they can register themselves)"""
-        for modName in self.config['imports']:
-            try:
-                module = self.config['imports'][modName]
-                self.log.log(self.log.INFO, "Importing %s (%s)" % (modName, module))
-                exec("import " + module)
-            except ImportError, err:
-                self.log.log(self.log.WARN, "Failed to import %s (%s): %s" % (modName, module, err))
+        if self.config.has_key('imports'):
+            for modName in self.config['imports']:
+                try:
+                    module = self.config['imports'][modName]
+                    self.log.log(self.log.INFO, "Importing %s (%s)" % (modName, module))
+                    exec("import " + module)
+                except ImportError, err:
+                    self.log.log(self.log.WARN, "Failed to import %s (%s): %s" % (modName, module, err))
 
 
     def detect(self, exposure, psf):

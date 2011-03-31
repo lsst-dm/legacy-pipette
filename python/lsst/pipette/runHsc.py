@@ -39,24 +39,25 @@ def run(rerun,                          # Rerun name
         log = pexLog.Log.getDefaultLog(), # Log object
     ):
 
-    """ """
-
     # Make our own mappers for now
+    mapperArgs = {'rerun': rerun}       # Arguments for mapper instantiation
+
     roots = config['roots']
-    registry = os.path.join(roots['data'], 'registry.sqlite3')
+    for key, value in {'data': 'root',
+                       'calib': 'calibRoot',
+                       'output': 'outRoot'}.iteritems():
+        if roots.has_key(key):
+            mapperArgs[value] = roots[key]
+    
     camera = config['camera']
     if camera.lower() in ("hsc"):
-        imapp = obsHsc.HscSimMapper(rerun=rerun, root=roots['data'], calibRoot=roots['calib'])
-        omapp = obsHsc.HscSimMapper(rerun=rerun, root=roots['output'], calibRoot=roots['calib'],
-                                    registry=registry)
+        mapper = obsHsc.HscSimMapper(**mapperArgs)
         ccdProc = pipCcd.ProcessCcd(config=config, Calibrate=HscCalibrate, log=log)
     elif camera.lower() in ("suprimecam", "suprime-cam", "sc"):
-        imapp = obsSc.SuprimecamMapper(rerun=rerun, root=roots['data'], calibRoot=roots['calib'])
-        omapp = obsSc.SuprimecamMapper(rerun=rerun, root=roots['output'], calibRoot=roots['calib'],
-                                       registry=registry)
+        mapper = obsSc.SuprimecamMapper(**mapperArgs)
         ccdProc = pipCcd.ProcessCcd(config=config, log=log)
         
-    io = pipReadWrite.ReadWrite([imapp, omapp], ['visit', 'ccd'], config=config)
+    io = pipReadWrite.ReadWrite(mapper, ['visit', 'ccd'], config=config)
 
     oldUmask = os.umask(2)
     if oldUmask != 2:

@@ -104,24 +104,32 @@ astrometry: {
 
 
 psf: {
+    selectName: "secondMomentStarSelector"
     select: {
-        sizeCellX: 512
-        sizeCellY: 512
         fluxLim: 200.0
-        clumpNSigma: 1.5
+	clumpNSigma: 1.5
+	borderWidth: 0
+	kernelSize: 21
     }
+    algorithmName: "pcaPsfDeterminer"
     algorithm: {
-        nIterForPsf: 10
-        constantWeight: true
-        lambda: 0.5
-        reducedChi2ForPsfCandidates: 1.2
-        nEigenComponents: 4
-        kernelSize:       21
-        spatialOrder: 2
-        nStarPerCell: 0                 # unlimited
-        nStarPerCellSpatialFit: 10
+        sizeCellX: 512
+	sizeCellY: 512
+	borderWidth: 0
+	nIterForPsf: 10
+	constantWeight: true
+	lambda: 0.5
+	reducedChi2ForPsfCandidates: 1.2
+	nEigenComponents: 4
+	kernelSize:       21
+	spatialOrder: 2
+	nStarPerCell: 0                 # unlimited
+	nStarPerCellSpatialFit: 10
+	tolerance: 1e-2
     }
 }
+
+
 
 measure: {
     source: {

@@ -42,12 +42,13 @@ def run(rerun,                          # Rerun name
     # Make our own mappers for now
     mapperArgs = {'rerun': rerun}       # Arguments for mapper instantiation
 
-    roots = config['roots']
-    for key, value in {'data': 'root',
-                       'calib': 'calibRoot',
-                       'output': 'outRoot'}.iteritems():
-        if roots.has_key(key):
-            mapperArgs[value] = roots[key]
+    if config.has_key('roots'):
+        roots = config['roots']
+        for key, value in {'data': 'root',
+                           'calib': 'calibRoot',
+                           'output': 'outRoot'}.iteritems():
+            if roots.has_key(key):
+                mapperArgs[value] = roots[key]
     
     camera = config['camera']
     if camera.lower() in ("hsc"):

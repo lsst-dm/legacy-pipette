@@ -43,7 +43,7 @@ def initMapper(mapper, config, log, inMap=True):
             log.log(self.log.WARN, "No configuration provided for mapper.")
             mapp = getMapper(mapper)
         else:
-            roots = config['roots']
+            roots = config['roots'] if config.has_key('roots') else {}
             dataRoot = roots['data'] if roots.has_key('data') else None
             calibRoot = roots['calib'] if roots.has_key('calib') else None
             if inMap:

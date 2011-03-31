@@ -48,7 +48,7 @@ measure: {
         apFlux:  "SINC"
         modelFlux: "GAUSSIAN"
         psfFlux: "PSF"
-        shape: "HSM_REGAUSS"
+        shape: "HSM_KSB"
     }
     shape: {
         HSM_BJ: {
@@ -60,9 +60,9 @@ measure: {
         HSM_KSB: {
             enabled: true
         }
-        HSM_REGAUSS: {
-            enabled: true
-        }
+#        HSM_REGAUSS: {
+#            enabled: true
+#        }
         HSM_SHAPELET: {
             enabled: true
         }

@@ -119,7 +119,7 @@ psf: {
 	nIterForPsf: 10
 	constantWeight: true
 	lambda: 0.5
-	reducedChi2ForPsfCandidates: 1.2
+	reducedChi2ForPsfCandidates: 2.0 #1.2
 	nEigenComponents: 4
 	kernelSize:       21
 	spatialOrder: 2

@@ -52,7 +52,7 @@ def getConfig(overrideFile=None):
     
     default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "lsstSim.paf")
-    config = pipConfig.configuration([default, overrides])
+    config = pipConfig.configuration(default, overrides)
     if overrideFile:
         config.merge(pipConfig.Config(overrideFile))
 

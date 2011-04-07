@@ -7,9 +7,10 @@ import lsst.afw.detection as afwDet
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.sdqa as sdqa
-import lsst.meas.algorithms.psfSelectionRhl as maPsfSel
-import lsst.meas.algorithms.psfAlgorithmRhl as maPsfAlg
-import lsst.meas.algorithms.ApertureCorrection as maApCorr
+import lsst.meas.algorithms as measAlg
+#import lsst.meas.algorithms.psfSelectionRhl as maPsfSel
+#import lsst.meas.algorithms.psfAlgorithmRhl as maPsfAlg
+import lsst.meas.algorithms.apertureCorrection as maApCorr
 import lsst.meas.astrom as measAst
 import lsst.meas.astrom.sip as astromSip
 import lsst.meas.astrom.verifyWcs as astromVerify
@@ -144,12 +145,25 @@ class Calibrate(pipProc.Process):
         assert exposure, "No exposure provided"
         assert sources, "No sources provided"
         psfPolicy = self.config['psf']
+        selName   = psfPolicy['selectName']
         selPolicy = psfPolicy['select'].getPolicy()
+        algName   = psfPolicy['algorithmName']
         algPolicy = psfPolicy['algorithm'].getPolicy()
         sdqaRatings = sdqa.SdqaRatingSet()
         self.log.log(self.log.INFO, "Measuring PSF")
-        psfStars, cellSet = maPsfSel.selectPsfSources(exposure, sources, selPolicy)
-        psf, cellSet, psfStars = maPsfAlg.getPsf(exposure, psfStars, cellSet, algPolicy, sdqaRatings)
+
+        starSelector = measAlg.makeStarSelector(selName, selPolicy)
+        psfCandidateList = starSelector.selectStars(exposure, sources)
+
+        psfDeterminer = measAlg.makePsfDeterminer(algName, algPolicy)
+        psf, cellSet = psfDeterminer.determinePsf(exposure, psfCandidateList, sdqaRatings)
+        sdqaRatings = dict(zip([r.getName() for r in sdqaRatings], [r for r in sdqaRatings]))
+        self.log.log(self.log.INFO, "PSF determination using %d/%d stars." % 
+                     (sdqaRatings["phot.psf.numGoodStars"].getValue(),
+                      sdqaRatings["phot.psf.numAvailStars"].getValue()))
+
+        #psfStars, cellSet = maPsfSel.selectPsfSources(exposure, sources, selPolicy)
+        #psf, cellSet, psfStars = maPsfAlg.getPsf(exposure, psfStars, cellSet, algPolicy, sdqaRatings)
         exposure.setPsf(psf)
         return psf, cellSet
 

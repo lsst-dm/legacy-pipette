@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
 import lsst.sdqa as sdqa
-if True:
-    import lsst.meas.algorithms.psfSelectionRhl as maPsfSel
-else:
-    import lsst.meas.algorithms.psfSelectionFromMatchList as maPsfSel
-import lsst.meas.algorithms.psfAlgorithmRhl as maPsfAlg
+import lsst.meas.algorithms as measAlg
+#if True:
+#    import lsst.meas.algorithms.psfSelectionRhl as maPsfSel
+#else:
+#    import lsst.meas.algorithms.psfSelectionFromMatchList as maPsfSel
+#import lsst.meas.algorithms.psfAlgorithmRhl as maPsfAlg
 
 from lsst.pipette.calibrate import Calibrate
 
@@ -89,7 +90,10 @@ class HscCalibrate(Calibrate):
         assert exposure, "No exposure provided"
         assert sources, "No sources provided"
         psfPolicy = self.config['psf']
+
+        selName   = psfPolicy['selectName']
         selPolicy = psfPolicy['select'].getPolicy()
+        algName   = psfPolicy['algorithmName']
         algPolicy = psfPolicy['algorithm'].getPolicy()
         sdqaRatings = sdqa.SdqaRatingSet()
         self.log.log(self.log.INFO, "Measuring PSF")
@@ -116,16 +120,26 @@ class HscCalibrate(Calibrate):
                               mySource.getYAstrom(), source.getYAstrom() - mySource.getYAstrom()
 
 
-        try:                            # probe the required arguments
-            needMatchList = maPsfSel.args[1] == "MatchList"
-        except AttributeError:
-            needMatchList = False
 
-        if needMatchList:
-            psfStars, cellSet = maPsfSel.selectPsfSources(exposure, matches, selPolicy)
-        else:
-            psfStars, cellSet = maPsfSel.selectPsfSources(exposure, sources, selPolicy)
+        starSelector = measAlg.makeStarSelector(selName, selPolicy)
+        psfCandidateList = starSelector.selectStars(exposure, sources)
 
-        psf, cellSet, psfStars = maPsfAlg.getPsf(exposure, psfStars, cellSet, algPolicy, sdqaRatings)
+        psfDeterminer = measAlg.makePsfDeterminer(algName, algPolicy)
+        psf, cellSet = psfDeterminer.determinePsf(exposure, psfCandidateList, sdqaRatings)
+
+                        
+        #try:                            # probe the required arguments
+        #    needMatchList = maPsfSel.args[1] == "MatchList"
+        #except AttributeError:
+        #    needMatchList = False
+
+        #if needMatchList:
+        #    print "hscCal: yikes"
+        #    psfStars, cellSet = maPsfSel.selectPsfSources(exposure, matches, selPolicy)
+        #else:
+        #    print "hscCal: ok"
+        #    psfStars, cellSet = maPsfSel.selectPsfSources(exposure, sources, selPolicy)
+
+        #psf, cellSet, psfStars = maPsfAlg.getPsf(exposure, psfStars, cellSet, algPolicy, sdqaRatings)
         exposure.setPsf(psf)
         return psf, cellSet

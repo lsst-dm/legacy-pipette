@@ -276,6 +276,9 @@ class Calibrate(pipProc.Process):
             yMin = int(yMin)
             size = (int(xMax - xMin + 0.5),
                     int(yMax - yMin + 0.5))
+            for s in distSources:
+                s.setXAstrom(s.getXAstrom() - xMin)
+                s.setYAstrom(s.getYAstrom() - yMin)
         else:
             distSources = sources
             size = (exposure.getWidth(), exposure.getHeight())
@@ -304,10 +307,17 @@ class Calibrate(pipProc.Process):
         # Undo distortion in matches
         if distortion is not None:
             self.log.log(self.log.INFO, "Removing distortion correction.")
-            first = map(lambda match: match.first, matches)
-            second = map(lambda match: match.second, matches)
-            distortion.idealToActual(first, copy=False)
-            distortion.idealToActual(second, copy=False)
+            # Undistort directly, assuming:
+            # * astrometry matching propagates the source identifier (to get original x,y)
+            # * distortion is linear on very very small scales (to get x,y of catalogue)
+            for m in matches:
+                dx = m.first.getXAstrom() - m.second.getXAstrom()
+                dy = m.first.getYAstrom() - m.second.getYAstrom()
+                orig = sources[m.second.getId()]
+                m.second.setXAstrom(orig.getXAstrom())
+                m.second.setYAstrom(orig.getYAstrom())
+                m.first.setXAstrom(m.second.getXAstrom() + dx)
+                m.first.setYAstrom(m.second.getYAstrom() + dy)
 
         self.display('astrometry', exposure=exposure, sources=sources, matches=matches)
 
@@ -320,8 +330,7 @@ class Calibrate(pipProc.Process):
             
             # Apply WCS to sources
             for index, source in enumerate(sources):
-                distSource = distSources[index]
-                sky = wcs.pixelToSky(distSource.getXAstrom(), distSource.getYAstrom())
+                sky = wcs.pixelToSky(source.getXAstrom(), source.getYAstrom())
                 source.setRa(sky[0])
                 source.setDec(sky[1])
         else:

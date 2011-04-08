@@ -167,8 +167,8 @@ class ReadWrite(object):
         @param ignore Ignore non-existent data?
         @returns Matches
         """
-        sources = self.read('matchedsources', dataId, ignore=ignore)
-        matches = self.read('matches', dataId, ignore=ignore)
+        sources = self.read('icSrc', dataId, ignore=ignore)
+        matches = self.read('icMatch', dataId, ignore=ignore)
         headers = self.read('calexp_md', dataId, ignore=ignore)
 
         output = []
@@ -332,12 +332,12 @@ class ReadWrite(object):
                 smv = afwDet.SourceMatchVector()
                 for match in matches:
                     smv.push_back(match)
-                self.outButler.put(afwDet.PersistableSourceMatchVector(smv, matchMeta), 'matches', dataId)
+                self.outButler.put(afwDet.PersistableSourceMatchVector(smv, matchMeta), 'icMatch', dataId)
 
                 matchSources = afwDet.SourceSet()
                 for match in matches:
                     matchSources.push_back(match.second)
-                self.outButler.put(afwDet.PersistableSourceVector(matchSources), 'matchedsources', dataId)
+                self.outButler.put(afwDet.PersistableSourceVector(matchSources), 'icSrc', dataId)
                 
             except Exception, e:
                 self.log.log(self.log.WARN, "Unable to write matches: %s" % e)

@@ -280,7 +280,7 @@ class ReadWrite(object):
                 for ident in identifiers:
                     ident.update(dataId)
                     if not self.inButler.datasetExists(kind, ident):
-                        raise RuntimeError("Data type %s does not exist for %s" % (which, ident))
+                        raise RuntimeError("Data type %s does not exist for %s" % (kind, ident))
                     self.log.log(self.log.DEBUG, "Reading %s for %s" % (kind, ident))
                     detrend = self.inButler.get(kind, ident)
                     detList.append(detrend)

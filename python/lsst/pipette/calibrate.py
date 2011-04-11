@@ -8,8 +8,6 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.sdqa as sdqa
 import lsst.meas.algorithms as measAlg
-#import lsst.meas.algorithms.psfSelectionRhl as maPsfSel
-#import lsst.meas.algorithms.psfAlgorithmRhl as maPsfAlg
 import lsst.meas.algorithms.apertureCorrection as maApCorr
 import lsst.meas.astrom as measAst
 import lsst.meas.astrom.sip as astromSip
@@ -262,7 +260,7 @@ class Calibrate(pipProc.Process):
             distSources = distortion.actualToIdeal(sources)
             
             # Get distorted image size so that astrometry_net does not clip.
-            xMin, xMax, yMin, yMax = 0, exposure.getWidth(), 0, exposure.getHeight()
+            xMin, xMax, yMin, yMax = float("INF"), float("-INF"), float("INF"), float("-INF")
             for x, y in ((0.0, 0.0), (0.0, exposure.getHeight()), (exposure.getWidth(), 0.0),
                          (exposure.getWidth(), exposure.getHeight())):
                 point = afwGeom.makePointD(x, y)
@@ -282,23 +280,25 @@ class Calibrate(pipProc.Process):
         else:
             distSources = sources
             size = (exposure.getWidth(), exposure.getHeight())
+            xMin, yMin = 0, 0
 
         log = pexLog.Log(self.log, "astrometry")
         astrom = measAst.determineWcs(self.config['astrometry'].getPolicy(), exposure, distSources,
                                       log=log, forceImageSize=size, filterName=filterName)
         if astrom is None:
-            raise RuntimeError("Unable to solve astrometry")
+            raise RuntimeError("Unable to solve astrometry for %s", exposure.getDetector().getId())
         wcs = astrom.getWcs()
         matches = astrom.getMatches()
         matchMeta = astrom.getMatchMetadata()
         if matches is None or len(matches) == 0:
-            raise RuntimeError("No astrometric matches")
-        self.log.log(self.log.INFO, "%d astrometric matches" % len(matches))
+            raise RuntimeError("No astrometric matches for %s", exposure.getDetector().getId())
+        self.log.log(self.log.INFO, "%d astrometric matches for %s" % \
+                     (len(matches), exposure.getDetector().getId()))
 
         # Apply WCS to sources
         for index, source in enumerate(sources):
             distSource = distSources[index]
-            sky = wcs.pixelToSky(distSource.getXAstrom(), distSource.getYAstrom())
+            sky = wcs.pixelToSky(distSource.getXAstrom() - xMin, distSource.getYAstrom() - yMin)
             source.setRa(sky[0])
             source.setDec(sky[1])
 

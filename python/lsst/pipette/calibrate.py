@@ -70,7 +70,11 @@ class Calibrate(pipProc.Process):
             self.background(exposure, footprints=footprints, background=background)
 
         if do['psf'] and (do['astrometry'] or do['zeropoint']):
-            sources = self.rephot(exposure, footprints, psf, apcorr=apcorr)
+            newSources = self.rephot(exposure, footprints, psf, apcorr=apcorr)
+            for old, new in zip(sources, newSources):
+                if old.getFlagForDetection() & measAlg.Flags.STAR:
+                    newFlag = new.getFlagForDetection() | measAlg.Flags.STAR
+                    new.setFlagForDetection(newFlag)
 
         if do['distortion']:
             dist = self.distortion(exposure)

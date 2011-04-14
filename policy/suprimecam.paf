@@ -32,12 +32,73 @@ do: {
     phot: true
 }
 
+imports: {
+    HSM: lsst.meas.extensions.shapeHSM
+    KRON: lsst.meas.extensions.photometryKron
+}
+
 detect: {
     thresholdValue: 5.0
     thresholdType: stdev
 }
 
-measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
+measure: {
+    source: {
+        astrom:  "SDSS"
+        apFlux:  "SINC"
+        modelFlux: "GAUSSIAN"
+        psfFlux: "PSF"
+#        shape: "HSM_KSB"
+    }
+    shape: {
+#        HSM_BJ: {
+#            enabled: true
+#        }
+#        HSM_LINEAR: {
+#            enabled: true
+#        }
+#        HSM_KSB: {
+#            enabled: true
+#        }
+#        HSM_REGAUSS: {
+#            enabled: true
+#        }
+#        HSM_SHAPELET: {
+#            enabled: true
+#        }
+    }
+    astrometry: {
+        GAUSSIAN: {
+            enabled: true
+        }
+        
+        NAIVE: {
+            enabled: true
+        }
+        
+        SDSS: {
+            enabled: true
+        }
+    }
+    photometry: {
+        GAUSSIAN: {
+            background: 0.0
+            shiftmax: 10
+        }
+        NAIVE: {
+            radius: 9.0
+        }
+        PSF: {
+            enabled: true
+        }
+        SINC: {
+            radius: 9.0
+        }
+#        KRON: {
+#            enabled: true
+#        }
+    }
+}
 
 defects: {
     grow: 2
@@ -55,17 +116,32 @@ distortion: {
     }
 }
 
+instrumentExtras: {
+    solveTansip: {
+        CRPIXMODE: MANUAL #AUTO for AUTO MODE, MANUAL for MANUAL MODE
+        CCDPMODE: 1       #1=DETERMINING CCD POSITION
+        NCCD: 10         #NUMBER of CCD for analysis
+        LSIPORDER: 3
+        SIPORDER: 5
+        PSIPORDER: 7
+        CLIPSIGMA: 3.0
+        CRPIX1: 0.0                #CRPIX VALUE OF AXIS 1(MANUAL MODE)
+        CRPIX2: 0.0                #CRPIX VALUE OF AXIS 2(MANUAL MODE)
+        CHECKFILE: 1               #1=out put fitting check file
+    }
+}
+
 filters: {
     # Translation table for astrometry.net matching, and therefore photometric calibration
-    B: G
-    r: R
-    i: I
-    z: Z
-    y: Z
+    B: g
+    r: r
+    i: i
+    z: z
+    y: z
 }
 
 astrometry: {
-    defaultFilterName: R
+    defaultFilterName: MAG_R
     numBrightStars: 200
     sipOrder: 2
     starGalaxyColumnName: "STARNOTGAL"
@@ -76,3 +152,30 @@ fringe: {
     filters: y
     filters: W-S-ZR
 }
+
+
+# psf: {
+#     selectName: "secondMomentStarSelector"
+#     select: {
+#         fluxLim: 200.0
+# 	clumpNSigma: 1.5
+# 	borderWidth: 0
+# 	kernelSize: 21
+#     }
+#     algorithmName: "pcaPsfDeterminer"
+#     algorithm: {
+#         sizeCellX: 512
+# 	sizeCellY: 512
+# 	borderWidth: 0
+# 	nIterForPsf: 10
+# 	constantWeight: true
+# 	lambda: 0.5
+# 	reducedChi2ForPsfCandidates: 2.0
+# 	nEigenComponents: 4
+# 	kernelSize:       21
+# 	spatialOrder: 2
+# 	nStarPerCell: 0                 # unlimited
+# 	nStarPerCellSpatialFit: 10
+# 	tolerance: 1e-2
+#     }
+# }

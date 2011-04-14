@@ -55,6 +55,11 @@ definitions: {
         maxOccurs: 1
         dictionary: @@meas_utils:policy:BackgroundDictionary.paf
     }
+    imports: {
+        type: Policy
+        description: "Modules to load"
+	minOccurs: 0
+    }
     detect: {
         type: Policy
         description: "Source detection policy"
@@ -77,19 +82,33 @@ definitions: {
         dictionary: {
             target: Config
             definitions: {
+                selectName: {
+                    type: string
+                    description: "Name of PSF star selection routine"
+                    minOccurs: 1
+                    maxOccurs: 1
+		    default: "secondMomentStarSelector"
+                }
                 select: {
                     type: Policy
                     description: "PSF star selection policy"
-                    minOccurs: 0
+                    minOccurs: 1
                     maxOccurs: 1
-                    dictionary: @@meas_algorithms:policy:PsfSelectionRhlDictionary.paf
+                    dictionary: @@meas_algorithms:policy:secondMomentStarSelectorDictionary.paf
+                }
+		algorithmName: {
+                    type: string
+                    description: "Name of PSF measurement routine"
+                    minOccurs: 1
+                    maxOccurs: 1
+		    default: "pcaPsfDeterminer"
                 }
                 algorithm: {
                     type: Policy
                     description: "PSF measurement policy"
-                    minOccurs: 0
+                    minOccurs: 1
                     maxOccurs: 1
-                    dictionary: @@meas_algorithms:policy:PsfAlgorithmRhlDictionary.paf
+                    dictionary: @@meas_algorithms:policy:pcaPsfDeterminerDictionary.paf
                 }
             }
         }

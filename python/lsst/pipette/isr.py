@@ -168,8 +168,8 @@ class Isr(pipProc.Process):
             #ipIsr.overscanCorrection(exposure, biassec, "MEDIAN")
 
             datasec = amp.getDiskDataSec()
-            overscan = MaskedImage(mi, biassec)
-            image = MaskedImage(mi, datasec)
+            overscan = MaskedImage(mi, biassec, afwImage.LOCAL)
+            image = MaskedImage(mi, datasec, afwImage.LOCAL)
             offset = afwMath.makeStatistics(overscan, afwMath.MEDIAN).getValue(afwMath.MEDIAN)
             self.log.log(self.log.INFO, "Overscan correction on amp %s, %s: %f" %
                          (amp.getId(), biassec, offset))
@@ -215,7 +215,7 @@ class Isr(pipProc.Process):
             ccd = pipUtil.getCcd(exposure)
             MaskedImage = type(mi)
             for amp in ccd:
-                miAmp = MaskedImage(mi, amp.getDataSec(True))
+                miAmp = MaskedImage(mi, amp.getDataSec(True), afwImage.LOCAL)
                 self._varianceAmp(miAmp, amp)
         else:
             amp = cameraGeom.cast_Amp(exposure.getDetector())

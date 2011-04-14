@@ -43,7 +43,7 @@ def initMapper(mapper, config, log, inMap=True):
             log.log(self.log.WARN, "No configuration provided for mapper.")
             mapp = getMapper(mapper)
         else:
-            roots = config['roots']
+            roots = config['roots'] if config.has_key('roots') else {}
             dataRoot = roots['data'] if roots.has_key('data') else None
             calibRoot = roots['calib'] if roots.has_key('calib') else None
             if inMap:
@@ -167,8 +167,8 @@ class ReadWrite(object):
         @param ignore Ignore non-existent data?
         @returns Matches
         """
-        sources = self.read('matchedsources', dataId, ignore=ignore)
-        matches = self.read('matches', dataId, ignore=ignore)
+        sources = self.read('icSrc', dataId, ignore=ignore)
+        matches = self.read('icMatch', dataId, ignore=ignore)
         headers = self.read('calexp_md', dataId, ignore=ignore)
 
         output = []
@@ -280,7 +280,7 @@ class ReadWrite(object):
                 for ident in identifiers:
                     ident.update(dataId)
                     if not self.inButler.datasetExists(kind, ident):
-                        raise RuntimeError("Data type %s does not exist for %s" % (which, ident))
+                        raise RuntimeError("Data type %s does not exist for %s" % (kind, ident))
                     self.log.log(self.log.DEBUG, "Reading %s for %s" % (kind, ident))
                     detrend = self.inButler.get(kind, ident)
                     detList.append(detrend)
@@ -332,12 +332,12 @@ class ReadWrite(object):
                 smv = afwDet.SourceMatchVector()
                 for match in matches:
                     smv.push_back(match)
-                self.outButler.put(afwDet.PersistableSourceMatchVector(smv, matchMeta), 'matches', dataId)
+                self.outButler.put(afwDet.PersistableSourceMatchVector(smv, matchMeta), 'icMatch', dataId)
 
                 matchSources = afwDet.SourceSet()
                 for match in matches:
                     matchSources.push_back(match.second)
-                self.outButler.put(afwDet.PersistableSourceVector(matchSources), 'matchedsources', dataId)
+                self.outButler.put(afwDet.PersistableSourceVector(matchSources), 'icSrc', dataId)
                 
             except Exception, e:
                 self.log.log(self.log.WARN, "Unable to write matches: %s" % e)

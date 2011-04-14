@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
+import numpy
+import lsst.afw.image as afwImage
+import lsst.afw.math as afwMath
+import lsst.meas.algorithms as measAlg
+import lsst.afw.display.ds9 as ds9
 import lsst.sdqa as sdqa
-if False:
-    import lsst.meas.algorithms.psfSelectionRhl as maPsfSel
-else:
-    import lsst.meas.algorithms.psfSelectionFromMatchList as maPsfSel
-import lsst.meas.algorithms.psfAlgorithmRhl as maPsfAlg
+import lsst.meas.algorithms as measAlg
 
 from lsst.pipette.calibrate import Calibrate
 
@@ -89,8 +90,9 @@ class HscCalibrate(Calibrate):
         assert exposure, "No exposure provided"
         assert sources, "No sources provided"
         psfPolicy = self.config['psf']
-        selPolicy = psfPolicy['select'].getPolicy()
-        algPolicy = psfPolicy['algorithm'].getPolicy()
+
+        algName   = psfPolicy['algorithmName']
+        algPolicy = psfPolicy['algorithm']
         sdqaRatings = sdqa.SdqaRatingSet()
         self.log.log(self.log.INFO, "Measuring PSF")
 
@@ -114,18 +116,67 @@ class HscCalibrate(Calibrate):
                     if False:
                         print mySource.getXAstrom(), source.getXAstrom() - mySource.getXAstrom(), \
                               mySource.getYAstrom(), source.getYAstrom() - mySource.getYAstrom()
+            
 
+        psfCandidateList = self.select(exposure, matches, algPolicy)
 
-        try:                            # probe the required arguments
-            needMatchList = maPsfSel.args[1] == "MatchList"
-        except AttributeError:
-            needMatchList = False
-
-        if needMatchList:
-            psfStars, cellSet = maPsfSel.selectPsfSources(exposure, matches, selPolicy)
-        else:
-            psfStars, cellSet = maPsfSel.selectPsfSources(exposure, sources, selPolicy)
-
-        psf, cellSet, psfStars = maPsfAlg.getPsf(exposure, psfStars, cellSet, algPolicy, sdqaRatings)
+        psfDeterminer = measAlg.makePsfDeterminer(algName, algPolicy.getPolicy())
+        psf, cellSet = psfDeterminer.determinePsf(exposure, psfCandidateList, sdqaRatings)
         exposure.setPsf(psf)
         return psf, cellSet
+
+
+    def select(self, exposure, matches, psfPolicy):
+        """Get a list of suitable stars to construct a PSF."""
+
+        import lsstDebug
+        display = lsstDebug.Info(__name__).display
+        displayExposure = lsstDebug.Info(__name__).displayExposure     # display the Exposure + spatialCells
+        #
+        # Unpack policy
+        #
+        kernelSize   = psfPolicy["kernelSize"]
+        borderWidth  = psfPolicy["borderWidth"]
+        #
+        mi = exposure.getMaskedImage()
+
+        if display and displayExposure:
+            frame = 0
+            ds9.mtv(mi, frame=frame, title="PSF candidates")
+
+        psfCandidates = []
+
+        for val in matches:
+            ref, source = val[0:2]
+            if not (ref.getFlagForDetection() & measAlg.Flags.STAR) or \
+                   (source.getFlagForDetection() & measAlg.Flags.BAD):
+                continue
+
+            try:
+                cand = measAlg.makePsfCandidate(source, mi)
+                #
+                # The setXXX methods are class static, but it's convenient to call them on
+                # an instance as we don't know Exposure's pixel type (and hence cand's exact type)
+                if cand.getWidth() == 0:
+                    cand.setBorderWidth(borderWidth)
+                    cand.setWidth(kernelSize + 2*borderWidth)
+                    cand.setHeight(kernelSize + 2*borderWidth)
+
+                im = cand.getImage().getImage()
+                max = afwMath.makeStatistics(im, afwMath.MAX).getValue()
+                if not numpy.isfinite(max):
+                    continue
+
+                if display and displayExposure:
+                    ds9.dot("+", source.getXAstrom() - mi.getX0(), source.getYAstrom() - mi.getY0(),
+                            size=4, frame=frame, ctype=ds9.CYAN)
+                    ds9.dot("o", source.getXAstrom() - mi.getX0(), source.getYAstrom() - mi.getY0(),
+                            size=4, frame=frame, ctype=ds9.CYAN)
+            except Exception, e:
+                continue
+
+            source.setFlagForDetection(source.getFlagForDetection() | measAlg.Flags.STAR)
+            psfCandidates.append(cand)
+
+        self.log.log(self.log.INFO, "Selected %d stars for PSF" % len(psfCandidates))
+        return psfCandidates

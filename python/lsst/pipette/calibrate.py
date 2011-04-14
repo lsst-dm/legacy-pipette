@@ -7,9 +7,8 @@ import lsst.afw.detection as afwDet
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.sdqa as sdqa
-import lsst.meas.algorithms.psfSelectionRhl as maPsfSel
-import lsst.meas.algorithms.psfAlgorithmRhl as maPsfAlg
-import lsst.meas.algorithms.ApertureCorrection as maApCorr
+import lsst.meas.algorithms as measAlg
+import lsst.meas.algorithms.apertureCorrection as maApCorr
 import lsst.meas.astrom as measAst
 import lsst.meas.astrom.sip as astromSip
 import lsst.meas.astrom.verifyWcs as astromVerify
@@ -71,7 +70,11 @@ class Calibrate(pipProc.Process):
             self.background(exposure, footprints=footprints, background=background)
 
         if do['psf'] and (do['astrometry'] or do['zeropoint']):
-            sources = self.rephot(exposure, footprints, psf, apcorr=apcorr)
+            newSources = self.rephot(exposure, footprints, psf, apcorr=apcorr)
+            for old, new in zip(sources, newSources):
+                if old.getFlagForDetection() & measAlg.Flags.STAR:
+                    newFlag = new.getFlagForDetection() | measAlg.Flags.STAR
+                    new.setFlagForDetection(newFlag)
 
         if do['distortion']:
             dist = self.distortion(exposure)
@@ -144,12 +147,25 @@ class Calibrate(pipProc.Process):
         assert exposure, "No exposure provided"
         assert sources, "No sources provided"
         psfPolicy = self.config['psf']
+        selName   = psfPolicy['selectName']
         selPolicy = psfPolicy['select'].getPolicy()
+        algName   = psfPolicy['algorithmName']
         algPolicy = psfPolicy['algorithm'].getPolicy()
         sdqaRatings = sdqa.SdqaRatingSet()
         self.log.log(self.log.INFO, "Measuring PSF")
-        psfStars, cellSet = maPsfSel.selectPsfSources(exposure, sources, selPolicy)
-        psf, cellSet, psfStars = maPsfAlg.getPsf(exposure, psfStars, cellSet, algPolicy, sdqaRatings)
+
+        starSelector = measAlg.makeStarSelector(selName, selPolicy)
+        psfCandidateList = starSelector.selectStars(exposure, sources)
+
+        psfDeterminer = measAlg.makePsfDeterminer(algName, algPolicy)
+        psf, cellSet = psfDeterminer.determinePsf(exposure, psfCandidateList, sdqaRatings)
+        sdqaRatings = dict(zip([r.getName() for r in sdqaRatings], [r for r in sdqaRatings]))
+        self.log.log(self.log.INFO, "PSF determination using %d/%d stars." % 
+                     (sdqaRatings["phot.psf.numGoodStars"].getValue(),
+                      sdqaRatings["phot.psf.numAvailStars"].getValue()))
+
+        #psfStars, cellSet = maPsfSel.selectPsfSources(exposure, sources, selPolicy)
+        #psf, cellSet, psfStars = maPsfAlg.getPsf(exposure, psfStars, cellSet, algPolicy, sdqaRatings)
         exposure.setPsf(psf)
         return psf, cellSet
 
@@ -248,10 +264,10 @@ class Calibrate(pipProc.Process):
             distSources = distortion.actualToIdeal(sources)
             
             # Get distorted image size so that astrometry_net does not clip.
-            xMin, xMax, yMin, yMax = 0, exposure.getWidth(), 0, exposure.getHeight()
+            xMin, xMax, yMin, yMax = float("INF"), float("-INF"), float("INF"), float("-INF")
             for x, y in ((0.0, 0.0), (0.0, exposure.getHeight()), (exposure.getWidth(), 0.0),
                          (exposure.getWidth(), exposure.getHeight())):
-                point = afwGeom.makePointD(x, y)
+                point = afwGeom.Point2D(x, y)
                 point = distortion.actualToIdeal(point)
                 x, y = point.getX(), point.getY()
                 if x < xMin: xMin = x
@@ -262,26 +278,31 @@ class Calibrate(pipProc.Process):
             yMin = int(yMin)
             size = (int(xMax - xMin + 0.5),
                     int(yMax - yMin + 0.5))
+            for s in distSources:
+                s.setXAstrom(s.getXAstrom() - xMin)
+                s.setYAstrom(s.getYAstrom() - yMin)
         else:
             distSources = sources
             size = (exposure.getWidth(), exposure.getHeight())
+            xMin, yMin = 0, 0
 
         log = pexLog.Log(self.log, "astrometry")
         astrom = measAst.determineWcs(self.config['astrometry'].getPolicy(), exposure, distSources,
                                       log=log, forceImageSize=size, filterName=filterName)
         if astrom is None:
-            raise RuntimeError("Unable to solve astrometry")
+            raise RuntimeError("Unable to solve astrometry for %s", exposure.getDetector().getId())
         wcs = astrom.getWcs()
         matches = astrom.getMatches()
         matchMeta = astrom.getMatchMetadata()
         if matches is None or len(matches) == 0:
-            raise RuntimeError("No astrometric matches")
-        self.log.log(self.log.INFO, "%d astrometric matches" % len(matches))
+            raise RuntimeError("No astrometric matches for %s", exposure.getDetector().getId())
+        self.log.log(self.log.INFO, "%d astrometric matches for %s" % \
+                     (len(matches), exposure.getDetector().getId()))
 
         # Apply WCS to sources
         for index, source in enumerate(sources):
             distSource = distSources[index]
-            sky = wcs.pixelToSky(distSource.getXAstrom(), distSource.getYAstrom())
+            sky = wcs.pixelToSky(distSource.getXAstrom() - xMin, distSource.getYAstrom() - yMin)
             source.setRa(sky[0])
             source.setDec(sky[1])
 
@@ -290,10 +311,17 @@ class Calibrate(pipProc.Process):
         # Undo distortion in matches
         if distortion is not None:
             self.log.log(self.log.INFO, "Removing distortion correction.")
-            first = map(lambda match: match.first, matches)
-            second = map(lambda match: match.second, matches)
-            distortion.idealToActual(first, copy=False)
-            distortion.idealToActual(second, copy=False)
+            # Undistort directly, assuming:
+            # * astrometry matching propagates the source identifier (to get original x,y)
+            # * distortion is linear on very very small scales (to get x,y of catalogue)
+            for m in matches:
+                dx = m.first.getXAstrom() - m.second.getXAstrom()
+                dy = m.first.getYAstrom() - m.second.getYAstrom()
+                orig = sources[m.second.getId()]
+                m.second.setXAstrom(orig.getXAstrom())
+                m.second.setYAstrom(orig.getYAstrom())
+                m.first.setXAstrom(m.second.getXAstrom() + dx)
+                m.first.setYAstrom(m.second.getYAstrom() + dy)
 
         self.display('astrometry', exposure=exposure, sources=sources, matches=matches)
 
@@ -306,8 +334,7 @@ class Calibrate(pipProc.Process):
             
             # Apply WCS to sources
             for index, source in enumerate(sources):
-                distSource = distSources[index]
-                sky = wcs.pixelToSky(distSource.getXAstrom(), distSource.getYAstrom())
+                sky = wcs.pixelToSky(source.getXAstrom(), source.getYAstrom())
                 source.setRa(sky[0])
                 source.setDec(sky[1])
         else:

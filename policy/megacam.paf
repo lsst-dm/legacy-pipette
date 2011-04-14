@@ -1,5 +1,10 @@
 #<?cfg paf policy>
 
+camera: megacam
+
+#imports: {
+#}
+
 do: {
     isr: {
         processAmp: {
@@ -31,11 +36,61 @@ detect: {
 
 measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
 
+defects: {
+    grow: 2
+}
+
 cosmicray: {
     nCrPixelMax: 200000
 }
 
-astrometry: {
-    defaultFilterName: MAG_R
-    numBrightStars: 100
+#distortion: {
+#    radial: {
+#}
+#}
+
+filters: {
+    g: G
+    i: I
+    r: R
+    z: Z
 }
+
+astrometry: {
+    defaultFilterName: i
+    numBrightStars: 200
+    sipOrder: 2
+    calculateSip: true
+    starGalaxyColumnName: "starnotgal"
+    #blindSolve: true
+    #magErrorColumnPattern: "%(filter)s_ERR"
+}
+fringe: {
+    filters: i
+}
+
+# psf: {
+#     selectName: "secondMomentStarSelector"
+#     select: {
+#         fluxLim: 200.0
+# 	clumpNSigma: 1.5
+# 	borderWidth: 0
+# 	kernelSize: 21
+#     }
+#     algorithmName: "pcaPsfDeterminer"
+#     algorithm: {
+#         sizeCellX: 512
+# 	sizeCellY: 512
+# 	borderWidth: 0
+# 	nIterForPsf: 10
+# 	constantWeight: true
+# 	lambda: 0.5
+# 	reducedChi2ForPsfCandidates: 2.0
+# 	nEigenComponents: 4
+# 	kernelSize:       21
+# 	spatialOrder: 2
+# 	nStarPerCell: 0                 # unlimited
+# 	nStarPerCellSpatialFit: 10
+# 	tolerance: 1e-2
+#     }
+# }

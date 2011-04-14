@@ -35,7 +35,7 @@ def run(rerun,                          # Rerun name
         raws = io.read('calexp', dataId)
         detrends = None
 
-    exposure, psf, apcorr, sources, matches, matchMeta = ccdProc.run(raws, detrends)
+    exposure, psf, brightSources, apcorr, sources, matches, matchMeta = ccdProc.run(raws, detrends)
     
     io.write(dataId, exposure=exposure, psf=psf, sources=sources, matches=matches, matchMeta=matchMeta)
 
@@ -67,12 +67,29 @@ if __name__ == "__main__":
     parser.add_option("-r", "--raft", dest="raft", help="Raft to run")
     parser.add_option("-s", "--sensor", dest="sensor", help="Sensor to run")
 
-    default = os.path.join(os.getenv("PIPETTE_ENGINE_DIR"), "policy", "ProcessCcdDictionary.paf")
-    overrides = os.path.join(os.getenv("PIPETTE_RUN_DIR"), "policy", "lsstSim.paf")
-    config, opts, args = parser.parse_args(default, overrides)
-    if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or opts.visit is None or \
-           opts.snap is None or opts.raft is None or opts.sensor is None:
-        parser.print_help()
+    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
+    overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "lsstSim.paf")
+    config, opts, args = parser.parse_args([default, overrides])
+    if len(args) > 0:
+        print >> sys.stderr, 'Unrecognized arguments: "%s"' % '", '.join(args)
+        sys.exit(1)
+    if len(sys.argv) == 1:
+        print >> sys.stderr, 'Unprocessed arguments: "%s"' % '", '.join(sys.args)
+        sys.exit(1)
+    if not opts.rerun:
+        print >> sys.stderr, "Please specify a rerun"
+        sys.exit(1)
+    if not opts.visit:
+        print >> sys.stderr, "Please specify a visit"
+        sys.exit(1)
+    if not opts.snap:
+        print >> sys.stderr, "Please specify a snap"
+        sys.exit(1)
+    if not opts.raft:
+        print >> sys.stderr, "Please specify a raft"
+        sys.exit(1)
+    if not opts.sensor:
+        print >> sys.stderr, "Please specify a sensor"
         sys.exit(1)
 
     run(opts.rerun, int(opts.visit), int(opts.snap), opts.raft, opts.sensor, config)

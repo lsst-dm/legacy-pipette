@@ -26,11 +26,25 @@ class Photometry(pipProc.Process):
         """
         assert exposure, "No exposure provided"
         assert psf, "No psf provided"
+
+        self.imports()
+        
         footprintSet = self.detect(exposure, psf)
         sources = self.measure(exposure, footprintSet, psf, apcorr=apcorr, wcs=wcs)
 
         self.display('phot', exposure=exposure, sources=sources, pause=True)
         return sources, footprintSet
+
+    def imports(self):
+        """Import modules (so they can register themselves)"""
+        if self.config.has_key('imports'):
+            for modName in self.config['imports']:
+                try:
+                    module = self.config['imports'][modName]
+                    self.log.log(self.log.INFO, "Importing %s (%s)" % (modName, module))
+                    exec("import " + module)
+                except ImportError, err:
+                    self.log.log(self.log.WARN, "Failed to import %s (%s): %s" % (modName, module, err))
 
 
     def detect(self, exposure, psf):

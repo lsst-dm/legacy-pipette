@@ -8,7 +8,6 @@ definitions: {
         description: "Root directory for output data"
         minOccurs: 0
         maxOccurs: 1
-        default: "."
     }
     data: {
         type: string

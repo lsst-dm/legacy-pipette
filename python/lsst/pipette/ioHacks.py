@@ -299,6 +299,16 @@ schema2NumpyTypes = {
     afwDet.Schema.DOUBLE: 'f8'
     }
 
+def getValue(measurement,               # Meaurement from which to get value
+             entry,                     # Entry in schema for meaurement of interest
+             ):
+    if entry.getType() in (afwDet.Schema.CHAR, afwDet.Schema.SHORT, afwDet.Schema.INT, afwDet.Schema.LONG):
+        value = measurement.getAsLong(entry)
+    else:
+        value = measurement.get(entry)
+    return value
+
+
 def getFitsColumns(sourceSet, outputs):
     """ Return pyfits columns defined by the outputs structure.
 
@@ -382,11 +392,12 @@ def schema2pyfits(objs, schemaNamePrefix, getterName):
             for s in val.getSchema():
                 # I'm guessing about arrays in schemas. -- CPL
                 if s.isArray():
-                    v = val.get(s.getName())
+                    v = getValue(val, s)
                     for v_i in range(s.getDimens()):
                         npCols[s_i][i][v_i] = v[v_i]
                 else:
-                    npCols[s_i][i] = val.get(s.getName())
+                    print "%s: %s" % (s.getName(), s.getType())
+                    npCols[s_i][i] = getValue(val, s)
                 s_i += 1
 
     fitsCols = []

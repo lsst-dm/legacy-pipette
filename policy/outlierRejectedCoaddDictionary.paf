@@ -22,11 +22,10 @@ definitions: {
         minOccurs: 1
         maxOccurs: 1
     }
-    coaddPolicy: {
-        description: "Policy to control coadd."
-        type: "policy"
-        dictionary: @@coadd_utils:policy/CoaddDictionary.paf
-        minOccurs: 1
-        maxOccurs: 1
-    }
+    subregionSize: {
+        description: "Size of images in array to compute outlier rejection (pixels)."
+        type: "int"
+        default: 200 200
+        minOccurs: 2
+        maxOccurs: 2
 }

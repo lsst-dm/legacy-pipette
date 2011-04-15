@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.afw.cameraGeom as cameraGeom
 import lsst.ip.isr as ipIsr
@@ -41,7 +42,7 @@ class ProcessAmp(pipProc.Process):
             if not pipUtil.haveAmp(exposure, amp):
                 continue
             saturation = amp.getElectronicParams().getSaturationLevel()
-            miAmp = MaskedImage(mi, amp.getDiskDataSec())
+            miAmp = MaskedImage(mi, amp.getDiskDataSec(), afwImage.LOCAL)
             expAmp = Exposure(miAmp)
             bboxes = ipIsr.saturationDetection(expAmp, saturation, doMask = True)
             self.log.log(self.log.INFO, "Masked %d saturated pixels on amp %s: %f" %
@@ -68,8 +69,8 @@ class ProcessAmp(pipProc.Process):
             #ipIsr.overscanCorrection(exposure, biassec, "MEDIAN")
 
             datasec = amp.getDiskDataSec()
-            overscan = MaskedImage(mi, biassec)
-            image = MaskedImage(mi, datasec)
+            overscan = MaskedImage(mi, biassec, afwImage.LOCAL)
+            image = MaskedImage(mi, datasec, afwImage.LOCAL)
             offset = afwMath.makeStatistics(overscan, afwMath.MEDIAN).getValue(afwMath.MEDIAN)
             self.log.log(self.log.INFO, "Overscan correction on amp %s, %s: %f" %
                          (amp.getId(), biassec, offset))
@@ -92,11 +93,11 @@ class ProcessAmp(pipProc.Process):
             for amp in ccd:
                 diskDataSec = amp.getDiskDataSec()
                 trimDataSec = amp.getDataSec(True)
-                miTrim = MaskedImage(mi, diskDataSec)
+                miTrim = MaskedImage(mi, diskDataSec, afwImage.LOCAL)
                 miTrim = MaskedImage(amp.prepareAmpData(miTrim.getImage()),
                                      amp.prepareAmpData(miTrim.getMask()),
                                      amp.prepareAmpData(miTrim.getVariance()))
-                miAmp = MaskedImage(miCcd, trimDataSec)
+                miAmp = MaskedImage(miCcd, trimDataSec, afwImage.LOCAL)
                 self.log.log(self.log.INFO, "Trimming amp %s: %s --> %s" %
                              (amp.getId(), diskDataSec, trimDataSec))
                 miAmp <<= miTrim
@@ -107,7 +108,7 @@ class ProcessAmp(pipProc.Process):
             amp = cameraGeom.cast_Amp(exposure.getDetector())
             diskDataSec = amp.getDiskDataSec()
             self.log.log(self.log.INFO, "Trimming amp %s: %s" % (amp.getId(), diskDataSec))
-            miTrim = MaskedImage(mi, diskDataSec)
+            miTrim = MaskedImage(mi, diskDataSec, afwImage.LOCAL)
             amp.setTrimmed(True)
             miAmp = MaskedImage(amp.prepareAmpData(miTrim.getImage()),
                                 amp.prepareAmpData(miTrim.getMask()),

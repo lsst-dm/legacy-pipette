@@ -27,6 +27,7 @@ import sys
 import lsst.afw.geom as afwGeom
 import lsst.afw.detection as afwDetection
 import lsst.afw.image as afwImage
+import lsst.afw.math as afwMath
 import lsst.coadd.utils as coaddUtils
 import lsst.coadd.psfmatched as coaddPsfMatched
 import lsst.pex.logging as pexLog
@@ -54,7 +55,7 @@ def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     @param[in] coaddBBox: bounding box for coadd
     @param[in] policy: a Policy object that must contain these policies:
         psfMatchPolicy: see ip_diffim/policy/PsfMatchingDictionary.paf
-        warpPolicy: see coadd_utils/policy/WarpDictionary.paf
+        warpPolicy: see afw/policy/WarpDictionary.paf
         coaddPolicy: see coadd_utils/policy/CoaddDictionary.paf
     @output:
     - coaddExposure: coadd exposure
@@ -76,22 +77,10 @@ def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         coreSigma = desFwhm / FWHMPerSigma
         modelPsf = afwDetection.createPsf("DoubleGaussian", kernelWidth, kernelHeight,
             coreSigma, coreSigma * 2.5, 0.1)
-#         
-#         # make sure PSF-matching kernel is small enough to work with the exposure's PSF kernel
-#         # it must be less than half as big or PSF matching will fail
-#         maxPsfMatchingKernelSize = 1 + (min(kernelWidth - 1, kernelHeight - 1) // 2)
-#         if maxPsfMatchingKernelSize%2 == 0:
-#             maxPsfMatchingKernelSize -= 1
-#         desKernelSize = psfMatchPolicy.get("kernelSize")
-#         if desKernelSize > maxPsfMatchingKernelSize:
-#             print "Warning: reducing size of PSF matching kernel from %s to %s" % \
-#                 (desKernelSize, maxPsfMatchingKernelSize)
-#             psfMatchPolicy.set("kernelSize", maxPsfMatchingKernelSize)
     
     psfMatcher = coaddPsfMatched.PsfMatchToModel(psfMatchPolicy)
-    warper = coaddUtils.Warp.fromPolicy(warpPolicy)
+    warper = afwMath.Warper.fromPolicy(warpPolicy)
     coadd = coaddUtils.Coadd.fromPolicy(coaddBBox, coaddWcs, coaddPolicy)
-    isFirst = True
     for id in idList:
         print "Processing id=%s" % (id,)
         exposure = butler.get("calexp", id)

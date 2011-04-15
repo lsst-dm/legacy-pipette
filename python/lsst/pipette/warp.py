@@ -87,10 +87,8 @@ class Warp(pipProc.Process):
 
         skyWcs = skycell.getWcs()
         xSize, ySize = skycell.getDimensions()
-        warp = afwImage.ExposureF(xSize, ySize)
-        warp.setWcs(skyWcs)
-        weight = afwImage.ImageF(xSize, ySize)
-        weight.set(0)
+        warp = afwImage.ExposureF(skycell.getDimensions(), skyWcs)
+        weight = afwImage.ImageF(skycell.getDimensions())
         
         for ident in identList:
             md = self.read(butler, ident, ["calexp_md"], ignore=ignore)
@@ -115,7 +113,7 @@ class Warp(pipProc.Process):
             yMax = min(ySize - 1, int(max(ySkycell) + 0.5))
             self.log.log(self.log.INFO, "Bounds of image: %d,%d --> %d,%d" % (xMin, yMin, xMax, yMax))
             if xMin < xSize and xMax >= 0 and yMin < ySize and yMax >= 0:
-                bbox = afwImage.BBox(afwImage.PointI(xMin, yMin), afwImage.PointI(xMax, yMax))
+                bbox = afwGeom.Box2I(afwGeom.Point2I(xMin, yMin), afwGeom.Point2I(xMax, yMax))
                 exp = self.read(butler, ident, ["calexp"])[0]
                 self.warpComponent(warp, weight, exp, bbox)
                 del exp
@@ -134,14 +132,10 @@ class Warp(pipProc.Process):
         @param[out] warp Warped exposure
         @param[out] weight Accumulated weight map
         @param[in] exposure Exposure component to process
-        @param[in] bbox Bounding box for component on warp
+        @param[in] bbox Bounding box for component on warp, in local coords
         """
-
-        warpImage = warp.getMaskedImage()
-        targetImage = warpImage.Factory(warpImage.getDimensions())
-        targetImage.set((0, 0, 0))
-        target = afwImage.makeExposure(targetImage, warp.getWcs())
-        subTarget = target.Factory(target, bbox)
+        target = warp.Factory(warp.getDimensions(), warp.getWcs())
+        subTarget = target.Factory(target, bbox, afwImage.LOCAL)
 
         policy = self.config["warp"]
         kernel = afwMath.makeWarpingKernel(policy["warpingKernelName"])
@@ -150,8 +144,8 @@ class Warp(pipProc.Process):
 
         afwMath.warpExposure(subTarget, exposure, kernel, interpLength)
 
-        subWarp = warp.getMaskedImage().Factory(warp.getMaskedImage(), bbox)
-        subWeight = weight.Factory(weight, bbox)
+        subWarp = warp.getMaskedImage().Factory(warp.getMaskedImage(), bbox, afwImage.LOCAL)
+        subWeight = weight.Factory(weight, bbox, afwImage.LOCAL)
 
         badpix = afwImage.MaskU.getPlaneBitMask("EDGE") # Allow everything else through
         coaddUtils.addToCoadd(subWarp, subWeight, subTarget.getMaskedImage(), badpix, 1.0)

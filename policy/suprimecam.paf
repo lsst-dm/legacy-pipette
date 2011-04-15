@@ -48,24 +48,24 @@ measure: {
         apFlux:  "SINC"
         modelFlux: "GAUSSIAN"
         psfFlux: "PSF"
-        shape: "HSM_KSB"
+#        shape: "HSM_KSB"
     }
     shape: {
-        HSM_BJ: {
-            enabled: true
-        }
-        HSM_LINEAR: {
-            enabled: true
-        }
-        HSM_KSB: {
-            enabled: true
-        }
+#        HSM_BJ: {
+#            enabled: true
+#        }
+#        HSM_LINEAR: {
+#            enabled: true
+#        }
+#        HSM_KSB: {
+#            enabled: true
+#        }
 #        HSM_REGAUSS: {
 #            enabled: true
 #        }
-        HSM_SHAPELET: {
-            enabled: true
-        }
+#        HSM_SHAPELET: {
+#            enabled: true
+#        }
     }
     astrometry: {
         GAUSSIAN: {
@@ -94,9 +94,9 @@ measure: {
         SINC: {
             radius: 9.0
         }
-        #KRON: {
-        #    enabled: true
-        #}
+#        KRON: {
+#            enabled: true
+#        }
     }
 }
 
@@ -133,11 +133,11 @@ instrumentExtras: {
 
 filters: {
     # Translation table for astrometry.net matching, and therefore photometric calibration
-    B: G
-    r: R
-    i: I
-    z: Z
-    y: Z
+    B: g
+    r: r
+    i: i
+    z: z
+    y: z
 }
 
 astrometry: {

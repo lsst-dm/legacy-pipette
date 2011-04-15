@@ -16,6 +16,6 @@ definitions: {
         description: "Warp policy"
         minOccurs: 0
         maxOccurs: 1
-        dictionary: @@coadd_utils:policy:WarpDictionary.paf
+        dictionary: @@afw:policy/WarpDictionary.paf
     }
 }

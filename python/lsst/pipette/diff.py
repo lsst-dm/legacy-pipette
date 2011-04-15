@@ -84,8 +84,7 @@ class Diff(pipProc.Process):
         # of these with some other method.
 
         # Object to store the KernelCandidates for spatial modeling
-        kernelCellSet = afwMath.SpatialCellSet(afwImage.BBox(afwImage.PointI(exp1.getX0(), exp1.getY0()),
-                                                             exp1.getWidth(), exp1.getHeight()),
+        kernelCellSet = afwMath.SpatialCellSet(exp1.getBBox(afwImage.PARENT),
                                                policy.getInt("sizeCellX"),
                                                policy.getInt("sizeCellY"))
 
@@ -97,12 +96,12 @@ class Diff(pipProc.Process):
             bbox = fp.getBBox()
 
             # Grab the centers in the parent's coordinate system
-            xC   = 0.5 * ( bbox.getX0() + bbox.getX1() )
-            yC   = 0.5 * ( bbox.getY0() + bbox.getY1() )
+            xC   = 0.5 * ( bbox.getMinX() + bbox.getMaxX() )
+            yC   = 0.5 * ( bbox.getMinY() + bbox.getMaxY() )
 
             # Since the footprint is in the parent's coordinate system,
             # while the BBox uses the child's coordinate system.
-            bbox.shift(-exp2.getX0(), -exp2.getY0())
+            bbox.shift(-afwGeom.Extent2I(exp2.getXY0()))
 
             tmi  = afwImage.MaskedImageF(exp2, bbox)
             smi  = afwImage.MaskedImageF(exp1, bbox)

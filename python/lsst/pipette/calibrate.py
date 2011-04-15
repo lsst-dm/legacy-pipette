@@ -267,7 +267,7 @@ class Calibrate(pipProc.Process):
             xMin, xMax, yMin, yMax = float("INF"), float("-INF"), float("INF"), float("-INF")
             for x, y in ((0.0, 0.0), (0.0, exposure.getHeight()), (exposure.getWidth(), 0.0),
                          (exposure.getWidth(), exposure.getHeight())):
-                point = afwGeom.makePointD(x, y)
+                point = afwGeom.Point2D(x, y)
                 point = distortion.actualToIdeal(point)
                 x, y = point.getX(), point.getY()
                 if x < xMin: xMin = x

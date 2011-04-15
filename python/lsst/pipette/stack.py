@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.coadd.utils as coaddUtils
 
@@ -30,9 +30,9 @@ class Stack(pipProcess.Process):
 
         skycell = self.skycell(ra, dec, scale, xSize, ySize)
 
-        coadd = afwImage.ExposureF(xSize, ySize)
-        coadd.setWcs(skycell.getWcs())
-        weight = afwImage.ImageF(xSize, ySize)
+        coaddDim = afwGeom.Extent2I(xSize, ySize)
+        coadd = afwImage.ExposureF(coaddDim, skycell.getWcs())
+        weight = afwImage.ImageF(coaddDim)
 
         badpix = afwImage.MaskU.getPlaneBitMask("EDGE") # Allow everything else through
         for identList in identMatrix:

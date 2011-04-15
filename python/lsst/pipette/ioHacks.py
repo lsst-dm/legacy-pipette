@@ -396,7 +396,6 @@ def schema2pyfits(objs, schemaNamePrefix, getterName):
                     for v_i in range(s.getDimens()):
                         npCols[s_i][i][v_i] = v[v_i]
                 else:
-                    print "%s: %s" % (s.getName(), s.getType())
                     npCols[s_i][i] = getValue(val, s)
                 s_i += 1
 

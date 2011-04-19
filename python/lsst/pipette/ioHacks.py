@@ -43,12 +43,12 @@ def genOutputDict(outlist):
 
 def getSourceOutputListHsc(addRefFlux=False, simple=False):
 
-    # We have pulled all the schema-based entries out. There re still a few stragglers:
+    # We have pulled all the schema-based entries out. There are still a few stragglers:
     outlistSimple = [
         ["objId",    "getId",          "setId", "%5s",     "%06d",       int,   32,   "K",0,0],
         ["objFlags", "getFlagForDetection", "setFlagForDetection", "%6s",        "0x%04x",      int,     16,   "I",0,0],
-        ["ra",     "getRa",           "setRa",           "%10s",       "%10.6f",     float,   32,   "E",0,1],
-        ["dec",    "getDec",          "setDec",          "%10s",       "%10.6f",     float,   32,   "E",0,1],
+        ["ra",     "getRa",           "setRa",           "%10s",       "%10.6f",     float,   32,   "E",0,0],
+        ["dec",    "getDec",          "setDec",          "%10s",       "%10.6f",     float,   32,   "E",0,0],
         #["raErr",  "getRaErrForWcs",  "setRaErrForWcs",  "%10s",       "%10.6f",     float,   32,   "E",0,0],
         #["decErr", "getDecErrForWcs", "setDecErrForWcs", "%10s",       "%10.6f",     float,   32,   "E",0,0],
         

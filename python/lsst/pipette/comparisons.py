@@ -19,6 +19,7 @@ class Comparisons(object):
         matches = afwDet.matchRaDec(sources1, sources2, matchTol)
         self.num = len(matches)
 
+
         # Set up arrays
         for name, method in (('ra', 'getRa'),
                              ('dec', 'getDec'),
@@ -40,6 +41,10 @@ class Comparisons(object):
                 array2[i] = getattr(second, method)()
             setattr(self, name1, array1)
             setattr(self, name2, array2)
+
+        # convert RA,Dec to degrees for human consumption
+        self.ra  = np.degrees(self.ra)
+        self.dec = np.degrees(self.dec)
 
         self.distance = numpy.array([m.distance for m in matches])
         self.index = ma.MaskedArray(numpy.arange(self.num))

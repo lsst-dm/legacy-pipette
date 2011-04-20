@@ -46,9 +46,7 @@ def filterSources(sources, md, bright, flags=0x80):
         #    src.setRa(4.32)
         #    src.setDec(0.0)
         #    continue
-        sky = wcs.pixelToSky(x, y)
-        src.setRa(sky[0])
-        src.setDec(sky[1])
+        src.setRa(wcs.pixelToSky(x, y))
 #        x1, y1 = src.getXAstrom(), src.getYAstrom()
 #        sky = wcs.pixelToSky(x1, y1)
 #        pix = wcs.skyToPixel(sky)

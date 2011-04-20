@@ -88,23 +88,18 @@ def doMergeWcs(deferredState, wcs):
     # Apply WCS to sources
     sources = deferredState.sources
     for source in sources:
-        sky = wcs.pixelToSky(source.getXAstrom(), source.getYAstrom())
-        source.setRa(sky[0])
-        source.setDec(sky[1])
+        source.setRaDec(wcs.pixelToSky(source.getXAstrom(), source.getYAstrom()))
 
     brightSources = deferredState.brightSources
     for source in brightSources:
-        sky = wcs.pixelToSky(source.getXAstrom(), source.getYAstrom())
-        source.setRa(sky[0])
-        source.setDec(sky[1])
+        source.setRa(wcs.pixelToSky(source.getXAstrom(), source.getYAstrom()))
 
     # The matchedList sources are _not_ the same as in the source lists.
+    # uhh, they should be --dstn
     for sourceMatch in matchlist:
         # _Only_ convert the .second source, which is our measured source.
         source = sourceMatch.second
-        sky = wcs.pixelToSky(source.getXAstrom(), source.getYAstrom())
-        source.setRa(sky[0])
-        source.setDec(sky[1])
+        source.setRaDec(wcs.pixelToSky(source.getXAstrom(), source.getYAstrom()))
 
     # Write SRC....fits files here, until we can push the scheme into a butler.
     if sources:

@@ -97,7 +97,7 @@ class Photometry(pipProc.Process):
             apcorr = None
 
         if apcorr is not None:
-            self.log.log(self.log.INFO, "Applying aperture correction")
+            self.log.log(self.log.INFO, "Applying aperture correction to %d sources" % len(sources))
             for source in sources:
                 x, y = source.getXAstrom(), source.getYAstrom()
                 flux = source.getPsfFlux()

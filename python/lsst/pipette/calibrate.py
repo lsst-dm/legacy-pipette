@@ -75,6 +75,7 @@ class Calibrate(pipProc.Process):
                 if old.getFlagForDetection() & measAlg.Flags.STAR:
                     newFlag = new.getFlagForDetection() | measAlg.Flags.STAR
                     new.setFlagForDetection(newFlag)
+            sources = newSources;  del newSources
 
         if do['distortion']:
             dist = self.distortion(exposure)

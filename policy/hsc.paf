@@ -2,9 +2,6 @@
 
 camera: HSC
 
-#imports: {
-#}
-
 do: {
     isr: {
         processAmp: {
@@ -43,7 +40,7 @@ detect: {
 #measure: @@meas_algorithms:policy:MeasureSourcesDefaults.paf
 
 defects: {
-    grow: 0
+    grow: 1
 }
 
 cosmicray: {
@@ -95,9 +92,10 @@ instrumentExtras: {
 astrometry: {
     defaultFilterName: R
     numBrightStars: 200
-    sipOrder: 2
+    sipOrder: 4
     calculateSip: true
     starGalaxyColumnName: "starnotgal"
+    pixelScaleRangeFactor: 1.5
     #blindSolve: true
     #magErrorColumnPattern: "%(filter)s_ERR"
 }
@@ -129,7 +127,10 @@ psf: {
     }
 }
 
-
+imports: {
+    HSM: lsst.meas.extensions.shapeHSM
+    KRON: lsst.meas.extensions.photometryKron
+}
 
 measure: {
     source: {

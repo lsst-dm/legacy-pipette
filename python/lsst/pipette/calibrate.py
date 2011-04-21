@@ -283,7 +283,7 @@ class Calibrate(pipProc.Process):
                 s.setXAstrom(s.getXAstrom() - xMin)
                 s.setYAstrom(s.getYAstrom() - yMin)
             # Removed distortion, so use low order
-            oldOrder = config['astrometry']['sipOrder']
+            oldOrder = self.config['astrometry']['sipOrder']
             self.config['astrometry']['sipOrder'] = 2
         else:
             distSources = sources

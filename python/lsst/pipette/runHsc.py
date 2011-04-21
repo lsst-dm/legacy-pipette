@@ -92,7 +92,7 @@ def doMergeWcs(deferredState, wcs):
 
     brightSources = deferredState.brightSources
     for source in brightSources:
-        source.setRa(wcs.pixelToSky(source.getXAstrom(), source.getYAstrom()))
+        source.setRaDec(wcs.pixelToSky(source.getXAstrom(), source.getYAstrom()))
 
     # The matchedList sources are _not_ the same as in the source lists.
     # uhh, they should be --dstn

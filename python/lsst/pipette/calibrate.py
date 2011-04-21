@@ -290,6 +290,8 @@ class Calibrate(pipProc.Process):
             size = (exposure.getWidth(), exposure.getHeight())
             xMin, yMin = 0, 0
 
+        self.display('astrometry', exposure=exposure, sources=distSources, pause=True)
+
         log = pexLog.Log(self.log, "astrometry")
         astrom = measAst.determineWcs(self.config['astrometry'].getPolicy(), exposure, distSources,
                                       log=log, forceImageSize=size, filterName=filterName)

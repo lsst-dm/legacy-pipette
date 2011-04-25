@@ -309,8 +309,7 @@ class Calibrate(pipProc.Process):
         for index, source in enumerate(sources):
             distSource = distSources[index]
             sky = wcs.pixelToSky(distSource.getXAstrom() - xMin, distSource.getYAstrom() - yMin)
-            source.setRa(sky[0])
-            source.setDec(sky[1])
+            source.setRaDec(sky)
 
         self.display('astrometry', exposure=exposure, sources=sources, matches=matches, pause=True)
 

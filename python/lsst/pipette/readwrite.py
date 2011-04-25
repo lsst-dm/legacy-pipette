@@ -211,7 +211,7 @@ class ReadWrite(object):
             keepref = []
             keepi = []
             for i in xrange(len(ref)):
-                x, y = wcs.skyToPixel(ref[i].getRa(), ref[i].getDec())
+                x, y = wcs.skyToPixel(ref[i].getRaDec())
                 if x < 0 or y < 0 or x > width or y > height:
                     continue
                 ref[i].setXAstrom(x)

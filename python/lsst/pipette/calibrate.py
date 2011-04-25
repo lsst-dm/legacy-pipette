@@ -75,6 +75,7 @@ class Calibrate(pipProc.Process):
                 if old.getFlagForDetection() & measAlg.Flags.STAR:
                     newFlag = new.getFlagForDetection() | measAlg.Flags.STAR
                     new.setFlagForDetection(newFlag)
+            sources = newSources;  del newSources
 
         if do['distortion']:
             dist = self.distortion(exposure)
@@ -281,10 +282,15 @@ class Calibrate(pipProc.Process):
             for s in distSources:
                 s.setXAstrom(s.getXAstrom() - xMin)
                 s.setYAstrom(s.getYAstrom() - yMin)
+            # Removed distortion, so use low order
+            oldOrder = self.config['astrometry']['sipOrder']
+            self.config['astrometry']['sipOrder'] = 2
         else:
             distSources = sources
             size = (exposure.getWidth(), exposure.getHeight())
             xMin, yMin = 0, 0
+
+        self.display('astrometry', exposure=exposure, sources=distSources, pause=True)
 
         log = pexLog.Log(self.log, "astrometry")
         astrom = measAst.determineWcs(self.config['astrometry'].getPolicy(), exposure, distSources,
@@ -310,6 +316,7 @@ class Calibrate(pipProc.Process):
         # Undo distortion in matches
         if distortion is not None:
             self.log.log(self.log.INFO, "Removing distortion correction.")
+            self.config['astrometry']['sipOrder'] = oldOrder
             # Undistort directly, assuming:
             # * astrometry matching propagates the source identifier (to get original x,y)
             # * distortion is linear on very very small scales (to get x,y of catalogue)

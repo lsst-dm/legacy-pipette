@@ -88,7 +88,7 @@ def getMatchOutputList():
         ["catId",     "getId",           None,           "%8s",        "%08df",     int,   32,   "K",1,0],
         ["catRa",     "getRa",           None,           "%10s",       "%10.6f",     float,   32,   "E",1,0],
         ["catDec",    "getDec",          None,           "%10s",       "%10.6f",     float,   32,   "E",1,0],
-        ["catFlux",   "getPsfFlux",      None,            "%8s",       "%8.3f",     float,   32,   "E",0,0],
+        ["catFlux",   "getPsfFlux",      None,            "%8s",       "%8.3f",     float,   32,   "E",1,0],
         ["objId",     "getId",          "setId",          "%6s",       "%06d",       int,   32,   "K",0,0],
         ["objFlags",  "getFlagForDetection", "setFlagForDetection", "%6s",        "0x%04x",      int,     16,   "I",0,0],
         ["ra",        "getRa",           "setRa",           "%10s",       "%10.6f",     float,   32,   "E",0,0],

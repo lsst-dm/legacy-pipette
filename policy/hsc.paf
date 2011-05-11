@@ -177,5 +177,8 @@ measure: {
         SINC: {
             radius: 9.0
         }
+        KRON: {
+            enabled: true
+        }
     }
 }

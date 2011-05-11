@@ -60,15 +60,6 @@ filters: {
     z: z
     y: z
 }
-#filters: {
-#    # Translation table for astrometry.net matching, and therefore photometric calibration
-#    B: G
-#    g: G
-#    r: R
-#    i: I
-#    z: Z
-#    y: Z
-#}
 
 distortion: {
     class: "hsc.meas.match.hscDistortion.HscDistortion"
@@ -96,8 +87,6 @@ astrometry: {
     calculateSip: true
     starGalaxyColumnName: "starnotgal"
     pixelScaleRangeFactor: 1.5
-    #blindSolve: true
-    #magErrorColumnPattern: "%(filter)s_ERR"
 }
 
 
@@ -167,6 +156,10 @@ measure: {
         }
         
         SDSS: {
+            enabled: true
+        }
+
+        ROTANGLE: {
             enabled: true
         }
     }

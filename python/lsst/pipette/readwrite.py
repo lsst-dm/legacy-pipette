@@ -256,12 +256,15 @@ class ReadWrite(object):
         data = list()
         for ident in identifiers:
             ident.update(dataId)
-            if not self.inButler.datasetExists(which, ident):
-                if not ignore:
-                    raise RuntimeError("Data type %s does not exist for %s" % (which, ident))
-            else:
-                self.log.log(self.log.DEBUG, "Reading %s: %s" % (which, ident))
-                data.append(self.inButler.get(which, ident))
+            for i, butler in enumerate([self.inButler, self.outButler]):
+                if not butler.datasetExists(which, ident):
+                    if i == 1:
+                        if not ignore:
+                            raise RuntimeError("Data type %s does not exist for %s" % (which, ident))
+                else:
+                    self.log.log(self.log.DEBUG, "Reading %s: %s" % (which, ident))
+                    data.append(butler.get(which, ident))
+                    break
         return data
 
     def detrends(self, dataId, config):
@@ -274,6 +277,9 @@ class ReadWrite(object):
         identifiers = self.lookup(dataId)
         detrends = dict()
         do = config['do']['isr']
+        if not do['enabled']:
+            return detrends
+
         for kind in ('bias', 'dark', 'flat'):
             if do[kind]:
                 detList = list()
@@ -311,7 +317,7 @@ class ReadWrite(object):
         @param exposure Exposure to write, or None
         @param psf PSF to write, or None
         @param sources Sources to write, or None
-        @param mathces Matches to write, or None
+        @param matches Matches to write, or None
         """
         if exposure is not None:
             self.log.log(self.log.INFO, "Writing exposure: %s" % (dataId))

@@ -3,6 +3,14 @@
 target: Config
 
 definitions: {
+    enabled: {
+        type: boolean
+        description: "Run the phases of the ISR processing"
+        minOccurs: 0
+        maxOccurs: 1
+        default: true
+    }
+
     processAmp: {
         type: Policy
         description: "Process single amplifiers"

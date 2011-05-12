@@ -29,7 +29,11 @@ class ProcessCcd(pipProc.Process):
         """
         assert exposureList and len(exposureList) > 0, "exposureList not provided"
 
-        exposure, defects, background = self.isr(exposureList, detrendsList)
+        if self.config['do']['isr']['enabled']:
+            exposure, defects, background = self.isr(exposureList, detrendsList)
+        else:
+            assert len(exposureList) == 1 # no ISR so the exposureList is just the calexp
+            exposure, defects, background = exposureList[0], None, None
 
         psf, apcorr, brightSources, matches, matchMeta = self.calibrate(exposure, defects=defects)
 

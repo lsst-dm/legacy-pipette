@@ -140,6 +140,9 @@ class HscCalibrate(Calibrate):
         #
         mi = exposure.getMaskedImage()
 
+        display = 1
+        displayExposure = 1
+
         if display and displayExposure:
             frame = 0
             ds9.mtv(mi, frame=frame, title="PSF candidates")
@@ -151,7 +154,9 @@ class HscCalibrate(Calibrate):
             if not (ref.getFlagForDetection() & measAlg.Flags.STAR) or \
                    (source.getFlagForDetection() & measAlg.Flags.BAD):
                 continue
-
+            if source.getPsfFlux() <= 0.0:
+                continue
+            
             try:
                 cand = measAlg.makePsfCandidate(source, mi)
                 #

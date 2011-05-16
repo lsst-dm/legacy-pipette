@@ -37,6 +37,18 @@ imports: {
 #    KRON: lsst.meas.extensions.photometryKron
 }
 
+background: {
+    binsize: 1024
+    undersamplestyle: "REDUCE_INTERP_ORDER"
+}
+
+psf: {
+    algorithm: {
+        nEigenComponents: 4
+        kernelSize:       31
+    }
+}
+
 detect: {
     thresholdValue: 5.0
     thresholdType: stdev

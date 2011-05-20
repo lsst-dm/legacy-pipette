@@ -44,9 +44,9 @@ class CoaddOptionParser(idListOptions.IdListOptionParser):
         self.add_option("-R", "--rerun", default=os.getenv("USER", default="rerun"), dest="rerun",
                           help="rerun name (default=%default)")
         self.add_option("--radec", dest="radec", type="float", nargs=2,
-                          help="RA, Dec of center of skycell, degrees")
+                          help="RA Dec of center of coadd (degrees, space-separated)")
         self.add_option("--size", dest="size", nargs=2, type="int",
-                        help="Size in x and y for skycell, pixels")
+                        help="x y size for coadd (pixels, space-separated)")
         
     def _handleDataSource(self):
         """Set attributes based on self._dataSource
@@ -80,8 +80,8 @@ class CoaddOptionParser(idListOptions.IdListOptionParser):
             requiredArgs = ("rerun", "radec", "scale", "size") + tuple(requiredArgs)
         )
     
-        crval = afwGeom.makePointD(opts.radec[0], opts.radec[1])
-        crpix = afwGeom.makePointD(opts.size[0] / 2.0, opts.size[1] / 2.0)
+        crval = afwGeom.Point2D(opts.radec[0], opts.radec[1])
+        crpix = afwGeom.Point2D(opts.size[0] / 2.0, opts.size[1] / 2.0)
         self._coaddWcs = afwImage.createWcs(crval, crpix, opts.scale / 3600.0, 0.0, 0.0, opts.scale / 3600.0)
         self._coaddBBox = afwGeom.Box2I(afwGeom.Point2I(0,0), afwGeom.Extent2I(opts.size[0], opts.size[1]))
         

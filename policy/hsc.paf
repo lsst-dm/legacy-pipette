@@ -67,15 +67,13 @@ distortion: {
 
 instrumentExtras: {
     solveTansip: {
-        CRPIXMODE: MANUAL #AUTO for A	UTO MODE, MANUAL for MANUAL MODE
+        CRPIXMODE: AUTO   #AUTO for AUTO MODE, MANUAL for MANUAL MODE
         CCDPMODE: 1       #1=DETERMINING CCD POSITION
         NCCD: 100         #NUMBER of CCD for analysis
         LSIPORDER: 3
         SIPORDER: 9
         PSIPORDER: 9
         CLIPSIGMA: 3.0
-        CRPIX1: 0.0                #CRPIX VALUE OF AXIS 1(MANUAL MODE)
-        CRPIX2: 0.0                #CRPIX VALUE OF AXIS 2(MANUAL MODE)
         CHECKFILE: 1               #1=out put fitting check file
     }
 }

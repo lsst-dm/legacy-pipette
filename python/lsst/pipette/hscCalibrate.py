@@ -132,6 +132,7 @@ class HscCalibrate(Calibrate):
         import lsstDebug
         display = lsstDebug.Info(__name__).display
         displayExposure = lsstDebug.Info(__name__).displayExposure     # display the Exposure + spatialCells
+        print display, displayExposure
         #
         # Unpack policy
         #
@@ -139,9 +140,6 @@ class HscCalibrate(Calibrate):
         borderWidth  = psfPolicy["borderWidth"]
         #
         mi = exposure.getMaskedImage()
-
-        display = 1
-        displayExposure = 1
 
         if display and displayExposure:
             frame = 0

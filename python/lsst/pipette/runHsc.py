@@ -107,10 +107,11 @@ def doMergeWcs(deferredState, wcs):
         hdrInfo = dict([(m, metadata.get(m)) for m in metadata.names()])
         filename = io.outButler.get('source_filename', dataId)[0]
         io.log.log(io.log.INFO, "writing sources to: %s" % (filename))
-        try:
+        if True:
+        #try:
             pipExtraIO.writeSourceSetAsFits(sources, filename, hdrInfo=hdrInfo, clobber=True)
-        except Exception, e:
-            print "failed to write sources: %s" % (e)
+        #except Exception, e:
+        #    print "failed to write sources: %s" % (e)
 
     filename = io.outButler.get('matchFull_filename', dataId)[0]
     io.log.log(io.log.INFO, "writing match debugging info to: %s" % (filename))

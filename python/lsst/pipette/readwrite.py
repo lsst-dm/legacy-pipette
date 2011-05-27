@@ -327,10 +327,6 @@ class ReadWrite(object):
             self.outButler.put(psf, 'psf', dataId)
         if sources is not None:
             self.log.log(self.log.INFO, "Writing sources: %s" % (dataId))
-            for src in sources:
-                src.setAstrometry(None)
-                src.setPhotometry(None)
-                src.setShape(None)
             self.outButler.put(afwDet.PersistableSourceVector(sources), 'src', dataId)
         if matches is not None:
             try:

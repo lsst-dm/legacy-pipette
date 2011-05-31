@@ -29,45 +29,67 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.coadd.utils as coaddUtils
+import lsst.daf.base as dafBase
 import lsst.ip.diffim as ipDiffIm
 import lsst.pex.logging as pexLog
 import lsst.pipette.coaddOptions
 
 FWHMPerSigma = 2 * math.sqrt(2 * math.log(2))
 
-MeanVarStatsCtrl = afwMath.StatisticsControl()
-MeanVarStatsCtrl.setNumSigmaClip(3.0)
-MeanVarStatsCtrl.setNumIter(2)
-MeanVarStatsCtrl.setAndMask(self._badPixelMask)
-
-OutlierRejectStatsCtrl = afwMath.StatisticsControl()
-OutlierRejectStatsCtrl.setNumSigmaClip(3.0)
-OutlierRejectStatsCtrl.setNumIter(2)
-OutlierRejectStatsCtrl.setAndMask(self._badPixelMask)
-
 class ExposureMetadata(object):
     """Metadata for an exposure
+        
+    Attributes:
+    - path: path to exposure FITS file
+    - wcs: WCS of exposure
+    - bbox: parent bounding box of exposure
+    - weight = weightFactor / clipped mean variance
     """
-    def __init__(self, path, exposure, weightFactor = 1.0):
+    def __init__(self, path, exposure, badPixelMask, weightFactor = 1.0):
+        """Create an ExposureMetadata
+        
+        @param[in] path: path to Exposure FITS file
+        @param[in] exposure: Exposure
+        @param[in] badPixelMask: bad pixel mask for pixels to ignore
+        @param[in] weightFactor: additional scaling factor for weight:
+        """
         self.path = path
         self.wcs = exposure.getWcs()
         self.bbox = exposure.getBBox(afwImage.PARENT)
         
         maskedImage = exposure.getMaskedImage()
+
+        statsCtrl = afwMath.StatisticsControl()
+        statsCtrl.setNumSigmaClip(3.0)
+        statsCtrl.setNumIter(2)
+        statsCtrl.setAndMask(badPixelMask)
         statObj = afwMath.makeStatistics(maskedImage.getVariance(), maskedImage.getMask(),
-            afwMath.MEANCLIP, MeanVarStatsCtrl)
+            afwMath.MEANCLIP, statsCtrl)
         meanVar, meanVarErr = statObj.getResult(afwMath.MEANCLIP);
         weight = weightFactor / float(meanVar)
         self.weight = weight
 
-def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, policy):
-    """PSF-match and warp exposures and save the resulting exposures as FITS files
+def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
+    """Normalize, PSF-match and warp exposures and save the resulting exposures as FITS files
     
-    @return exposureMetadataList; a list of ExposureMetadata objects
+    @param[in] idList: a list of IDs of calexp (and associated PSFs) to coadd
+    @param[in] butler: data butler for retrieving input calexp and associated PSFs
+    @param[in] desFwhm: desired FWHM (pixels)
+    @param[in] coaddWcs: desired WCS of coadd
+    @param[in] coaddBBox: bounding box for coadd
+    @param[in] policy: policy: see policy/outlierRejectedCoaddDictionary.paf
+    
+    @return exposureMetadataList: a list of ExposureMetadata objects
         describing the saved psf-matched and warped exposures
     """
     psfMatchPolicy = policy.getPolicy("psfMatchPolicy")
     warpPolicy = policy.getPolicy("warpPolicy")
+    coaddPolicy = policy.getPolicy("coaddPolicy")
+    badPixelMask = coaddUtils.makeBitMask(coaddPolicy.getArray("badMaskPlanes"))
+    coaddZeroPoint = coaddPolicy.get("coaddZeroPoint")
+    coddFluxMag0 = 10**(0.4 * coaddZeroPoint)
+    destCalib = afwImage.Calib()
+    destCalib.setFluxMag0(coddFluxMag0)
 
     if len(idList) > 0:
         exposurePsf = butler.get("psf", idList[0])
@@ -85,25 +107,49 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, policy):
     
     exposureMetadataList = []
     for id in idList:
-        outPath = "".join(["%s%s" % (k, id[k]) for k in id.keys().sorted()])
+        outPath = "_".join(["%s_%s" % (k, id[k]) for k in sorted(id.keys())])
+        outPath = outPath.replace(",", "_")
         outPath = outPath + ".fits"
-        print "Processing id=%s; will save as %s" % (id, outPath)
-        exposure = butler.get("calexp", id)
-        psf = butler.get("psf", id)
-        exposure.setPsf(psf)
-        exposure, psfMatchingKernel, kernelCellSet = psfMatcher.matchExposure(exposure, modelPsf)
-        exposure = warper.warpExposure(coaddWcs, exposure, maxBBox = coaddBBox)
-        exposure.writeFits(outPath)
-        exposureMetadataList.append(ExposureMetadata(outPath, exposure))
+        if False:        
+            print "Processing id=%s; will save as %s" % (id, outPath)
+            exposure = butler.get("calexp", id)
+            psf = butler.get("psf", id)
+            exposure.setPsf(psf)
+    
+            srcCalib = exposure.getCalib()
+            scaleFac = 1.0 / srcCalib.getFlux(coaddZeroPoint)
+            maskedImage = exposure.getMaskedImage()
+            maskedImage *= scaleFac
+
+            exposure, psfMatchingKernel, kernelCellSet = psfMatcher.matchExposure(exposure, modelPsf)
+            
+            exposure = warper.warpExposure(coaddWcs, exposure, maxBBox = coaddBBox)
+            exposure.setCalib(destCalib)
+
+            exposure.writeFits(outPath)
+        else:
+            # debug mode; exposures already exist
+            print "WARNING: DEBUG MODE; Processing id=%s; retrieving from %s" % (id, outPath)
+            exposure = afwImage.ExposureF(outPath)
+
+        expMetadata = ExposureMetadata(
+                path = outPath,
+                exposure = exposure,
+                badPixelMask = badPixelMask,
+            )
+        exposureMetadataList.append(expMetadata)
+        
+        # print "scaleFac=%0.3g; weight=%0.3f" % (scaleFac, expMetadata.weight)
 
     return exposureMetadataList
 
 def subBBoxIter(bbox, subregionSize):
     """Iterate over subregions of a bbox
     
-    @param[in] bbox bounding box over which to iterate: afwGeom.Box2I
-    @param[in] subregionSize size of sub-bboxes
-    @return subBBox next sub-bounding box of size subregionSize or smaller;
+    @param[in] bbox: bounding box over which to iterate: afwGeom.Box2I
+    @param[in] subregionSize: size of sub-bboxes
+
+    @return subBBox: next sub-bounding box of size subregionSize or smaller;
         each subBBox is contained within bbox, so it may be smaller than subregionSize at the edges of bbox,
         but it will never be empty
     """
@@ -114,7 +160,7 @@ def subBBoxIter(bbox, subregionSize):
 
     for rowShift in range(0, bbox.getHeight(), subregionSize[1]):
         for colShift in range(0, bbox.getWidth(), subregionSize[0]):
-            subBBox = afwGeom.Box2I(coaddBBox.getMin() + afwGeom.Extent2I(colShift, rowShift), bboxSize)
+            subBBox = afwGeom.Box2I(bbox.getMin() + afwGeom.Extent2I(colShift, rowShift), subregionSize)
             subBBox.clip(bbox)
             if subBBox.isEmpty():
                 raise RuntimeError("Bug: empty bbox! bbox=%s, subregionSize=%s, colShift=%s, rowShift=%s" % \
@@ -143,56 +189,67 @@ def outlierRejectedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
                 (the coadd usually has a different scale!)
     @param[in] coaddWcs: WCS for coadd
     @param[in] coaddBBox: bounding box for coadd
-    @param[in] policy: a Policy object that must contain these policies:
-        psfMatchPolicy: see ip_diffim/policy/PsfMatchingDictionary.paf
-        warpPolicy: see afw/policy/WarpDictionary.paf
-        plus subregionSize = int, int
+    @param[in] policy: see policy/outlierRejectedCoaddDictionary.paf
     @output:
     - coaddExposure: coadd exposure
     - weightMap: a float Image of the same dimensions as the coadd; the value of each pixel
         is the sum of the weights of all the images that contributed to that pixel.
     """
-    exposureMetadataList = psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, policy)
+    exposureMetadataList = psfMatchAndWarp(
+        idList = idList,
+        butler = butler,
+        desFwhm = desFwhm,
+        coaddWcs = coaddWcs,
+        coaddBBox = coaddBBox,
+        policy = policy,
+    )
     
-    edgeMask = afwImage.MaskU.getPlaneBitMask(maskPlaneName)
+    edgeMask = afwImage.MaskU.getPlaneBitMask("EDGE")
+    
+    coaddPolicy = policy.getPolicy("coaddPolicy")
+    badPixelMask = coaddUtils.makeBitMask(coaddPolicy.getArray("badMaskPlanes"))
 
-    coaddExposure = ExposureF(coaddBBox, afwImage.PARENT, coaddWcs)
+    statsCtrl = afwMath.StatisticsControl()
+    statsCtrl.setNumSigmaClip(3.0)
+    statsCtrl.setNumIter(2)
+    statsCtrl.setAndMask(badPixelMask)
+
+    coaddExposure = afwImage.ExposureF(coaddBBox, coaddWcs)
+    coaddMaskedImage = coaddExposure.getMaskedImage()
     subregionSizeArr = policy.getArray("subregionSize")
     subregionSize = afwGeom.Extent2I(subregionSizeArr[0], subregionSizeArr[1])
+    dumPS = dafBase.PropertySet()
     for bbox in subBBoxIter(coaddBBox, subregionSize):
-        coaddView = ExposureF(coaddExposure, bbox, afwImage.PARENT, false)
-        maskedImageList = []
+        coaddView = afwImage.MaskedImageF(coaddMaskedImage, bbox, afwImage.PARENT, False)
+        maskedImageList = afwImage.vectorMaskedImageF() # [] is rejected by afwMath.statisticsStack
         weightList = []
         for expMeta in exposureMetadataList:
-            if bbox == expMeta.bbox:
+            if expMeta.bbox.contains(bbox):
                 print "Processing %s(%s)" % (expMeta.path, bbox)
-                exposure = ExposureF(expMeta.path, bbox, afwImage.PARENT)
+                maskedImage = afwImage.MaskedImageF(expMeta.path, 0, dumPS, bbox, afwImage.PARENT)
             elif not bbox.overlaps(expMeta.bbox):
                 print "Skipping %s(%s); no overlap" % (expMeta.path, bbox)
             else:
-                unpBBox = afwGeom.Box2I(expMeta.bbox).clip(bbox)
-                print "Processing %s(%s); grow from %s" % (expMeta.path, bbox, unpBBox)
-                exposure = ExposureF(bbox, afwImage.PARENT, expMeta.wcs)
-                exposure.getMask().set(edgeMask)
-                exposureView = ExposureF(exposure, unpBBox, afwImage.PARENT)
-                exposureView <<= ExposureF(expMeta.path, unpBBox, afwImage.PARENT)
-            maskedImageList.append(exposure.getMaskedImage())
+                overlapBBox = afwGeom.Box2I(expMeta.bbox)
+                overlapBBox.clip(bbox)
+                print "Processing %s(%s); grow from %s to %s" % (expMeta.path, bbox, overlapBBox, bbox)
+                maskedImage = afwImage.MaskedImageF(bbox)
+                maskedImage.getMask().set(edgeMask)
+                maskedImageView = afwImage.MaskedImageF(maskedImage, overlapBBox, afwImage.PARENT, False)
+                maskedImageView <<= afwImage.MaskedImageF(expMeta.path, 0,dumPS, overlapBBox, afwImage.PARENT)
+            maskedImageList.append(maskedImage)
             weightList.append(expMeta.weight)
         try:
-            # how to compute the variance plane?
-            # I have email into Steve Bickerton about it
-            # perhaps set flags=afwMath.VARIANCECLIP but I doubt it
-            # I fear it may require two calls!
-            print "WARNING: variance may not be computed, in which case all EDGE bits will be set"
             coaddSubregion = afwMath.statisticsStack(
-                maskedImageList, afwMath.MEANCLIP, OutlierRejectStatsCtrl, weightList)
+                maskedImageList, afwMath.MEANCLIP, statsCtrl, weightList)
 
             coaddView <<= coaddSubregion
         except Exception, e:
             print "Outlier rejection failed; setting EDGE mask: %s" % (e,)
-            # setCoaddEdgePixels does this later, so no need to do it here
+            raise
+            # setCoaddEdgeBits does this later, so no need to do it here
 
-    coaddUtils.setCoaddEdgePixels(coaddExposure.getMask(), coaddExposure.getVariance())
+    coaddUtils.setCoaddEdgeBits(coaddMaskedImage.getMask(), coaddMaskedImage.getVariance())
 
     return coaddExposure
 
@@ -205,7 +262,7 @@ if __name__ == "__main__":
     policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "outlierRejectedCoaddDictionary.paf")
     config, opts, args = parser.parse_args(policyPath, requiredArgs=["fwhm"])
     
-    coaddExposure, weightMap = outlierRejectedCoadd(
+    coaddExposure = outlierRejectedCoadd(
         idList = parser.getIdList(),
         butler = parser.getReadWrite().inButler,
         desFwhm = opts.fwhm,
@@ -215,4 +272,3 @@ if __name__ == "__main__":
 
     coaddBasePath = parser.getCoaddBasePath()
     coaddExposure.writeFits(coaddBasePath + "outlierRejectedCoadd.fits")
-    weightMap.writeFits(coaddBasePath + "psfMatchedWeightMap.fits")

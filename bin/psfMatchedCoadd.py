@@ -29,7 +29,7 @@ import lsst.afw.detection as afwDetection
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.coadd.utils as coaddUtils
-import lsst.coadd.psfmatched as coaddPsfMatched
+import lsst.ip.diffim as ipDiffIm
 import lsst.pex.logging as pexLog
 import lsst.pipette.coaddOptions
 
@@ -78,7 +78,7 @@ def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         modelPsf = afwDetection.createPsf("DoubleGaussian", kernelWidth, kernelHeight,
             coreSigma, coreSigma * 2.5, 0.1)
     
-    psfMatcher = coaddPsfMatched.PsfMatchToModel(psfMatchPolicy)
+    psfMatcher = ipDiffIm.ModelPsfMatch(psfMatchPolicy)
     warper = afwMath.Warper.fromPolicy(warpPolicy)
     coadd = coaddUtils.Coadd.fromPolicy(coaddBBox, coaddWcs, coaddPolicy)
     for id in idList:
@@ -86,7 +86,7 @@ def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         exposure = butler.get("calexp", id)
         psf = butler.get("psf", id)
         exposure.setPsf(psf)
-        exposure, psfMatchingKernel = psfMatcher.matchExposure(exposure, modelPsf)
+        exposure, psfMatchingKernel, kernelCellSet = psfMatcher.matchExposure(exposure, modelPsf)
         exposure = warper.warpExposure(coaddWcs, exposure, maxBBox = coaddBBox)
         coadd.addExposure(exposure)
 
@@ -96,7 +96,7 @@ def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     return coaddExposure, weightMap
 
 if __name__ == "__main__":
-    pexLog.Trace.setVerbosity('lsst.coadd', 5)
+    pexLog.Trace.setVerbosity('lsst.coadd', 3)
     pexLog.Trace.setVerbosity('lsst.ip.diffim', 1)
 
     parser = lsst.pipette.coaddOptions.CoaddOptionParser()

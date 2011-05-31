@@ -29,7 +29,7 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.coadd.utils as coaddUtils
-import lsst.coadd.psfmatched as coaddPsfMatched
+import lsst.ip.diffim as ipDiffIm
 import lsst.pex.logging as pexLog
 import lsst.pipette.coaddOptions
 
@@ -80,7 +80,7 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, policy):
         modelPsf = afwDetection.createPsf("DoubleGaussian", kernelDim[0], kernelDim[1],
             coreSigma, coreSigma * 2.5, 0.1)
     
-    psfMatcher = coaddPsfMatched.PsfMatchToModel(psfMatchPolicy)
+    psfMatcher = ipDiffIm.ModelPsfMatch(psfMatchPolicy)
     warper = afwMath.Warper.fromPolicy(warpPolicy)
     
     exposureMetadataList = []
@@ -91,7 +91,7 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, policy):
         exposure = butler.get("calexp", id)
         psf = butler.get("psf", id)
         exposure.setPsf(psf)
-        exposure, psfMatchingKernel = psfMatcher.matchExposure(exposure, modelPsf)
+        exposure, psfMatchingKernel, kernelCellSet = psfMatcher.matchExposure(exposure, modelPsf)
         exposure = warper.warpExposure(coaddWcs, exposure, maxBBox = coaddBBox)
         exposure.writeFits(outPath)
         exposureMetadataList.append(ExposureMetadata(outPath, exposure))

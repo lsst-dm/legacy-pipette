@@ -1,0 +1,11 @@
+#<?cfg paf dictionary ?>
+
+definitions: {
+    roots: {
+        type: Policy
+        description: "Root directories"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "RootsDictionary.paf"
+    }
+}

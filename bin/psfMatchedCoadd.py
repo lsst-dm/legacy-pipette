@@ -113,5 +113,5 @@ if __name__ == "__main__":
         policy = config.getPolicy())
 
     coaddBasePath = parser.getCoaddBasePath()
-    coaddExposure.writeFits(coaddBasePath + "psfMatchedCoadd.fits")
-    weightMap.writeFits(coaddBasePath + "psfMatchedWeightMap.fits")
+    coaddExposure.writeFits(coaddBasePath + "_psfMatchedCoadd.fits")
+    weightMap.writeFits(coaddBasePath + "_psfMatchedCoadd_weight.fits")

@@ -26,10 +26,10 @@ import sys
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
-import lsst.coadd.utils as coaddUtils
+import lsst.coadd.chisquared as coaddChiSq
 import lsst.pipette.coaddOptions
 
-def simpleCoadd(idList, butler, coaddWcs, coaddBBox, policy):
+def chiSquaredCoadd(idList, butler, coaddWcs, coaddBBox, policy):
     """Warp and coadd images
 
     @param[in] idList: list of data identity dictionaries
@@ -48,16 +48,14 @@ def simpleCoadd(idList, butler, coaddWcs, coaddBBox, policy):
     coaddPolicy = policy.getPolicy("coaddPolicy")
     
     warper = afwMath.Warper.fromPolicy(warpPolicy)
-    coadd = coaddUtils.Coadd.fromPolicy(coaddBBox, coaddWcs, coaddPolicy)
+    coadd = coaddChiSq.Coadd.fromPolicy(coaddBBox, coaddWcs, coaddPolicy)
     for id in idList:
         print "Processing id=%s" % (id,)
         exposure = butler.get("calexp", id)
         psf = butler.get("psf", id)
         exposure.setPsf(psf)
-        print "before warping: fluxMag0=", exposure.getCalib().getFluxMag0()
         print "Warp exposure"
         exposure = warper.warpExposure(coaddWcs, exposure, maxBBox = coaddBBox)
-        print "after warping: fluxMag0=", exposure.getCalib().getFluxMag0()
         coadd.addExposure(exposure)
 
     coaddExposure = coadd.getCoadd()
@@ -67,10 +65,10 @@ def simpleCoadd(idList, butler, coaddWcs, coaddBBox, policy):
 
 if __name__ == "__main__":
     parser = lsst.pipette.coaddOptions.CoaddOptionParser()
-    policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "simpleCoaddDictionary.paf")
+    policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "chiSquaredCoaddDictionary.paf")
     config, opts, args = parser.parse_args(policyPath)
     
-    coaddExposure, weightMap = simpleCoadd(
+    coaddExposure, weightMap = chiSquaredCoadd(
         idList = parser.getIdList(),
         butler = parser.getReadWrite().inButler,
         coaddWcs = parser.getCoaddWcs(),
@@ -78,5 +76,5 @@ if __name__ == "__main__":
         policy = config.getPolicy())
 
     coaddBasePath = parser.getCoaddBasePath()
-    coaddExposure.writeFits(coaddBasePath + "_simpleCoadd.fits")
-    weightMap.writeFits(coaddBasePath + "_simpleCoadd_weight.fits")
+    coaddExposure.writeFits(coaddBasePath + "_chiSquaredCoadd.fits")
+    weightMap.writeFits(coaddBasePath + "_chiSquaredCoadd_weight.fits")

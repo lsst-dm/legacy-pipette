@@ -271,4 +271,4 @@ if __name__ == "__main__":
         policy = config.getPolicy())
 
     coaddBasePath = parser.getCoaddBasePath()
-    coaddExposure.writeFits(coaddBasePath + "outlierRejectedCoadd.fits")
+    coaddExposure.writeFits(coaddBasePath + "_outlierRejectedCoadd.fits")

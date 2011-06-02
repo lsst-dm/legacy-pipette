@@ -110,7 +110,7 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         outPath = "_".join(["%s_%s" % (k, id[k]) for k in sorted(id.keys())])
         outPath = outPath.replace(",", "_")
         outPath = outPath + ".fits"
-        if False:        
+        if True:        
             print "Processing id=%s; will save as %s" % (id, outPath)
             exposure = butler.get("calexp", id)
             psf = butler.get("psf", id)
@@ -120,9 +120,11 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
             scaleFac = 1.0 / srcCalib.getFlux(coaddZeroPoint)
             maskedImage = exposure.getMaskedImage()
             maskedImage *= scaleFac
+            print "Normalized using scaleFac=%0.3g; now PSF match to model" % (scaleFac,)
 
             exposure, psfMatchingKernel, kernelCellSet = psfMatcher.matchExposure(exposure, modelPsf)
             
+            print "Warp exposure"
             exposure = warper.warpExposure(coaddWcs, exposure, maxBBox = coaddBBox)
             exposure.setCalib(destCalib)
 
@@ -139,8 +141,6 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
             )
         exposureMetadataList.append(expMetadata)
         
-        # print "scaleFac=%0.3g; weight=%0.3f" % (scaleFac, expMetadata.weight)
-
     return exposureMetadataList
 
 def subBBoxIter(bbox, subregionSize):
@@ -225,14 +225,14 @@ def outlierRejectedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         weightList = []
         for expMeta in exposureMetadataList:
             if expMeta.bbox.contains(bbox):
-                print "Processing %s(%s)" % (expMeta.path, bbox)
+                print "Processing %s %s" % (expMeta.path, bbox)
                 maskedImage = afwImage.MaskedImageF(expMeta.path, 0, dumPS, bbox, afwImage.PARENT)
             elif not bbox.overlaps(expMeta.bbox):
-                print "Skipping %s(%s); no overlap" % (expMeta.path, bbox)
+                print "Skipping %s %s; no overlap" % (expMeta.path, bbox)
             else:
                 overlapBBox = afwGeom.Box2I(expMeta.bbox)
                 overlapBBox.clip(bbox)
-                print "Processing %s(%s); grow from %s to %s" % (expMeta.path, bbox, overlapBBox, bbox)
+                print "Processing %s %s; grow from %s to %s" % (expMeta.path, bbox, overlapBBox, bbox)
                 maskedImage = afwImage.MaskedImageF(bbox)
                 maskedImage.getMask().set(edgeMask)
                 maskedImageView = afwImage.MaskedImageF(maskedImage, overlapBBox, afwImage.PARENT, False)

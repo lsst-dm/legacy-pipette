@@ -22,11 +22,4 @@ definitions: {
         minOccurs: 1
         maxOccurs: 1
     }
-    saveDebugImages: {
-        description: "Save intermediate images?"
-        type: "bool"
-        default: false
-        minOccurs: 1
-        maxOccurs: 1
-    }
 }

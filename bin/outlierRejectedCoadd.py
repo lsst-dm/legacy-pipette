@@ -220,19 +220,19 @@ def outlierRejectedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     subregionSize = afwGeom.Extent2I(subregionSizeArr[0], subregionSizeArr[1])
     dumPS = dafBase.PropertySet()
     for bbox in subBBoxIter(coaddBBox, subregionSize):
+        print "Computing coadd %s" % (bbox,)
         coaddView = afwImage.MaskedImageF(coaddMaskedImage, bbox, afwImage.PARENT, False)
         maskedImageList = afwImage.vectorMaskedImageF() # [] is rejected by afwMath.statisticsStack
         weightList = []
         for expMeta in exposureMetadataList:
             if expMeta.bbox.contains(bbox):
-                print "Processing %s %s" % (expMeta.path, bbox)
                 maskedImage = afwImage.MaskedImageF(expMeta.path, 0, dumPS, bbox, afwImage.PARENT)
             elif not bbox.overlaps(expMeta.bbox):
-                print "Skipping %s %s; no overlap" % (expMeta.path, bbox)
+                print "Skipping %s; no overlap" % (expMeta.path, bbox)
             else:
                 overlapBBox = afwGeom.Box2I(expMeta.bbox)
                 overlapBBox.clip(bbox)
-                print "Processing %s %s; grow from %s to %s" % (expMeta.path, bbox, overlapBBox, bbox)
+                print "Processing %s; grow from %s to %s" % (expMeta.path, overlapBBox, bbox)
                 maskedImage = afwImage.MaskedImageF(bbox)
                 maskedImage.getMask().set(edgeMask)
                 maskedImageView = afwImage.MaskedImageF(maskedImage, overlapBBox, afwImage.PARENT, False)

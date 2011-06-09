@@ -10,8 +10,6 @@ import lsst.meas.algorithms as measAlg
 
 from lsst.pipette.calibrate import Calibrate
 
-import debug
-
 class HscCalibrate(Calibrate):
     def __init__(self, *args, **kwargs):
         super(HscCalibrate, self).__init__(*args, **kwargs)

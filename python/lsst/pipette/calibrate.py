@@ -83,9 +83,12 @@ class Calibrate(pipProc.Process):
             dist = None
 
         if do['astrometry'] or do['zeropoint']:
-            matches, matchMeta, wcs = self.astrometry(exposure, sources, distortion=dist)
+            distSources, llc, size = self.distort(exposure, sources, distortion=dist)
+            matches, matchMeta = self.astrometry(exposure, distSources, distortion=dist, llc=llc, size=size)
+            self.undistort(exposure, sources, matches, distortion=dist)
+            self.verifyAstrometry(exposure, matches)
         else:
-            matches, matchMeta, wcs = None, None, None
+            matches, matchMeta = None, None
 
         if do['zeropoint']:
             self.zeropoint(exposure, matches)
@@ -170,6 +173,7 @@ class Calibrate(pipProc.Process):
         exposure.setPsf(psf)
         return psf, cellSet
 
+
     def apCorr(self, exposure, cellSet):
         """Measure aperture correction
 
@@ -190,6 +194,7 @@ class Calibrate(pipProc.Process):
                       sdqaRatings["phot.apCorr.numGoodStars"].getValue(),
                       value, error))
         return corr
+
 
     def background(self, exposure, footprints=None, background=None):
         """Subtract background from exposure.
@@ -238,27 +243,17 @@ class Calibrate(pipProc.Process):
         dist = pipDist.createDistortion(ccd, self.config['distortion'])
         return dist
 
-    def astrometry(self, exposure, sources, distortion=None):
-        """Solve astrometry to produce WCS
+
+    def distort(self, exposure, sources, distortion=None):
+        """Distort source positions before solving astrometry
 
         @param exposure Exposure to process
         @param sources Sources with undistorted (actual) positions
         @param distortion Distortion to apply
-        @return Star matches, World Coordinate System
+        @return Distorted sources, lower-left corner, size of distorted image
         """
         assert exposure, "No exposure provided"
         assert sources, "No sources provided"
-        
-        self.log.log(self.log.INFO, "Solving astrometry")
-
-        try:
-            menu = self.config['filters']
-            filterName = menu[exposure.getFilter().getName()]
-            self.log.log(self.log.INFO, "Using catalog filter: %s" % filterName)
-        except:
-            self.log.log(self.log.WARN, "Unable to determine catalog filter from lookup table using %s" %
-                         exposure.getFilter().getName())
-            filterName = None
 
         if distortion is not None:
             self.log.log(self.log.INFO, "Applying distortion correction.")
@@ -277,26 +272,62 @@ class Calibrate(pipProc.Process):
                 if y > yMax: yMax = y
             xMin = int(xMin)
             yMin = int(yMin)
-            size = (int(xMax - xMin + 0.5),
-                    int(yMax - yMin + 0.5))
+            llc = (xMin, yMin)
+            size = (int(xMax - xMin + 0.5), int(yMax - yMin + 0.5))
             for s in distSources:
                 s.setXAstrom(s.getXAstrom() - xMin)
                 s.setYAstrom(s.getYAstrom() - yMin)
-            # Removed distortion, so use low order
-            oldOrder = self.config['astrometry']['sipOrder']
-            self.config['astrometry']['sipOrder'] = 2
         else:
             distSources = sources
             size = (exposure.getWidth(), exposure.getHeight())
-            xMin, yMin = 0, 0
+            llc = (0, 0)
 
-        self.display('astrometry', exposure=exposure, sources=distSources, pause=True)
+        self.display('distortion', exposure=exposure, sources=distSources, pause=True)
+        return distSources, llc, size
+
+
+    def astrometry(self, exposure, distSources, distortion=None, llc=(0,0), size=None):
+        """Solve astrometry to produce WCS
+
+        @param exposure Exposure to process
+        @param distSources Sources with undistorted (actual) positions
+        @param distortion Distortion model
+        @param llc Lower left corner (minimum x,y)
+        @param size Size of exposure
+        @return Star matches, World Coordinate System
+        """
+        assert exposure, "No exposure provided"
+        assert distSources, "No sources provided"
+
+        self.log.log(self.log.INFO, "Solving astrometry")
+
+        if size is None:
+            size = (exposure.getWidth(), exposure.getHeight())
+
+        try:
+            menu = self.config['filters']
+            filterName = menu[exposure.getFilter().getName()]
+            self.log.log(self.log.INFO, "Using catalog filter: %s" % filterName)
+        except:
+            self.log.log(self.log.WARN, "Unable to determine catalog filter from lookup table using %s" %
+                         exposure.getFilter().getName())
+            filterName = None
+
+        if distortion is not None:
+            # Removed distortion, so use low order
+            oldOrder = self.config['astrometry']['sipOrder']
+            self.config['astrometry']['sipOrder'] = 2
 
         log = pexLog.Log(self.log, "astrometry")
         astrom = measAst.determineWcs(self.config['astrometry'].getPolicy(), exposure, distSources,
                                       log=log, forceImageSize=size, filterName=filterName)
+
+        if distortion is not None:
+            self.config['astrometry']['sipOrder'] = oldOrder
+
         if astrom is None:
             raise RuntimeError("Unable to solve astrometry for %s", exposure.getDetector().getId())
+
         wcs = astrom.getWcs()
         matches = astrom.getMatches()
         matchMeta = astrom.getMatchMetadata()
@@ -304,39 +335,57 @@ class Calibrate(pipProc.Process):
             raise RuntimeError("No astrometric matches for %s", exposure.getDetector().getId())
         self.log.log(self.log.INFO, "%d astrometric matches for %s" % \
                      (len(matches), exposure.getDetector().getId()))
+        exposure.setWcs(wcs)
 
         # Apply WCS to sources
         for index, source in enumerate(sources):
             distSource = distSources[index]
-            sky = wcs.pixelToSky(distSource.getXAstrom() - xMin, distSource.getYAstrom() - yMin)
+            sky = wcs.pixelToSky(distSource.getXAstrom() - llc[0], distSource.getYAstrom() - llc[1])
             source.setRaDec(sky)
-
-        self.display('astrometry', exposure=exposure, sources=sources, matches=matches, pause=True)
-
-        # Undo distortion in matches
-        if distortion is not None:
-            self.log.log(self.log.INFO, "Removing distortion correction.")
-            self.config['astrometry']['sipOrder'] = oldOrder
-            # Undistort directly, assuming:
-            # * astrometry matching propagates the source identifier (to get original x,y)
-            # * distortion is linear on very very small scales (to get x,y of catalogue)
-            for m in matches:
-                dx = m.first.getXAstrom() - m.second.getXAstrom()
-                dy = m.first.getYAstrom() - m.second.getYAstrom()
-                orig = sources[m.second.getId()]
-                m.second.setXAstrom(orig.getXAstrom())
-                m.second.setYAstrom(orig.getYAstrom())
-                m.first.setXAstrom(m.second.getXAstrom() + dx)
-                m.first.setYAstrom(m.second.getYAstrom() + dy)
 
         self.display('astrometry', exposure=exposure, sources=sources, matches=matches)
 
+        return matches, matchMeta
+
+
+    def undistort(self, exposure, sources, matches, distortion=None):
+        """Undistort matches after solving astrometry, resolving WCS
+
+        @param exposure Exposure of interest
+        @param sources Sources on image (no distortion applied)
+        @param matches Astrometric matches
+        @param distortion Distortion model
+        """
+        assert exposure, "No exposure provided"
+        assert sources, "No sources provided"
+        assert matches, "No matches provided"
+
+        if distortion is None:
+            # No need to do anything
+            return
+
+        # Undo distortion in matches
+        self.log.log(self.log.INFO, "Removing distortion correction.")
+        # Undistort directly, assuming:
+        # * astrometry matching propagates the source identifier (to get original x,y)
+        # * distortion is linear on very very small scales (to get x,y of catalogue)
+        for m in matches:
+            dx = m.first.getXAstrom() - m.second.getXAstrom()
+            dy = m.first.getYAstrom() - m.second.getYAstrom()
+            orig = sources[m.second.getId()]
+            m.second.setXAstrom(orig.getXAstrom())
+            m.second.setYAstrom(orig.getYAstrom())
+            m.first.setXAstrom(m.second.getXAstrom() + dx)
+            m.first.setYAstrom(m.second.getYAstrom() + dy)
+
         # Re-fit the WCS with the distortion undone
         if self.config['astrometry']['calculateSip']:
+            self.log.log(self.log.INFO, "Refitting WCS with distortion removed")
             sip = astromSip.CreateWcsWithSip(matches, wcs, self.config['astrometry']['sipOrder'])
             wcs = sip.getNewWcs()
             self.log.log(self.log.INFO, "Astrometric scatter: %f arcsec (%s non-linear terms)" %
                          (sip.getScatterInArcsec(), "with" if wcs.hasDistortion() else "without"))
+            exposure.setWcs(wcs)
             
             # Apply WCS to sources
             for index, source in enumerate(sources):
@@ -344,17 +393,23 @@ class Calibrate(pipProc.Process):
                 source.setRa(sky[0])
                 source.setDec(sky[1])
         else:
-            self.log.log(self.log.WARN, "not calculating a sip solution; matches may be suspect")
-            
+            self.log.log(self.log.WARN, "Not calculating a SIP solution; matches may be suspect")
+        
+        self.display('astrometry', exposure=exposure, sources=sources, matches=matches)
+
+
+    def verifyAstrometry(self, exposure, matches):
+        """Verify astrometry solution
+
+        @param exposure Exposure of interest
+        @param matches Astrometric matches
+        """
         verify = dict()                    # Verification parameters
         verify.update(astromSip.sourceMatchStatistics(matches))
-        verify.update(astromVerify.checkMatches(matches, exposure, log=log))
+        verify.update(astromVerify.checkMatches(matches, exposure, log=self.log))
         for k, v in verify.items():
             exposure.getMetadata().set(k, v)
 
-        exposure.setWcs(wcs)
-
-        return matches, matchMeta, wcs
 
     def zeropoint(self, exposure, matches):
         """Photometric calibration

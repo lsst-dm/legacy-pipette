@@ -84,7 +84,8 @@ class Calibrate(pipProc.Process):
 
         if do['astrometry'] or do['zeropoint']:
             distSources, llc, size = self.distort(exposure, sources, distortion=dist)
-            matches, matchMeta = self.astrometry(exposure, distSources, distortion=dist, llc=llc, size=size)
+            matches, matchMeta = self.astrometry(exposure, sources, distSources,
+                                                 distortion=dist, llc=llc, size=size)
             self.undistort(exposure, sources, matches, distortion=dist)
             self.verifyAstrometry(exposure, matches)
         else:
@@ -286,11 +287,12 @@ class Calibrate(pipProc.Process):
         return distSources, llc, size
 
 
-    def astrometry(self, exposure, distSources, distortion=None, llc=(0,0), size=None):
+    def astrometry(self, exposure, sources, distSources, distortion=None, llc=(0,0), size=None):
         """Solve astrometry to produce WCS
 
         @param exposure Exposure to process
-        @param distSources Sources with undistorted (actual) positions
+        @param sources Sources as measured (actual) positions
+        @param distSources Sources with undistorted (ideal) positions
         @param distortion Distortion model
         @param llc Lower left corner (minimum x,y)
         @param size Size of exposure
@@ -381,7 +383,7 @@ class Calibrate(pipProc.Process):
         # Re-fit the WCS with the distortion undone
         if self.config['astrometry']['calculateSip']:
             self.log.log(self.log.INFO, "Refitting WCS with distortion removed")
-            sip = astromSip.CreateWcsWithSip(matches, wcs, self.config['astrometry']['sipOrder'])
+            sip = astromSip.CreateWcsWithSip(matches, exposure.getWcs(), self.config['astrometry']['sipOrder'])
             wcs = sip.getNewWcs()
             self.log.log(self.log.INFO, "Astrometric scatter: %f arcsec (%s non-linear terms)" %
                          (sip.getScatterInArcsec(), "with" if wcs.hasDistortion() else "without"))

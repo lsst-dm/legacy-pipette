@@ -8,6 +8,7 @@ setupOptional(obs_cfht)
 setupOptional(obs_lsstSim)
 
 # HSC products
+setupOptional(hscAstrom)
 setupOptional(solvetansip)
 setupOptional(distEst)
 

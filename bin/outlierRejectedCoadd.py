@@ -83,6 +83,7 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         describing the saved psf-matched and warped exposures
     """
     psfMatchPolicy = policy.getPolicy("psfMatchPolicy")
+    psfMatchPolicy = ipDiffIm.modifyForModelPsfMatch(psfMatchPolicy)
     warpPolicy = policy.getPolicy("warpPolicy")
     coaddPolicy = policy.getPolicy("coaddPolicy")
     badPixelMask = coaddUtils.makeBitMask(coaddPolicy.getArray("badMaskPlanes"))

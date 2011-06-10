@@ -35,8 +35,8 @@ import lsst.pipette.coaddOptions
 
 FWHMPerSigma = 2 * math.sqrt(2 * math.log(2))
 
-def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
-    """PSF-match, warp and coadd images
+def coadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
+    """PSF-match (if desFwhm is specified), warp and coadd images
     
     PSF matching is to a double gaussian model with core FWHM = desFwhm
     and wings of amplitude 1/10 of core and FWHM = 2.5 * core.
@@ -50,7 +50,8 @@ def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     @param[in] idList: list of data identity dictionaries
     @param[in] butler: data butler for input images
     @param[in] desFwhm: desired PSF of coadd, but in science exposure pixels
-                (the coadd usually has a different scale!)
+                (the coadd usually has a different scale!);
+                if 0 then no PSF matching is performed.
     @param[in] coaddWcs: WCS for coadd
     @param[in] coaddBBox: bounding box for coadd
     @param[in] policy: a Policy object that must contain these policies:
@@ -62,11 +63,17 @@ def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     - weightMap: a float Image of the same dimensions as the coadd; the value of each pixel
         is the sum of the weights of all the images that contributed to that pixel.
     """
+    if len(idList) < 1:
+        print "Warning: no exposures to coadd!"
+        sys.exit(1)
+    print "Coadd %s calexp" % (len(idList),)
+
     psfMatchPolicy = policy.getPolicy("psfMatchPolicy")
+    psfMatchPolicy = ipDiffIm.modifyForModelPsfMatch(psfMatchPolicy)
     warpPolicy = policy.getPolicy("warpPolicy")
     coaddPolicy = policy.getPolicy("coaddPolicy")
 
-    if len(idList) > 0:
+    if desFwhm > 0:
         exposurePsf = butler.get("psf", idList[0])
         exposurePsfKernel = exposurePsf.getKernel()
 
@@ -78,7 +85,10 @@ def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         modelPsf = afwDetection.createPsf("DoubleGaussian", kernelWidth, kernelHeight,
             coreSigma, coreSigma * 2.5, 0.1)
     
-    psfMatcher = ipDiffIm.ModelPsfMatch(psfMatchPolicy)
+        psfMatcher = ipDiffIm.ModelPsfMatch(psfMatchPolicy)
+    else:
+        print "No PSF matching will be done (desFwhm <= 0)"
+
     warper = afwMath.Warper.fromPolicy(warpPolicy)
     coadd = coaddUtils.Coadd.fromPolicy(coaddBBox, coaddWcs, coaddPolicy)
     for id in idList:
@@ -86,7 +96,10 @@ def psfMatchedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         exposure = butler.get("calexp", id)
         psf = butler.get("psf", id)
         exposure.setPsf(psf)
-        exposure, psfMatchingKernel, kernelCellSet = psfMatcher.matchExposure(exposure, modelPsf)
+        if desFwhm > 0:
+            print "PSF-match exposure"
+            exposure, psfMatchingKernel, kernelCellSet = psfMatcher.matchExposure(exposure, modelPsf)
+        print "Warp exposure"
         exposure = warper.warpExposure(coaddWcs, exposure, maxBBox = coaddBBox)
         coadd.addExposure(exposure)
 
@@ -100,11 +113,12 @@ if __name__ == "__main__":
     pexLog.Trace.setVerbosity('lsst.ip.diffim', 1)
 
     parser = lsst.pipette.coaddOptions.CoaddOptionParser()
-    parser.add_option("--fwhm", dest="fwhm", type="float", help="Desired FWHM, in science exposure pixels")
-    policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "psfMatchedCoaddDictionary.paf")
+    parser.add_option("--fwhm", dest="fwhm", type="float", default=0.0,
+        help="Desired FWHM, in science exposure pixels; for no PSF matching omit or set to 0")
+    policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "coaddDictionary.paf")
     config, opts, args = parser.parse_args(policyPath, requiredArgs=["fwhm"])
     
-    coaddExposure, weightMap = psfMatchedCoadd(
+    coaddExposure, weightMap = coadd(
         idList = parser.getIdList(),
         butler = parser.getReadWrite().inButler,
         desFwhm = opts.fwhm,
@@ -113,5 +127,5 @@ if __name__ == "__main__":
         policy = config.getPolicy())
 
     coaddBasePath = parser.getCoaddBasePath()
-    coaddExposure.writeFits(coaddBasePath + "_psfMatchedCoadd.fits")
-    weightMap.writeFits(coaddBasePath + "_psfMatchedCoadd_weight.fits")
+    coaddExposure.writeFits(coaddBasePath + "_coadd.fits")
+    weightMap.writeFits(coaddBasePath + "_coadd_weight.fits")

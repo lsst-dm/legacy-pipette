@@ -296,7 +296,7 @@ class Calibrate(pipProc.Process):
         @param distortion Distortion model
         @param llc Lower left corner (minimum x,y)
         @param size Size of exposure
-        @return Star matches, World Coordinate System
+        @return Star matches, match metadata
         """
         assert exposure, "No exposure provided"
         assert distSources, "No sources provided"

@@ -117,6 +117,7 @@ psf: {
 imports: {
     HSM: lsst.meas.extensions.shapeHSM
     KRON: lsst.meas.extensions.photometryKron
+    ROTANGLE: lsst.meas.extensions.rotAngle
 }
 
 measure: {

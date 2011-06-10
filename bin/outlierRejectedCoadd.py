@@ -30,7 +30,10 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.coadd.utils as coaddUtils
 import lsst.daf.base as dafBase
-import lsst.ip.diffim as ipDiffIm
+try:
+    import lsst.ip.diffim as ipDiffIm
+except ImportError:
+    print "Warning: ip_diffim not setup; cannot PSF-match exposures"
 import lsst.pex.logging as pexLog
 import lsst.pipette.coaddOptions
 
@@ -70,7 +73,7 @@ class ExposureMetadata(object):
         self.weight = weight
 
 def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
-    """Normalize, PSF-match and warp exposures and save the resulting exposures as FITS files
+    """Normalize, PSF-match (if desFWhm > 0) and warp exposures; save the resulting exposures as FITS files
     
     @param[in] idList: a list of IDs of calexp (and associated PSFs) to coadd
     @param[in] butler: data butler for retrieving input calexp and associated PSFs
@@ -82,8 +85,9 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     @return exposureMetadataList: a list of ExposureMetadata objects
         describing the saved psf-matched and warped exposures
     """
-    psfMatchPolicy = policy.getPolicy("psfMatchPolicy")
-    psfMatchPolicy = ipDiffIm.modifyForModelPsfMatch(psfMatchPolicy)
+    if len(idList) < 1:
+        return []
+        
     warpPolicy = policy.getPolicy("warpPolicy")
     coaddPolicy = policy.getPolicy("coaddPolicy")
     badPixelMask = coaddUtils.makeBitMask(coaddPolicy.getArray("badMaskPlanes"))
@@ -92,7 +96,10 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     destCalib = afwImage.Calib()
     destCalib.setFluxMag0(coddFluxMag0)
 
-    if len(idList) > 0:
+    if desFwhm > 0:
+        psfMatchPolicy = policy.getPolicy("psfMatchPolicy")
+        psfMatchPolicy = ipDiffIm.modifyForModelPsfMatch(psfMatchPolicy)
+
         exposurePsf = butler.get("psf", idList[0])
         exposurePsfKernel = exposurePsf.getKernel()
 
@@ -103,7 +110,10 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         modelPsf = afwDetection.createPsf("DoubleGaussian", kernelDim[0], kernelDim[1],
             coreSigma, coreSigma * 2.5, 0.1)
     
-    psfMatcher = ipDiffIm.ModelPsfMatch(psfMatchPolicy)
+        psfMatcher = ipDiffIm.ModelPsfMatch(psfMatchPolicy)
+    else:
+        print "No PSF matching will be done (desFwhm <= 0)"
+        
     warper = afwMath.Warper.fromPolicy(warpPolicy)
     
     exposureMetadataList = []
@@ -121,14 +131,17 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
             scaleFac = 1.0 / srcCalib.getFlux(coaddZeroPoint)
             maskedImage = exposure.getMaskedImage()
             maskedImage *= scaleFac
-            print "Normalized using scaleFac=%0.3g; now PSF match to model" % (scaleFac,)
+            print "Normalized using scaleFac=%0.3g" % (scaleFac,)
 
-            exposure, psfMatchingKernel, kernelCellSet = psfMatcher.matchExposure(exposure, modelPsf)
+            if desFwhm > 0:
+                print "PSF-match exposure"
+                exposure, psfMatchingKernel, kernelCellSet = psfMatcher.matchExposure(exposure, modelPsf)
             
             print "Warp exposure"
             exposure = warper.warpExposure(coaddWcs, exposure, maxBBox = coaddBBox)
             exposure.setCalib(destCalib)
 
+            print "Saving intermediate exposure %s" % (outPath,)
             exposure.writeFits(outPath)
         else:
             # debug mode; exposures already exist
@@ -180,14 +193,11 @@ def outlierRejectedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     PSF-matching is performed before warping so the code can use the PSF models
     associated with the calibrated science exposures (without having to warp those models).
     
-    @todo Figure out where subregionSize comes from: I suspect we need a new
-      outlier-rejection coadd dictionary, but where to put it?
-      For now just use a hard-coded value.
-
     @param[in] idList: list of data identity dictionaries
     @param[in] butler: data butler for input images
     @param[in] desFwhm: desired PSF of coadd, but in science exposure pixels
-                (the coadd usually has a different scale!)
+                (the coadd usually has a different scale!);
+                if 0 then no PSF matching is performed.
     @param[in] coaddWcs: WCS for coadd
     @param[in] coaddBBox: bounding box for coadd
     @param[in] policy: see policy/outlierRejectedCoaddDictionary.paf
@@ -196,6 +206,11 @@ def outlierRejectedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     - weightMap: a float Image of the same dimensions as the coadd; the value of each pixel
         is the sum of the weights of all the images that contributed to that pixel.
     """
+    if len(idList) < 1:
+        print "Warning: no exposures to coadd!"
+        sys.exit(1)
+    print "Coadd %s calexp" % (len(idList),)
+
     exposureMetadataList = psfMatchAndWarp(
         idList = idList,
         butler = butler,
@@ -255,12 +270,14 @@ def outlierRejectedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     return coaddExposure
 
 if __name__ == "__main__":
-    pexLog.Trace.setVerbosity('lsst.coadd', 5)
+    algName = "outlierRejectedCoadd"
+    pexLog.Trace.setVerbosity('lsst.coadd', 3)
     pexLog.Trace.setVerbosity('lsst.ip.diffim', 1)
 
     parser = lsst.pipette.coaddOptions.CoaddOptionParser()
-    parser.add_option("--fwhm", dest="fwhm", type="float", help="Desired FWHM, in science exposure pixels")
-    policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "outlierRejectedCoaddDictionary.paf")
+    parser.add_option("--fwhm", dest="fwhm", type="float", default=0.0,
+        help="Desired FWHM, in science exposure pixels; for no PSF matching omit or set to 0")
+    policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "%sDictionary.paf" % (algName,))
     config, opts, args = parser.parse_args(policyPath, requiredArgs=["fwhm"])
     
     coaddExposure = outlierRejectedCoadd(
@@ -272,4 +289,6 @@ if __name__ == "__main__":
         policy = config.getPolicy())
 
     coaddBasePath = parser.getCoaddBasePath()
-    coaddExposure.writeFits(coaddBasePath + "_outlierRejectedCoadd.fits")
+    coaddPath = "%s_%s.fits" % (coaddBasePath, algName)
+    print "Saving coadd as %s" % (coaddPath,)
+    coaddExposure.writeFits(coaddPath)

@@ -24,8 +24,8 @@ import math
 import os
 import sys
 
-import lsst.afw.geom as afwGeom
 import lsst.afw.detection as afwDetection
+import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.coadd.utils as coaddUtils
@@ -81,12 +81,11 @@ def coadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         exposurePsf = butler.get("psf", idList[0])
         exposurePsfKernel = exposurePsf.getKernel()
 
-        kernelWidth = exposurePsfKernel.getWidth()
-        kernelHeight = exposurePsfKernel.getHeight()
+        kernelDim = exposurePsfKernel.getDimensions()
         print "Create double Gaussian PSF model with core fwhm %0.1f and size %dx%d" % \
-            (desFwhm, kernelWidth, kernelHeight)
+            (desFwhm, kernelDim[0], kernelDim[1])
         coreSigma = desFwhm / FWHMPerSigma
-        modelPsf = afwDetection.createPsf("DoubleGaussian", kernelWidth, kernelHeight,
+        modelPsf = afwDetection.createPsf("DoubleGaussian", kernelDim[0], kernelDim[1],
             coreSigma, coreSigma * 2.5, 0.1)
     
         psfMatcher = ipDiffIm.ModelPsfMatch(psfMatchPolicy)
@@ -132,5 +131,9 @@ if __name__ == "__main__":
         policy = config.getPolicy())
 
     coaddBasePath = parser.getCoaddBasePath()
-    coaddExposure.writeFits("%s_%s.fits" % (coaddBasePath, algName))
-    weightMap.writeFits("%s_%s_weight.fits" % (coaddBasePath, algName))
+    coaddPath = "%s_%s.fits" % (coaddBasePath, algName)
+    weightPath = "%s_%s_weight.fits" % (coaddBasePath, algName)
+    print "Saving coadd as %s" % (coaddPath,)
+    coaddExposure.writeFits(coaddPath)
+    print "saving weight map as %s" % (weightPath,)
+    weightMap.writeFits(weightPath)

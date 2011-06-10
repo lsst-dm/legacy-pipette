@@ -8,12 +8,11 @@ import lsst.afw.display.ds9 as ds9
 import lsst.sdqa as sdqa
 import lsst.meas.algorithms as measAlg
 
-from lsst.pipette.calibrate import Calibrate
+from lsst.pipette.specific.Hsc import CalibrateHsc
 
-class HscCalibrate(Calibrate):
-    def __init__(self, *args, **kwargs):
-        super(HscCalibrate, self).__init__(*args, **kwargs)
-    
+# HSC-DC2 has very round galaxies that look much like stars, so we need to change the order of operations a
+# bit to use the astrometry catalogue to select stars for the PSF determination.
+class CalibrateHscDc2(CalibrateHsc):
     def run(self, exposure, defects=None, background=None):
         """Calibrate an exposure: PSF, astrometry and photometry
 
@@ -43,7 +42,11 @@ class HscCalibrate(Calibrate):
         if do['astrometry'] or do['zeropoint'] or do['psf']:
             # Solving the astrometry prevents us from re-solving for astrometry again later, so save the wcs...
             wcs0 = exposure.getWcs().clone()
-            matches = self.astrometry(exposure, sources, distortion=dist)[0] # for the PSF determination
+
+            distSources, llc, size = self.distort(exposure, sources, distortion=dist)
+            matches, matchMeta = self.astrometry(exposure, sources, distSources,
+                                                 distortion=dist, llc=llc, size=size)
+
             exposure.setWcs(wcs0)                                            # ... and restore it
         else:
             matches = None
@@ -70,9 +73,13 @@ class HscCalibrate(Calibrate):
             sources = self.rephot(exposure, footprints, psf, apcorr=apcorr)
 
         if do['astrometry'] or do['zeropoint']:
-            matches, matchMeta, wcs = self.astrometry(exposure, sources, distortion=dist)
+            distSources, llc, size = self.distort(exposure, sources, distortion=dist)
+            matches, matchMeta = self.astrometry(exposure, sources, distSources,
+                                                 distortion=dist, llc=llc, size=size)
+            self.undistort(exposure, sources, matches, distortion=dist)
+            self.verifyAstrometry(exposure, matches)
         else:
-            matches, matchMeta, wcs = None, None, None
+            matches, matchMeta = None, None
 
         if do['zeropoint']:
             self.zeropoint(exposure, matches)

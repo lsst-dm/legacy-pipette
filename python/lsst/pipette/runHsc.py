@@ -13,7 +13,7 @@ import lsst.pipette.catalog as pipCatalog
 import lsst.pipette.readwrite as pipReadWrite
 
 import lsst.pipette.ioHacks as pipExtraIO
-from lsst.pipette.hscCalibrate import HscCalibrate
+from lsst.pipette.specific.hscDc2 import CalibrateHscDc2
 from lsst.pipette.specific.suprimecam import ProcessCcdSuprimeCam
 
 class DeferredHSCState(object):
@@ -50,7 +50,7 @@ def run(rerun,                          # Rerun name
     camera = config['camera']
     if camera.lower() in ("hsc"):
         mapper = obsHsc.HscSimMapper(**mapperArgs)
-        ccdProc = pipCcd.ProcessCcd(config=config, Calibrate=HscCalibrate, log=log)
+        ccdProc = pipCcd.ProcessCcd(config=config, Calibrate=CalibrateHscDc2, log=log)
     elif camera.lower() in ("suprimecam", "suprime-cam", "sc"):
         mapper = obsSc.SuprimecamMapper(**mapperArgs)
         ccdProc = ProcessCcdSuprimeCam(config=config, log=log)

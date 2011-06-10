@@ -29,7 +29,10 @@ import lsst.afw.detection as afwDetection
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.coadd.utils as coaddUtils
-import lsst.ip.diffim as ipDiffIm
+try:
+    import lsst.ip.diffim as ipDiffIm
+except ImportError:
+    print "Warning: ip_diffim not setup; cannot PSF-match exposures"
 import lsst.pex.logging as pexLog
 import lsst.pipette.coaddOptions
 
@@ -55,7 +58,7 @@ def coadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     @param[in] coaddWcs: WCS for coadd
     @param[in] coaddBBox: bounding box for coadd
     @param[in] policy: a Policy object that must contain these policies:
-        psfMatchPolicy: see ip_diffim/policy/PsfMatchingDictionary.paf
+        psfMatchPolicy: see ip_diffim/policy/PsfMatchingDictionary.paf (may omit if desFwhm <= 0)
         warpPolicy: see afw/policy/WarpDictionary.paf
         coaddPolicy: see coadd_utils/policy/CoaddDictionary.paf
     @output:
@@ -68,12 +71,13 @@ def coadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         sys.exit(1)
     print "Coadd %s calexp" % (len(idList),)
 
-    psfMatchPolicy = policy.getPolicy("psfMatchPolicy")
-    psfMatchPolicy = ipDiffIm.modifyForModelPsfMatch(psfMatchPolicy)
     warpPolicy = policy.getPolicy("warpPolicy")
     coaddPolicy = policy.getPolicy("coaddPolicy")
 
     if desFwhm > 0:
+        psfMatchPolicy = policy.getPolicy("psfMatchPolicy")
+        psfMatchPolicy = ipDiffIm.modifyForModelPsfMatch(psfMatchPolicy)
+
         exposurePsf = butler.get("psf", idList[0])
         exposurePsfKernel = exposurePsf.getKernel()
 
@@ -109,13 +113,14 @@ def coadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     return coaddExposure, weightMap
 
 if __name__ == "__main__":
+    algName = "coadd"
     pexLog.Trace.setVerbosity('lsst.coadd', 3)
     pexLog.Trace.setVerbosity('lsst.ip.diffim', 1)
 
     parser = lsst.pipette.coaddOptions.CoaddOptionParser()
     parser.add_option("--fwhm", dest="fwhm", type="float", default=0.0,
         help="Desired FWHM, in science exposure pixels; for no PSF matching omit or set to 0")
-    policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "coaddDictionary.paf")
+    policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "%sDictionary.paf" % (algName,))
     config, opts, args = parser.parse_args(policyPath, requiredArgs=["fwhm"])
     
     coaddExposure, weightMap = coadd(
@@ -127,5 +132,5 @@ if __name__ == "__main__":
         policy = config.getPolicy())
 
     coaddBasePath = parser.getCoaddBasePath()
-    coaddExposure.writeFits(coaddBasePath + "_coadd.fits")
-    weightMap.writeFits(coaddBasePath + "_coadd_weight.fits")
+    coaddExposure.writeFits("%s_%s.fits" % (coaddBasePath, algName))
+    weightMap.writeFits("%s_%s_weight.fits" % (coaddBasePath, algName))

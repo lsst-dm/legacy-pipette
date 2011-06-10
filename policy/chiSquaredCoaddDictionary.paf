@@ -8,6 +8,13 @@ definitions: {
         maxOccurs: 1
         dictionaryFile: "RootsDictionary.paf"
     }
+    psfMatchPolicy: {
+        description: "Policy to control PSF matching."
+        type: "policy"
+        dictionary: @@ip_diffim:policy/PsfMatchingDictionary.paf
+        minOccurs: 1
+        maxOccurs: 1
+    }
     warpPolicy: {
         description: "Policy to control warping."
         type: "policy"
@@ -19,13 +26,6 @@ definitions: {
         description: "Policy to control coadd."
         type: "policy"
         dictionary: @@coadd_utils:policy/CoaddDictionary.paf
-        minOccurs: 1
-        maxOccurs: 1
-    }
-    saveDebugImages: {
-        description: "Save intermediate images?"
-        type: "bool"
-        default: false
         minOccurs: 1
         maxOccurs: 1
     }

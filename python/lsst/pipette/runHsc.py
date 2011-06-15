@@ -51,6 +51,9 @@ def run(rerun,                          # Rerun name
     if camera.lower() in ("hsc"):
         mapper = obsHsc.HscSimMapper(**mapperArgs)
         ccdProc = pipCcd.ProcessCcd(config=config, Calibrate=CalibrateHscDc2, log=log)
+    elif camera.lower() in ("suprimecam-mit", "sc-mit", "scmit", "suprimecam-old", "sc-old", "scold"):
+        mapper = obsSc.SuprimecamMapper(mit=True, **mapperArgs)
+        ccdProc = ProcessCcdSuprimeCam(config=config, log=log)
     elif camera.lower() in ("suprimecam", "suprime-cam", "sc"):
         mapper = obsSc.SuprimecamMapper(**mapperArgs)
         ccdProc = ProcessCcdSuprimeCam(config=config, log=log)

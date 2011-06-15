@@ -1,6 +1,6 @@
 #<?cfg paf policy>
 
-camera: suprimecam
+camera: suprimecam-mit
 
 do: {
     isr: {

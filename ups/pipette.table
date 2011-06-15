@@ -17,6 +17,7 @@ setupOptional(matplotlib)
 # Extra algorithms
 setupOptional(meas_extensions_shapeHSM)
 setupOptional(meas_extensions_photometryKron)
+setupOptional(meas_extensions_rotAngle)
 
 pathPrepend(PATH, ${PRODUCT_DIR}/bin)
 pathPrepend(PYTHONPATH, ${PRODUCT_DIR}/bin)

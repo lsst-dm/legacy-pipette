@@ -467,7 +467,7 @@ def writeSourceSetAsFits(sourceSet, filename, hdrInfo=[], clobber=False, log=NoL
             cardName = key if len(key) <= 8 else "HIERARCH %s" % (key)
             hdr.update(cardName, v, key)
 
-    log.log(log.DEBUG, "Writing out..." % len(columns))
+    log.log(log.DEBUG, "Writing out %d columns to %s..." % (len(columns), filename))
     hdulist = pyfits.HDUList([primHdu, tblHdu])
     hdulist.writeto(filename, clobber=clobber)
 

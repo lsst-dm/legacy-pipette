@@ -12,6 +12,14 @@ try:
 except:
     pass
 
+class NoLogging(object):
+    DEBUG = 0
+    INFO = 0
+    WARN = 0
+    FATAL = 0
+    def log(self, *args):
+        pass
+
 ###################################################################
 #
 # We'll define all the values we're interested in right here.  There are four functions
@@ -100,13 +108,15 @@ def getMatchOutputList():
         ]
     return genOutputDict(outlist)
         
-def writeMatchListAsFits(matchList, fileName):
+def writeMatchListAsFits(matchList, fileName, log=NoLogging()):
     """ write matchList to a given filename with pyfits. """
 
     if matchList != None and len(matchList) > 0:
         nSource = len(matchList)
         outputs = getMatchOutputList()
         nOut = len(outputs)
+
+        log.log(log.DEBUG, "Writing %d matches" % nOut)
 
         # create the arrays and fill them
         arrays = {}
@@ -343,7 +353,7 @@ def getFitsColumns(sourceSet, outputs):
     return columnDefs
 
     
-def schema2pyfits(objs, schemaNamePrefix, getterName):
+def schema2pyfits(objs, schemaNamePrefix, getterName, log=NoLogging()):
     """ Return pyfits Columns for all the schema entries """
 
     nobj = len(objs)
@@ -354,7 +364,9 @@ def schema2pyfits(objs, schemaNamePrefix, getterName):
     colSchemas = []
     colNames = []
     getter = getattr(objs[0], getterName)
-    for val in getter():
+    log.log(log.DEBUG, "Getting schema for %s with %s" % (schemaNamePrefix, getterName))
+    values = getter()
+    for i, val in enumerate(values):
         if hasattr(val, 'getAlgorithm'):
             # "getAlgorithm" is the camel's nose under the tent of abstraction -- CPL
             schemaName = "%s_%s" % (schemaNamePrefix, val.getAlgorithm())
@@ -384,7 +396,8 @@ def schema2pyfits(objs, schemaNamePrefix, getterName):
                 colName = s.getName()
             # A better behaved person might do: colName = colName.lower()
             colNames.append(colName)
-            
+    log.log(log.DEBUG, "Column names for %s: %s" % (schemaNamePrefix, ",".join(colNames)))
+
     for i in range(nobj):
         getter = getattr(objs[i], getterName)
         s_i = 0
@@ -399,6 +412,7 @@ def schema2pyfits(objs, schemaNamePrefix, getterName):
                     npCols[s_i][i] = getValue(val, s)
                 s_i += 1
 
+    log.log(log.DEBUG, "Generating columns for %s" % schemaNamePrefix)
     fitsCols = []
     for npCol, colSchema, colName in zip(npCols, colSchemas, colNames):
         fitsType = schema2FitsTypes[colSchema.getType()]
@@ -410,10 +424,13 @@ def schema2pyfits(objs, schemaNamePrefix, getterName):
                             unit=colSchema.getUnits(),
                             array=npCol)
         fitsCols.append(col)
+
+    log.log(log.DEBUG, "Done parsing schema for %s" % schemaNamePrefix)
     return fitsCols
 
-def writeSourceSetAsFits(sourceSet, filename, hdrInfo=[], clobber=False):
+def writeSourceSetAsFits(sourceSet, filename, hdrInfo=[], clobber=False, log=NoLogging()):
     """Write a SourceSet as a FITS file. Crawls the Scheme for most columns, uses manual hacks for the rest. """
+    log.log(log.DEBUG, "Writing source FITS table...")
 
     if not sourceSet:
         raise RuntimeError("Please provide at least one Source")
@@ -427,15 +444,19 @@ def writeSourceSetAsFits(sourceSet, filename, hdrInfo=[], clobber=False):
     columns = []
 
     # Start with hacky manual columns
+    log.log(log.DEBUG, "Adding manual columns...")
     columns.extend(getFitsColumns(sourceSet, getSourceOutputListHsc(addRefFlux=True)))
                    
     # Add in nice schema-based columns
     for measureType, getterName in measurementTypes:
-        fitsCols = schema2pyfits(sourceSet, measureType, getterName)
+        log.log(log.DEBUG, "Parsing schema from %s..." % getterName)
+        fitsCols = schema2pyfits(sourceSet, measureType, getterName, log=log)
         columns.extend(fitsCols)
 
+    log.log(log.DEBUG, "Opening table with %d columns..." % len(columns))
     tblHdu = pyfits.new_table(columns)
 
+    log.log(log.DEBUG, "Setting header...")
     primHdu = pyfits.PrimaryHDU()
     hdr = primHdu.header
     for key, value in hdrInfo.items():
@@ -445,7 +466,8 @@ def writeSourceSetAsFits(sourceSet, filename, hdrInfo=[], clobber=False):
         for v in value:
             cardName = key if len(key) <= 8 else "HIERARCH %s" % (key)
             hdr.update(cardName, v, key)
-    
+
+    log.log(log.DEBUG, "Writing out..." % len(columns))
     hdulist = pyfits.HDUList([primHdu, tblHdu])
     hdulist.writeto(filename, clobber=clobber)
 

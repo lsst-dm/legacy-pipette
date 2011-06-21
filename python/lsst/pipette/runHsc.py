@@ -98,6 +98,7 @@ def doMergeWcs(deferredState, wcs):
             s.setRaDec(wcs.pixelToSky(s.getXAstrom(), s.getYAstrom()))
 
     # Write SRC....fits files here, until we can push the scheme into a butler.
+    sources = deferredState.sources
     if sources:
         metadata = exposure.getMetadata()
         hdrInfo = dict([(m, metadata.get(m)) for m in metadata.names()])

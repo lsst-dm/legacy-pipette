@@ -1,0 +1,108 @@
+#<?cfg paf dictionary ?>
+
+definitions: {
+    roots: {
+        type: Policy
+        description: "Root directories"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "RootsDictionary.paf"
+    }
+
+    do: {
+        type: Policy
+        description: "Do we do these tasks?"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: {
+        }
+    }
+
+    db: {
+        type: Policy
+        description: "Database parameters"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: {
+            definitions: {
+                host: {
+                    type: string
+                    description: "Database server host"
+                    default: "lsst10.ncsa.uiuc.edu"
+                    minOccurs: 1
+                    maxOccurs: 1
+                }
+                table: {
+                    type: string
+                    description: "Reference object table"
+                    default: "SimRefObject"
+                    minOccurs: 1
+                    maxOccurs: 1
+                }
+            }
+        }
+    }
+    match: {
+        type: Policy
+        description: "Source matching parameters"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: {
+            definitions: {
+                radMult: {
+                    type: double
+                    description: "Max radius for source match = PSF Gaussian width (sigma) * radMult"
+                    default: 2.0
+                    minOccurs: 1
+                    maxOccurs: 1
+                }
+            }
+        }
+    }
+    detect: {
+        type: Policy
+        description: "Source detection policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_utils:policy:DetectionDictionary.paf
+    }
+    measure: {
+        type: Policy
+        description: "Source measurement policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_algorithms:policy:MeasureSourcesDictionary.paf
+    }
+    psf: {
+        type: Policy
+        description: "PSF determination policies"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: {
+            target: Config
+            definitions: {
+                select: {
+                    type: Policy
+                    description: "PSF star selection policy"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    dictionary: @@meas_algorithms:policy:PsfSelectionRhlDictionary.paf
+                }
+                algorithm: {
+                    type: Policy
+                    description: "PSF measurement policy"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    dictionary: @@meas_algorithms:policy:PsfAlgorithmRhlDictionary.paf
+                }
+            }
+        }
+    }
+    apcorr: {
+        type: Policy
+        description: "Aperture correction policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_algorithms:policy:ApertureCorrectionDictionary.paf
+    }
+}

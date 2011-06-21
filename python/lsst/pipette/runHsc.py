@@ -11,6 +11,7 @@ import lsst.pipette.processCcd as pipCcd
 import lsst.pipette.options as pipOptions
 import lsst.pipette.catalog as pipCatalog
 import lsst.pipette.readwrite as pipReadWrite
+import lsst.pipette.phot as pipPhot
 
 import lsst.pipette.ioHacks as pipExtraIO
 from lsst.pipette.specific.hscDc2 import CalibrateHscDc2
@@ -90,20 +91,11 @@ def doMergeWcs(deferredState, wcs):
     exposure.setWcs(wcs)
 
     # Apply WCS to sources
-    sources = deferredState.sources
-    for source in sources:
-        source.setRaDec(wcs.pixelToSky(source.getXAstrom(), source.getYAstrom()))
-
-    brightSources = deferredState.brightSources
-    for source in brightSources:
-        source.setRaDec(wcs.pixelToSky(source.getXAstrom(), source.getYAstrom()))
-
-    # The matchedList sources are _not_ the same as in the source lists.
-    # uhh, they should be --dstn
-    for sourceMatch in matchlist:
-        # _Only_ convert the .second source, which is our measured source.
-        source = sourceMatch.second
-        source.setRaDec(wcs.pixelToSky(source.getXAstrom(), source.getYAstrom()))
+    for sources in (deferredState.sources, deferredState.brightSources,
+                    # _Only_ convert the matchlist.second source, which is our measured source.
+                    [m.second for m in deferredState.matchlist]):
+        for s in sources:
+            s.setRaDec(wcs.pixelToSky(s.getXAstrom(), s.getYAstrom()))
 
     # Write SRC....fits files here, until we can push the scheme into a butler.
     if sources:
@@ -124,8 +116,9 @@ def doMergeWcs(deferredState, wcs):
                            matches=matchlist,
                            matchMeta=deferredState.matchMeta)
 
-    
-def getConfig(argv=None):
+
+def getConfigFromArguments(argv=None):
+    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
     parser = pipOptions.OptionParser()
     parser.add_option("-r", "--rerun", default=os.getenv("USER", default="rerun"), dest="rerun",
                       help="rerun name (default=%default)")
@@ -133,10 +126,6 @@ def getConfig(argv=None):
                       help="visit to run (default=%default)")
     parser.add_option("-c", "--ccd", dest="ccd",
                       help="CCD to run (default=%default)")
-
-    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
-    #if argv == None:
-    #    argv = sys.argv
 
     config, opts, args = parser.parse_args([default], argv=argv)
     if (len(args) > 0 # or opts.instrument is None
@@ -150,43 +139,43 @@ def getConfig(argv=None):
 
     return config, opts, args
 
+    
+def getConfig(instrument="hsc", output=None, data=None, calib=None):
+    default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
+    override = os.path.join(os.getenv("PIPETTE_DIR"), "policy", instrument + ".paf")
+    if output:
+        override['roots.output'] = output
+    if data:
+        override['roots.data'] = data
+    if calib:
+        override['roots.calib'] = calib
+    return pipConfig.configuration(default, override)
+
+
+def doLoad(instrument="hsc", output=None, data=None, calib=None, log=pexLog.Log.getDefaultLog()):
+    config = getConfig(instrument=instrument, output=output, data=data, calib=calib)
+    phot = pipPhot.Photometry(config=config, log=log)
+    phot.imports()
+
+
 def doRun(rerun=None, frameId=None, ccdId=None,
-          doMerge=True, doBreak=False,
+          doMerge=True,
           instrument="hsc",
-	  output=None,
-	  data=None,
-	  calib=None,
+          output=None,
+          data=None,
+          calib=None,
           log = pexLog.Log.getDefaultLog() # Log object
           ):
-    argv = []
-    argv.extend(["--instrument=%s" % (instrument),
-                 "--frame=%s" % (frameId),
-                 "--ccd=%s" % (ccdId)])
-
-    if output:
-	argv.append("--output=%s" % (output))
-    if data:
-	argv.append("--data=%s" % (data))
-    if calib:
-	argv.append("--calib=%s" % (calib))
-    
-    if rerun:
-        argv.append("--rerun=%s" % (rerun))
-                
-    if doBreak:
-        import pdb; pdb.set_trace()
-
-    config, opts, args = getConfig(argv=argv)
-
+    config = getConfig(instrument=instrument, output=output, data=data, calib=calib)
     state = run(rerun, frameId, ccdId, config, log=log)
-
     if doMerge:
         doMergeWcs(state, None)
     else:
         return state
 
+
 def main(argv=None):
-    config, opts, args = getConfig(argv=argv)
+    config, opts, args = getConfigFromArguments(argv)
     if not config:
         raise SystemExit("argument parsing error")
     

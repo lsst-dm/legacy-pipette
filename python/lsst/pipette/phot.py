@@ -22,7 +22,9 @@ class Photometry(pipProc.Process):
         @param psf PSF for photometry
         @param apcorr Aperture correction to apply
         @param wcs WCS to apply
-        @return Positive sources on exposure
+        @return
+        - sources: Measured sources
+        - footprintSet: Set of footprints
         """
         assert exposure, "No exposure provided"
         assert psf, "No psf provided"

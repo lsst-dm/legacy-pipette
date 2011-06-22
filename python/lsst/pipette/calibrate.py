@@ -36,7 +36,12 @@ class Calibrate(pipProc.Process):
         @param exposure Exposure to calibrate
         @param defects List of defects on exposure
         @param background Background model
-        @return Psf, Aperture correction, Sources, Matches
+        @return
+        - psf: Point spread function
+        - apcorr: Aperture correction
+        - sources: Sources used in calibration
+        - matches: Astrometric matches
+        - matchMeta: Metadata for astrometric matches
         """
         assert exposure is not None, "No exposure provided"
 

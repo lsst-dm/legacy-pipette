@@ -33,7 +33,7 @@ def getObjectsInField(exposure, db, user, password, host="lsst10.ncsa.uiuc.edu",
     
     @warning assumes database sky positions are ICRS
     
-    @return a list of sourceList
+    @return a list of sources
 
     SimRefObject table:    
     +----------------+--------------+------+-----+---------+-------+
@@ -106,7 +106,7 @@ def getObjectsInField(exposure, db, user, password, host="lsst10.ncsa.uiuc.edu",
     return sourceList
 
 def measure(exposure, config):
-    """Detect and measure sourceList on an exposure
+    """Detect and measure sources on an exposure
 
     @param[in] exposure: an instance of afwImage.Exposure
     @param[in] policy:
@@ -129,7 +129,7 @@ def measure(exposure, config):
     return sourceList, footprints
 
 def matchSources(sourceList, refSourceList, maxSep):
-    """Match exposure sourceList to reference sourceList
+    """Match exposure sources to reference sources
     
     @param[in] sourceList: list of Sources from the exposure
     @param[in] refSourceList: list of Sources from the reference catalog

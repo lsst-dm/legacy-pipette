@@ -8,17 +8,24 @@ definitions: {
         maxOccurs: 1
         dictionaryFile: "RootsDictionary.paf"
     }
-
     do: {
         type: Policy
         description: "Do we do these tasks?"
         minOccurs: 0
         maxOccurs: 1
         dictionary: {
+            definitions: {
+                calibrate: {
+                    type: Policy
+                    description: "Perform background subtraction?"
+                    minOccurs: 0
+                    maxOccurs: 1
+                    dictionaryFile: "DoCalibrateDictionary.paf"
+                }
+            }
         }
     }
-
-    db: {
+    dbPolicy: {
         type: Policy
         description: "Database parameters"
         minOccurs: 0
@@ -32,7 +39,7 @@ definitions: {
                     minOccurs: 1
                     maxOccurs: 1
                 }
-                table: {
+                objTable: {
                     type: string
                     description: "Reference object table"
                     default: "SimRefObject"
@@ -42,7 +49,7 @@ definitions: {
             }
         }
     }
-    match: {
+    matchPolicy: {
         type: Policy
         description: "Source matching parameters"
         minOccurs: 0
@@ -59,6 +66,13 @@ definitions: {
             }
         }
     }
+    calibrate: {
+        type: Policy
+        description: "Policy for calibration"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "calibrateDictionary.paf"
+    }
     detect: {
         type: Policy
         description: "Source detection policy"
@@ -72,31 +86,6 @@ definitions: {
         minOccurs: 0
         maxOccurs: 1
         dictionary: @@meas_algorithms:policy:MeasureSourcesDictionary.paf
-    }
-    psf: {
-        type: Policy
-        description: "PSF determination policies"
-        minOccurs: 0
-        maxOccurs: 1
-        dictionary: {
-            target: Config
-            definitions: {
-                select: {
-                    type: Policy
-                    description: "PSF star selection policy"
-                    minOccurs: 0
-                    maxOccurs: 1
-                    dictionary: @@meas_algorithms:policy:PsfSelectionRhlDictionary.paf
-                }
-                algorithm: {
-                    type: Policy
-                    description: "PSF measurement policy"
-                    minOccurs: 0
-                    maxOccurs: 1
-                    dictionary: @@meas_algorithms:policy:PsfAlgorithmRhlDictionary.paf
-                }
-            }
-        }
     }
     apcorr: {
         type: Policy

@@ -25,7 +25,8 @@ class ProcessCcd(pipProc.Process):
 
         @param exposureList List of exposures (each is an amp from the same exposure)
         @param detrendsList List of detrend dicts (each for an amp in the CCD; with bias, dark, flat, fringe)
-        @return Exposure, PSF, Aperture correction, Sources, Matched sources
+        @return Exposure, PSF, Aperture correction, Calibration sources, Faint sources,
+                Matched sources, Match metadata
         """
         assert exposureList and len(exposureList) > 0, "exposureList not provided"
 

@@ -13,17 +13,7 @@ definitions: {
         description: "Do we do these tasks?"
         minOccurs: 0
         maxOccurs: 1
-        dictionary: {
-            definitions: {
-                calibrate: {
-                    type: Policy
-                    description: "Perform background subtraction?"
-                    minOccurs: 0
-                    maxOccurs: 1
-                    dictionaryFile: "DoCalibrateDictionary.paf"
-                }
-            }
-        }
+        dictionaryFile: "DoProcessCcdDictionary.paf"
     }
     dbPolicy: {
         type: Policy
@@ -66,12 +56,46 @@ definitions: {
             }
         }
     }
+    
+    camera: {
+        type: string
+        description: "Camera name"
+        minOccurs: 1
+        maxOccurs: 1
+    }
+    fringe: {
+        type: Policy
+        description: "Policy for fringe subtraction"
+        maxOccurs: 1
+        dictionaryFile: "FringeDictionary.paf"
+    }
     calibrate: {
         type: Policy
         description: "Policy for calibration"
         minOccurs: 0
         maxOccurs: 1
         dictionaryFile: "calibrateDictionary.paf"
+    }
+
+    defects: {
+        type: Policy
+        description: "Policy for handling defects"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "defectsDictionary.paf"
+    }
+
+    background: {
+        type: Policy
+        description: "Background subtraction policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_utils:policy:BackgroundDictionary.paf
+    }
+    imports: {
+        type: Policy
+        description: "Modules to load"
+        minOccurs: 0
     }
     detect: {
         type: Policy
@@ -87,6 +111,45 @@ definitions: {
         maxOccurs: 1
         dictionary: @@meas_algorithms:policy:MeasureSourcesDictionary.paf
     }
+    psf: {
+        type: Policy
+        description: "PSF determination policies"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: {
+            target: Config
+            definitions: {
+                selectName: {
+                    type: string
+                    description: "Name of PSF star selection routine"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: "secondMomentStarSelector"
+                }
+                select: {
+                    type: Policy
+                    description: "PSF star selection policy"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    dictionary: @@meas_algorithms:policy:secondMomentStarSelectorDictionary.paf
+                }
+                algorithmName: {
+                    type: string
+                    description: "Name of PSF measurement routine"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: "pcaPsfDeterminer"
+                }
+                algorithm: {
+                    type: Policy
+                    description: "PSF measurement policy"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    dictionary: @@meas_algorithms:policy:pcaPsfDeterminerDictionary.paf
+                }
+            }
+        }
+    }
     apcorr: {
         type: Policy
         description: "Aperture correction policy"
@@ -94,4 +157,44 @@ definitions: {
         maxOccurs: 1
         dictionary: @@meas_algorithms:policy:ApertureCorrectionDictionary.paf
     }
+    cosmicray: {
+        type: Policy
+        description: "Cosmic rays masking policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_algorithms:policy:CrRejectDictionary.paf
+    }
+    distortion: {
+        type: Policy
+        description: "Distortion configuration"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionaryFile: "distortionDictionary.paf"
+    }
+    astrometry: {
+        type: Policy
+        description: "Astrometric calibration policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@meas_pipeline:policy:WcsDeterminationStageDictionary.paf
+    }
+    filters: {
+        type: Policy
+        description: "Filter translation table: data --> catalog"
+        minOccurs: 0
+        maxOccurs: 1
+    }
+    instrumentExtras: {
+        type: Policy
+        description: "Per-instrument policies"
+        minOccurs: 0
+        maxOccurs: 1
+    }
+#    zeropoint: {
+#        type: Policy
+#        description: "Photometric calibration policies"
+#        minOccurs: 0
+#        maxOccurs: 1
+#        dictionary: {
+#        }
 }

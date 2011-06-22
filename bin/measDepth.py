@@ -20,6 +20,7 @@ import lsst.sdqa as sdqa
 import lsst.pipette.options
 import lsst.pipette.calibrate
 import lsst.pipette.phot
+import lsst.pipette.processCcd
 
 def getObjectsInField(exposure, db, user, password, host="lsst10.ncsa.uiuc.edu", objTable="SimRefObject"):
     """Query database for all reference objects within a given exposure from a given table
@@ -111,11 +112,13 @@ def measure(exposure, config):
     @param[in] exposure: an instance of afwImage.Exposure
     @param[in] policy:
     
-    @return sourceList, footprints
+    @return sourceList
     """
     config['do']['calibrate']['astrometry'] = False
     config['do']['calibrate']['zeropoint'] = True
     config['do']['calibrate']['background'] = False
+    # turn off repair due to ticket #1718:
+    config['do']['calibrate']['repair']['cosmicray'] = False
     config['detect']['thresholdValue'] = 5.0
 
     calProc = lsst.pipette.calibrate.Calibrate(config=config)
@@ -126,7 +129,21 @@ def measure(exposure, config):
     
     photProc = lsst.pipette.phot.Photometry(config=config)
     sourceList, footprints = photProc.run(exposure, psf=psf, apcorr=apcorr, wcs=exposure.getWcs())
-    return sourceList, footprints
+    return sourceList
+
+#     defaults = os.path.join(os.environ("PIPETTE_DIR"), "policy",
+#     "ProcessCcdDictionary.paf")
+#     config = pipConfig.configuration(defaults, policy) # Not sure this will
+#     work, but you get the idea
+
+#     config['do']['isr']['enabled'] = False
+#     config['do']['calibrate']['psf'] = True
+#     config['do']['calibrate']['apcorr'] = True
+#     config['detect']['thresholdValue'] = 5.0
+# 
+#     procCcdProc = lsst.pipette.processCcd.ProcessCcd(config=config)
+#     exp, psf, apcorr, brightSources, sourceList, matches, matchMeta = procCcdProc.run([exposure])
+#     return sourceList
 
 def matchSources(sourceList, refSourceList, maxSep):
     """Match exposure sources to reference sources
@@ -166,7 +183,8 @@ if __name__ == "__main__":
     parser.add_option("--user", dest="user", type="string", help="Username for database")
     parser.add_option("--password", dest="password", type="string", help="Password for database")
     policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "measDepthDictionary.paf")
-    config, opts, args = parser.parse_args(policyPath)
+    overridePath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "lsstSim.paf")
+    config, opts, args = parser.parse_args([policyPath, overridePath])
     
     policy = config.getPolicy()
     dbPolicy = policy.getPolicy("dbPolicy")
@@ -182,16 +200,16 @@ if __name__ == "__main__":
     exposure = afwImage.ExposureF(exposurePath)
     maxSep = opts.maxsep
 
-    refSourceList = getObjectsInField(
-        exposure = exposure,
-        db = db,
-        user = user,
-        password = password,
-        host = dbPolicy.get("host"),
-        objTable = dbPolicy.get("objTable"),
-    )
-    print "Found %d reference sources" % (len(refSourceList),)
-    sourceList, footprints = measure(exposure, config)
+#     refSourceList = getObjectsInField(
+#         exposure = exposure,
+#         db = db,
+#         user = user,
+#         password = password,
+#         host = dbPolicy.get("host"),
+#         objTable = dbPolicy.get("objTable"),
+#     )
+#     print "Found %d reference sources" % (len(refSourceList),)
+    sourceList = measure(exposure, config)
     print "Found %d sources on the exposure" % (len(sourceList),)
     matchedSourceIds, matchedRefSourceIds, unmatchedSourceIDs, unmatchedRefIDs = matchSources(
         sourceList = sourceList,

@@ -21,8 +21,8 @@ def run(rerun,                          # Rerun name
 #    log = pexLog.getDefaultLog()
 #    log.setThreshold(log.DEBUG)
 
-    roots = config['roots']
-    io = pipReadWrite.ReadWrite(suprimecam.SuprimecamMapper, ['visit', 'ccd'], config=config)
+    mapper = suprimecam.SuprimecamMapper(rerun=rerun)
+    io = pipReadWrite.ReadWrite(mapper, ['visit', 'ccd'], config=config)
     detProc = pipMaster.Master(config=config)
     identMatrix = list()
     for ccd in ccds:

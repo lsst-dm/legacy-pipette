@@ -55,16 +55,16 @@ class CalibrateHsc(pipCalibrate.Calibrate):
         log = pexLog.Log(self.log, "astrometry")
         wcs.shiftReferencePixel(-llc[0], -llc[1])
 
-#        try:
-        if True:
+        try:
             astrom = hscAst.determineWcs(self.config['astrometry'].getPolicy(), exposure, distSources,
                                          log=log, forceImageSize=size, filterName=filterName)
             wcs.shiftReferencePixel(llc[0], llc[1])
-#        except Exception, e:
-#            pass
-#            self.log.log(self.log.WARN, "hsc.meas.astrom failed (%s); trying lsst.meas.astrom" % e)
-#            astrom = measAstrom.determineWcs(self.config['astrometry'].getPolicy(), exposure, distSources,
-#                                             log=log, forceImageSize=size, filterName=filterName)
+            if astrom is None:
+                raise RuntimeError("hsc.meas.astrom failed to determine the WCS")
+        except Exception, e:
+            self.log.log(self.log.WARN, "hsc.meas.astrom failed (%s); trying lsst.meas.astrom" % e)
+            astrom = measAstrom.determineWcs(self.config['astrometry'].getPolicy(), exposure, distSources,
+                                             log=log, forceImageSize=size, filterName=filterName)
         
         if distortion is not None:
             self.config['astrometry']['sipOrder'] = oldOrder

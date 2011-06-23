@@ -172,7 +172,7 @@ class Master(pipProc.Process):
         imageDim = None # Size of image
         for i in identList:
             exp = butler.get('calexp', i)
-            if imageDim == None:
+            if imageDim is None:
                 imageDim = exp.getDimensions()
             elif imageDim != exp.getDimensions():
                 raise RuntimeError("Dimensions don't match: %s != %s" % (exp.getDimensions(), imageDim))
@@ -203,7 +203,7 @@ class Master(pipProc.Process):
                 if self.config['do']['scale'] == "FRINGE" and backgrounds is not None:
                     bg = backgrounds[index]
                     if isinstance(bg, afwMath.mathLib.Background):
-                        bg = afwImage.ImageF(bg.getImageF(), box)
+                        bg = afwImage.ImageF(bg.getImageF(), box, afwImage.LOCAL)
                     data -= bg
 
                 if expScales is not None:

@@ -175,7 +175,7 @@ class Master(pipProc.Process):
             if imageDim == None:
                 imageDim = exp.getDimensions()
             elif imageDim != exp.getDimensions():
-                raise RuntimeError("Dimensions don't match: %s != %s" % (exp.getDimensions(), imageDim)
+                raise RuntimeError("Dimensions don't match: %s != %s" % (exp.getDimensions(), imageDim))
             del exp
         width, height = imageDim
 

@@ -104,6 +104,11 @@ def getObjectsInField(exposure, db, user, password, host="lsst10.ncsa.uiuc.edu",
         source = afwDet.Source(fakeId)
         source.setRaDecObject(raDecCoord)
         sourceList.append(source)
+
+    # copy RaObject/DecObject to Ra/Dec
+    for source in sourceList:
+        source.setRa(source.getRaObject())
+        source.setDec(source.getDecObject())
     return sourceList
 
 def measure(exposure, config):
@@ -114,36 +119,28 @@ def measure(exposure, config):
     
     @return sourceList
     """
+    config['do']['isr']['enabled'] = False
+    config['do']['calibrate']['psf'] = True
+    config['do']['calibrate']['apcorr'] = True
     config['do']['calibrate']['astrometry'] = False
-    config['do']['calibrate']['zeropoint'] = True
-    config['do']['calibrate']['background'] = False
-    # turn off repair due to ticket #1718:
+    config['do']['calibrate']['zeropoint'] = False # prevents measuring astrometry
+    # turn off cosmic ray interpolation due to ticket #1718 and because it is probably not wanted anyway
+    config['do']['calibrate']['repair']['interpolate'] = False
     config['do']['calibrate']['repair']['cosmicray'] = False
+    config['do']['calibrate']['background'] = False
+
+#    config['calibrate']['thresholdValue'] = 10.0 # default is 50
     config['detect']['thresholdValue'] = 5.0
-
-    calProc = lsst.pipette.calibrate.Calibrate(config=config)
-    psf, apcorr, sources, matches, matchMeta = calProc.run(exposure)
-    if sources == None:
-        raise RuntimeError("found no sources")
-    print "Calibrate results: psf=%s, apcorr=%s, %d sources" % (psf, apcorr, len(sources))
+    config["psf"]["select"]["fluxLim"] = 50.0 # why is the default so much larger?
     
-    photProc = lsst.pipette.phot.Photometry(config=config)
-    sourceList, footprints = photProc.run(exposure, psf=psf, apcorr=apcorr, wcs=exposure.getWcs())
+    procCcdProc = lsst.pipette.processCcd.ProcessCcd(config=config)
+    exp, psf, apcorr, brightSources, sourceList, matches, matchMeta = procCcdProc.run([exposure])
+
+#     # copy Ra/Dec to RaObject/DecObject
+#     for source in sourceList:
+#         source.setRaObject(source.getRa())
+#         source.setDecObject(source.getDec())
     return sourceList
-
-#     defaults = os.path.join(os.environ("PIPETTE_DIR"), "policy",
-#     "ProcessCcdDictionary.paf")
-#     config = pipConfig.configuration(defaults, policy) # Not sure this will
-#     work, but you get the idea
-
-#     config['do']['isr']['enabled'] = False
-#     config['do']['calibrate']['psf'] = True
-#     config['do']['calibrate']['apcorr'] = True
-#     config['detect']['thresholdValue'] = 5.0
-# 
-#     procCcdProc = lsst.pipette.processCcd.ProcessCcd(config=config)
-#     exp, psf, apcorr, brightSources, sourceList, matches, matchMeta = procCcdProc.run([exposure])
-#     return sourceList
 
 def matchSources(sourceList, refSourceList, maxSep):
     """Match exposure sources to reference sources
@@ -158,18 +155,19 @@ def matchSources(sourceList, refSourceList, maxSep):
     - unmatchedSourceIds:    set of unmatched source IDs
     - unmatchedRefSourceIds: set of unmatched reference IDs
     """
-    sourceMatchList = afwDet.matchRAaDec(sourceList, refSourceList, maxSep)
+    sourceMatchList = afwDet.matchRaDec(sourceList, refSourceList, float(maxSep))
+    print "matched %d sources using maxSep=%s" % (len(sourceMatchList), maxSep)
 
-    sourceIds = set(s.sourceId for s in sourceList)
-    refSourceIds = set(s.sourceId for s in refSourceList)
+    sourceIds = set(s.getSourceId() for s in sourceList)
+    refSourceIds = set(s.getSourceId() for s in refSourceList)
     matchedSourceIds = set()
     matchedRefSourceIds = set()
     for match in sourceMatchList:
-       matchedSourcesIds.add(match.first)
-       matchedRefSourceIds.add(match.second)
+       matchedSourceIds.add(match.first.getSourceId())
+       matchedRefSourceIds.add(match.second.getSourceId())
     unmatchedSourceIds = sourceIds - matchedSourceIds
     unmatchedRefSourceIds = refSourceIds - matchedRefSourceIds
-    return matchedSourceIds, matchedRefSourceIds, unmatchedSourceIDs, unmatchedRefIDs
+    return matchedSourceIds, matchedRefSourceIds, unmatchedSourceIds, unmatchedRefSourceIds
 
 if __name__ == "__main__":
     # Note: coadds don't have an official spot in repositories yet
@@ -177,7 +175,7 @@ if __name__ == "__main__":
     
     parser = lsst.pipette.options.OptionParser()
     parser.add_option("--exposure", dest="exposure", type="string", help="Path to exposure")
-    parser.add_option("--maxsep", dest="maxsep", type="float",
+    parser.add_option("--maxsep", dest="maxsep", type="float", default=0.5,
         help="Maximum separation for two sources to match (arcsec)")
     parser.add_option("--db", dest="db", type="string", help="Name of database containing reference catalog")
     parser.add_option("--user", dest="user", type="string", help="Username for database")
@@ -194,28 +192,39 @@ if __name__ == "__main__":
     db = opts.db
     user = opts.user
     password = opts.password
+    
+    for name in ("exposure", "db", "user", "password"):
+        if getattr(opts, name) == None:
+            print "Error: must specify --%s" % (name,)
+            sys.exit(1)
+    
     host = dbPolicy.get("host")
     objTable = dbPolicy.get("objTable")
     
     exposure = afwImage.ExposureF(exposurePath)
     maxSep = opts.maxsep
 
-#     refSourceList = getObjectsInField(
-#         exposure = exposure,
-#         db = db,
-#         user = user,
-#         password = password,
-#         host = dbPolicy.get("host"),
-#         objTable = dbPolicy.get("objTable"),
-#     )
-#     print "Found %d reference sources" % (len(refSourceList),)
+    print "Search the reference catalog"
+    refSourceList = getObjectsInField(
+        exposure = exposure,
+        db = db,
+        user = user,
+        password = password,
+        host = dbPolicy.get("host"),
+        objTable = dbPolicy.get("objTable"),
+    )
+    
+    print "Detect and measure sources on the exposure"
     sourceList = measure(exposure, config)
-    print "Found %d sources on the exposure" % (len(sourceList),)
-    matchedSourceIds, matchedRefSourceIds, unmatchedSourceIDs, unmatchedRefIDs = matchSources(
+    
+    print "Match sources"
+    matchedSourceIds, matchedRefSourceIds, unmatchedSourceIds, unmatchedRefSourceIds = matchSources(
         sourceList = sourceList,
         refSourceList = refSourceList,
         maxSep = maxSep,
     )
-
-    print "Found %d sources; missed %d and falsely detected %d" % \
-        (len(matchedSourceIds), len(unmatchedRefIDs), len(unmatchedSourceIDs))
+    print "Found %d reference sources in the catalog" % (len(refSourceList),)
+    print "Found %d sources on the exposure" % (len(sourceList),)
+    print "Matched using maxSep=%0.1f arcsec" % (maxSep,)
+    print "Identified %d sources from the exposure; failed to detect %d sources and falsely detected %d" % \
+        (len(matchedSourceIds), len(unmatchedRefSourceIds), len(unmatchedSourceIds))

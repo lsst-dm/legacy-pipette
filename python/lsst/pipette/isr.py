@@ -260,14 +260,8 @@ class Isr(pipProc.Process):
         assert flat, "No flat provided"
         flat = self._checkDimensions("flat", exposure, flat)
         mi = exposure.getMaskedImage()
-        image = mi.getImage()
-        variance = mi.getVariance()
-        flatImage = flat.getMaskedImage().getImage()
-        self.log.log(self.log.INFO, "Flattening image")
-        # XXX This looks awful because AFW doesn't define useful functions.  Need to fix this.
-        image /= flatImage
-        variance /= flatImage
-        variance /= flatImage
+        mi /= flat.getMaskedImage().getImage()
+
         ### This API is bad --- you NEVER want to rescale your flat on the fly.
         ### Scale it properly when you make it and never rescale again.
         #ipIsr.flatCorrection(exposure, flat, "USER", 1.0)

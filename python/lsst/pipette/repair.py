@@ -21,16 +21,11 @@ class Repair(pipProc.Process):
         @param psf Point spread function
         @param defects Defect list
         """
-        import lsstDebug
-        display = lsstDebug.Info(__name__).display
-
         assert exposure, "No exposure provided"
 
         do = self.config['do']['calibrate']['repair']
 
-        if display:
-            ds9.setDefaultFrame(0)
-            ds9.mtv(exposure, title="Pre-repair")
+        self.display('prerepair', exposure=exposure)
 
         if defects is not None and do['interpolate']:
             self.interpolate(exposure, psf, defects)

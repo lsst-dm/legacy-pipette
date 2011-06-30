@@ -3,12 +3,19 @@
 re-detection, re-measurement and source association
 and reporting the number of objects found, number missed and false detections.
 
-@todo once ticket #1714 is fixed use database source IDs for reference source IDs
+@todo
+- Display a line graph of fraction of detected stars vs. magnitude
+  as Andy Becker says: # matched stars + # blended stars / # of ref stars
+  (though in my case I don't know about blends because I'm using cruder source association).
+- Display a separate plot of psfFlux error vs. magnitude for matched stars, binned by 1/2 mag
+  and comapre this to one of the input images. At a given fraction you should be able to go fainter in the coadd.
+- Once ticket #1714 is fixed use database source IDs for reference source IDs
 """
 import math
 import os
 import sys
 
+import matplotlib.pyplot as pyplot
 import MySQLdb
 
 import lsst.afw.coord as afwCoord
@@ -22,19 +29,26 @@ import lsst.pipette.calibrate
 import lsst.pipette.phot
 import lsst.pipette.processCcd
 
-def getObjectsInField(exposure, db, user, password, host="lsst10.ncsa.uiuc.edu", objTable="SimRefObject"):
+def getObjectsInField(exposure, filterName, db, user, password, host="lsst10.ncsa.uiuc.edu", objTable="SimRefObject"):
     """Query database for all reference objects within a given exposure from a given table
     
     @param[in] exposure: exposure whose footprint on the sky is to be searched
+    @param[in] filterName: name of filter (e.g. "g"); required because exposure may not have a Filter
     @param[in] db: database to search for reference objects
     @param[in] user: user for database server
     @param[in] password: password for database server
     @param[in] host: database host
     @param[in] objTable: table of reference objects
     
-    @warning assumes database sky positions are ICRS
+    @return a list of sources. Fields that are set include:
+        - sourceId: set to an index, NOT refObjectId from the database 
+        - ra, dec
+        - flagForDetection is 1 if isStar, 0 otherwise
+        - psfFlux
     
-    @return a list of sources
+    @warning
+    - sourceId is set to an arbitrary index, NOT refObjectId from the database, due to ticket #1714
+    - assumes database sky positions are ICRS
 
     SimRefObject table:    
     +----------------+--------------+------+-----+---------+-------+
@@ -77,6 +91,11 @@ def getObjectsInField(exposure, db, user, password, host="lsst10.ncsa.uiuc.edu",
                          passwd = password)
     cursor = db.cursor()
 
+    calib = exposure.getCalib()
+    
+    filterColName = "%sMag" % (filterName,)
+    print "filterName=%s, filterColName=%s" % (filterName, filterColName)
+
     pixPosBox = afwGeom.Box2D(exposure.getBBox(afwImage.PARENT))
     llSky = wcs.pixelToSky(pixPosBox.getMin()).getPosition()
     urSky = wcs.pixelToSky(pixPosBox.getMax()).getPosition()
@@ -87,9 +106,9 @@ def getObjectsInField(exposure, db, user, password, host="lsst10.ncsa.uiuc.edu",
         llSky[0], urSky[1],
     )
     
-    queryStr = "select refObjectId, ra, decl " + \
-        "from %s as objTbl " % (objTable,) + \
-        "where qserv_ptInSphPoly(objTbl.ra, objTbl.decl, '%s')" % (skyCornersStr,)
+    queryStr = "select refObjectId, isStar, ra, decl, %s" % (filterColName,) + \
+        " from %s as objTbl" % (objTable,) + \
+        " where qserv_ptInSphPoly(objTbl.ra, objTbl.decl, '%s')" % (skyCornersStr,)
     print "SQL query=%r" % (queryStr,)
     results = cursor.execute(queryStr)
     sourceList = []
@@ -98,11 +117,17 @@ def getObjectsInField(exposure, db, user, password, host="lsst10.ncsa.uiuc.edu",
         dataTuple = cursor.fetchone()
         if dataTuple == None:
             break
-        sourceId, ra, dec = dataTuple
+        sourceId, isStar, ra, dec, mag = dataTuple
         fakeId += 1
         raDecCoord = afwCoord.IcrsCoord(afwGeom.Point2D(ra, dec), afwCoord.DEGREES) 
+        flux = calib.getFlux(mag)
+        if flux <= 0:
+            print "Error: reference source %s has flux = %s < 0; mag = %s" % (sourceId, flux, mag)
+            continue
         source = afwDet.Source(fakeId)
         source.setRaDecObject(raDecCoord)
+        source.setFlagForDetection(isStar)
+        source.setPsfFlux(flux)
         sourceList.append(source)
 
     # copy RaObject/DecObject to Ra/Dec
@@ -135,6 +160,11 @@ def measure(exposure, config):
     
     procCcdProc = lsst.pipette.processCcd.ProcessCcd(config=config)
     exp, psf, apcorr, brightSources, sourceList, matches, matchMeta = procCcdProc.run([exposure])
+    
+    badSourceList = [s for s in sourceList if s.getPsfFlux() <= 0]
+    if len(badSourceList) > 0:
+        print "Warning: rejecting %d sources with psfFlux <= 0" % (len(badSourceList),)
+        sourceList = [s for s in sourceList if s.getPsfFlux() > 0]
 
 #     # copy Ra/Dec to RaObject/DecObject
 #     for source in sourceList:
@@ -150,24 +180,30 @@ def matchSources(sourceList, refSourceList, maxSep):
     @param[in] maxSep: maximum separation (arcsec)
 
     @return
-    - matchedSourceIds:      set of matched source IDs
-    - matchedRefSourceIds:   set of matched reference source IDs
-    - unmatchedSourceIds:    set of unmatched source IDs
-    - unmatchedRefSourceIds: set of unmatched reference IDs
+    - matchedSources:       set of matched exposure Sources
+    - matchedRefSources:    set of matched reference Sources
+    - unmatchedSources:   set of unmatched exposure Sources
+    - unmatchedRefSources:  set of unmatched reference Sources
     """
     sourceMatchList = afwDet.matchRaDec(sourceList, refSourceList, float(maxSep))
-    print "matched %d sources using maxSep=%s" % (len(sourceMatchList), maxSep)
+    print "Matched %d sources using maxSep=%s" % (len(sourceMatchList), maxSep)
+    
+    matchedSources = set(m.first for m in sourceMatchList)
+    matchedRefSources = set(m.second for m in sourceMatchList)
 
-    sourceIds = set(s.getSourceId() for s in sourceList)
-    refSourceIds = set(s.getSourceId() for s in refSourceList)
-    matchedSourceIds = set()
-    matchedRefSourceIds = set()
-    for match in sourceMatchList:
-       matchedSourceIds.add(match.first.getSourceId())
-       matchedRefSourceIds.add(match.second.getSourceId())
+    sourceDict = dict((s.getSourceId(), s) for s in sourceList)
+    sourceIds = set(sourceDict.keys())
+    matchedSourceIds  = set(m.first.getSourceId()  for m in sourceMatchList)
     unmatchedSourceIds = sourceIds - matchedSourceIds
-    unmatchedRefSourceIds = refSourceIds - matchedRefSourceIds
-    return matchedSourceIds, matchedRefSourceIds, unmatchedSourceIds, unmatchedRefSourceIds
+    unmatchedSources = set(sourceDict[id] for id in unmatchedSourceIds)
+
+    refSourceDict = dict((s.getSourceId(), s) for s in refSourceList)
+    refSourceIDs = set(s.getSourceId() for s in refSourceList)
+    matchedRefSourceIds = set(s.getSourceId() for s in matchedRefSources)
+    unmatchedRefSourceIds = refSourceIDs - matchedRefSourceIds
+    unmatchedRefSources = set(refSourceDict[id] for id in unmatchedRefSourceIds)
+
+    return matchedSources, matchedRefSources, unmatchedSources, unmatchedRefSources
 
 if __name__ == "__main__":
     # Note: coadds don't have an official spot in repositories yet
@@ -175,6 +211,7 @@ if __name__ == "__main__":
     
     parser = lsst.pipette.options.OptionParser()
     parser.add_option("--exposure", dest="exposure", type="string", help="Path to exposure")
+    parser.add_option("--filter", dest="filter", type="string", help="Filter name (e.g. g)")
     parser.add_option("--maxsep", dest="maxsep", type="float", default=0.5,
         help="Maximum separation for two sources to match (arcsec)")
     parser.add_option("--db", dest="db", type="string", help="Name of database containing reference catalog")
@@ -189,11 +226,12 @@ if __name__ == "__main__":
     matchPolicy = policy.getPolicy("matchPolicy")
     
     exposurePath = opts.exposure
+    filterName = opts.filter
     db = opts.db
     user = opts.user
     password = opts.password
     
-    for name in ("exposure", "db", "user", "password"):
+    for name in ("exposure", "db", "filter", "user", "password"):
         if getattr(opts, name) == None:
             print "Error: must specify --%s" % (name,)
             sys.exit(1)
@@ -202,11 +240,14 @@ if __name__ == "__main__":
     objTable = dbPolicy.get("objTable")
     
     exposure = afwImage.ExposureF(exposurePath)
+    calib = exposure.getCalib()
+    print "exposure zeropoint=%0.1f" % (calib.getMagnitude(1.0),)
     maxSep = opts.maxsep
 
     print "Search the reference catalog"
     refSourceList = getObjectsInField(
         exposure = exposure,
+        filterName = filterName,
         db = db,
         user = user,
         password = password,
@@ -218,13 +259,38 @@ if __name__ == "__main__":
     sourceList = measure(exposure, config)
     
     print "Match sources"
-    matchedSourceIds, matchedRefSourceIds, unmatchedSourceIds, unmatchedRefSourceIds = matchSources(
+    matchedSources, matchedRefSources, unmatchedSources, unmatchedRefSources = matchSources(
         sourceList = sourceList,
         refSourceList = refSourceList,
         maxSep = maxSep,
     )
-    print "Found %d reference sources in the catalog" % (len(refSourceList),)
+
+    matchedStars = set(s for s in matchedSources if s.getFlagForDetection())
+    matchedRefStars = set(s for s in matchedRefSources if s.getFlagForDetection())
+    unmatchedRefStars = set(s for s in unmatchedRefSources if s.getFlagForDetection())
+    
+    print "Found %d reference sources, of which %d are stars, in the catalog" % \
+        (len(refSourceList), len(matchedRefStars) + len(unmatchedRefStars))
     print "Found %d sources on the exposure" % (len(sourceList),)
     print "Matched using maxSep=%0.1f arcsec" % (maxSep,)
-    print "Identified %d sources from the exposure; failed to detect %d sources and falsely detected %d" % \
-        (len(matchedSourceIds), len(unmatchedRefSourceIds), len(unmatchedSourceIds))
+    print "Matched %d stars from the exposure; failed to detect %d stars and falsely detected %d sources" % \
+        (len(matchedRefStars), len(unmatchedRefStars), len(unmatchedSources))
+    
+    matchedStarPsfMags = sorted(list(calib.getMagnitude(s.getPsfFlux()) for s in matchedStars))
+    unmatchedRefStarPsfMags = sorted(list(calib.getMagnitude(s.getPsfFlux()) for s in unmatchedRefStars))
+    unmatchedSourcePsfMags = sorted(list(calib.getMagnitude(s.getPsfFlux()) for s in unmatchedSources))
+    
+    plotData = (matchedStarPsfMags, unmatchedRefStarPsfMags, unmatchedSourcePsfMags)
+    dataLabels = ("Matched Stars", "Unmatched Ref Stars", "False Detections")
+    try:
+        count, bins, ignored = pyplot.hist(plotData,
+            label=dataLabels, bins=30, histtype='barstacked', normed=True)
+        pyplot.legend(loc='upper left')
+    except Exception:
+        # old version of matplotlib; cannnot show a useful legend without a lot of extra work
+        count, bins, ignored = pyplot.hist(plotData, bins=30, histtype='barstacked', normed=True)
+        print "This matplotlib is too old to support legends for stacked histograms."
+        print "From bottom to top the histogram shows:"
+        for label in dataLabels:
+            print "*", label
+    pyplot.show()

@@ -25,12 +25,12 @@ class IsrSuprimeCam(pipIsr.Isr):
         ccdNum = ccd.getId().getSerial()
         if ccdNum not in [0, 1, 2, 6, 7]:
             # No need to mask
-            return
+            return defects
 
         md = exposure.getMetadata()
         if not md.exists("S_AG-X"):
             self.log.log(self.log.WARN, "No autoguider position in exposure metadata.")
-            return
+            return defects
 
         xGuider = md.get("S_AG-X")
         if ccdNum in [1, 2, 7]:
@@ -43,7 +43,7 @@ class IsrSuprimeCam(pipIsr.Isr):
         height = mi.getHeight()
         if height < maskLimit:
             # Nothing to mask!
-            return
+            return defects
 
         if False:
             # XXX This mask plane isn't respected by background subtraction or source detection or measurement
@@ -64,7 +64,7 @@ class IsrSuprimeCam(pipIsr.Isr):
             good = mi.Factory(mi, bbox, afwImage.LOCAL)
             exposure.setMaskedImage(good)
 
-        return
+        return defects
 
 class ProcessCcdSuprimeCam(pipProcCcd.ProcessCcd):
     def __init__(self, *args, **kwargs):

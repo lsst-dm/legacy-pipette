@@ -30,10 +30,7 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.coadd.utils as coaddUtils
 import lsst.daf.base as dafBase
-try:
-    import lsst.ip.diffim as ipDiffIm
-except ImportError:
-    print "Warning: ip_diffim not setup; cannot PSF-match exposures"
+import lsst.ip.diffim as ipDiffIm
 import lsst.pex.logging as pexLog
 import lsst.pipette.coaddOptions
 

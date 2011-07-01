@@ -30,7 +30,6 @@ class CalibrateHsc(pipCalibrate.Calibrate):
 
         wcs = exposure.getWcs()
         if wcs is None or hscAst is None:
-            import pdb; pdb.set_trace()
             self.log.log(self.log.WARN, "Unable to use hsc.meas.astrom; reverting to lsst.meas.astrom")
             return super(CalibrateHsc, self).astrometry(exposure, sources, distSources,
                                                         distortion=distortion, llc=llc, size=size)

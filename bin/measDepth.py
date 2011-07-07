@@ -99,18 +99,32 @@ def getObjectsInField(exposure, filterName, db, user, password, host="lsst10.ncs
     pixPosBox = afwGeom.Box2D(exposure.getBBox(afwImage.PARENT))
     llSky = wcs.pixelToSky(pixPosBox.getMin()).getPosition()
     urSky = wcs.pixelToSky(pixPosBox.getMax()).getPosition()
-    skyCornersStr = "%0.4f %0.4f %0.4f %0.4f %0.4f %0.4f %0.4f %0.4f" % (
+    # create binary representation of search polygon; name it @poly
+    queryStr = "SET @poly = scisql_s2CPolyToBin(%0.6f, %0.6f, %0.6f, %0.6f, %0.6f, %0.6f, %0.6f, %0.6f)" % \
+    (
         llSky[0], llSky[1],
         urSky[0], llSky[1],
         urSky[0], urSky[1],
         llSky[0], urSky[1],
     )
-    
-    queryStr = "select refObjectId, isStar, ra, decl, %s" % (filterColName,) + \
-        " from %s as objTbl" % (objTable,) + \
-        " where qserv_ptInSphPoly(objTbl.ra, objTbl.decl, '%s')" % (skyCornersStr,)
-    print "SQL query=%r" % (queryStr,)
-    results = cursor.execute(queryStr)
+    print "SQL command:", queryStr
+    cursor.execute(queryStr)
+
+    # Compute HTM ID ranges for the level 20 triangles overlapping @poly.
+    # They will be stored in a temp table called scisql.Region with two columns, htmMin and htmMax
+    queryStr = "CALL scisql.scisql_s2CPolyRegion(@poly, 20)"
+    print "SQL command:", queryStr
+    cursor.execute(queryStr)
+
+    # Select reference objects inside the polygon. The join against
+    # the HTM ID range table populated above cuts down on the number of
+    # SimRefObject rows that need to be tested against the polygon
+    queryStr = "SELECT refObjectId, isStar, ra, decl, %s" % (filterColName,) + \
+        " FROM %s AS objTbl INNER JOIN" % (objTable,) + \
+        " scisql.Region AS rgnTbl ON (objTbl.htmId20 BETWEEN rgnTbl.htmMin and rgnTbl.htmMax)" + \
+        " WHERE scisql_s2PtInCPoly(ra, decl, @poly) = 1"
+    print "SQL command:", queryStr
+    cursor.execute(queryStr)
     sourceList = []
     fakeId = 0 # to work around ticket #1714
     while True:
@@ -156,7 +170,7 @@ def measure(exposure, config):
 
 #    config['calibrate']['thresholdValue'] = 10.0 # default is 50
     config['detect']['thresholdValue'] = 5.0
-    config["psf"]["select"]["fluxLim"] = 50.0 # why is the default so much larger?
+    config["psf"]["select"]["fluxLim"] = 10.0 # why is the default so much larger?
     
     procCcdProc = lsst.pipette.processCcd.ProcessCcd(config=config)
     exp, psf, apcorr, brightSources, sourceList, matches, matchMeta = procCcdProc.run([exposure])
@@ -254,9 +268,11 @@ if __name__ == "__main__":
         host = dbPolicy.get("host"),
         objTable = dbPolicy.get("objTable"),
     )
+    print "Found %d reference sources in the catalog" % (len(refSourceList),)
     
     print "Detect and measure sources on the exposure"
     sourceList = measure(exposure, config)
+    print "Found %d sources on the exposure" % (len(sourceList),)
     
     print "Match sources"
     matchedSources, matchedRefSources, unmatchedSources, unmatchedRefSources = matchSources(

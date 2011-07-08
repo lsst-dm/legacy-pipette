@@ -79,7 +79,9 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     @param[in] coaddBBox: bounding box for coadd
     @param[in] policy: policy: see policy/outlierRejectedCoaddDictionary.paf
     
-    @return exposureMetadataList: a list of ExposureMetadata objects
+    @return
+    - coaddCalib: Calib object for coadd
+    - exposureMetadataList: a list of ExposureMetadata objects
         describing the saved psf-matched and warped exposures
     """
     if len(idList) < 1:
@@ -87,11 +89,11 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         
     warpPolicy = policy.getPolicy("warpPolicy")
     coaddPolicy = policy.getPolicy("coaddPolicy")
-    badPixelMask = coaddUtils.makeBitMask(coaddPolicy.getArray("badMaskPlanes"))
+    badPixelMask = afwImage.MaskU.getPlaneBitMask(coaddPolicy.getArray("badMaskPlanes"))
     coaddZeroPoint = coaddPolicy.get("coaddZeroPoint")
     coddFluxMag0 = 10**(0.4 * coaddZeroPoint)
-    destCalib = afwImage.Calib()
-    destCalib.setFluxMag0(coddFluxMag0)
+    coaddCalib = afwImage.Calib()
+    coaddCalib.setFluxMag0(coddFluxMag0)
 
     if desFwhm > 0:
         psfMatchPolicy = policy.getPolicy("psfMatchPolicy")
@@ -136,7 +138,7 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
             
             print "Warp exposure"
             exposure = warper.warpExposure(coaddWcs, exposure, maxBBox = coaddBBox)
-            exposure.setCalib(destCalib)
+            exposure.setCalib(coaddCalib)
 
             print "Saving intermediate exposure %s" % (outPath,)
             exposure.writeFits(outPath)
@@ -152,7 +154,7 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
             )
         exposureMetadataList.append(expMetadata)
         
-    return exposureMetadataList
+    return coaddCalib, exposureMetadataList
 
 def subBBoxIter(bbox, subregionSize):
     """Iterate over subregions of a bbox
@@ -208,7 +210,7 @@ def outlierRejectedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
         sys.exit(1)
     print "Coadd %s calexp" % (len(idList),)
 
-    exposureMetadataList = psfMatchAndWarp(
+    coaddCalib, exposureMetadataList = psfMatchAndWarp(
         idList = idList,
         butler = butler,
         desFwhm = desFwhm,
@@ -220,7 +222,7 @@ def outlierRejectedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     edgeMask = afwImage.MaskU.getPlaneBitMask("EDGE")
     
     coaddPolicy = policy.getPolicy("coaddPolicy")
-    badPixelMask = coaddUtils.makeBitMask(coaddPolicy.getArray("badMaskPlanes"))
+    badPixelMask = afwImage.MaskU.getPlaneBitMask(coaddPolicy.getArray("badMaskPlanes"))
 
     statsCtrl = afwMath.StatisticsControl()
     statsCtrl.setNumSigmaClip(3.0)
@@ -228,6 +230,7 @@ def outlierRejectedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     statsCtrl.setAndMask(badPixelMask)
 
     coaddExposure = afwImage.ExposureF(coaddBBox, coaddWcs)
+    coaddExposure.setCalib(coaddCalib)
     coaddMaskedImage = coaddExposure.getMaskedImage()
     subregionSizeArr = policy.getArray("subregionSize")
     subregionSize = afwGeom.Extent2I(subregionSizeArr[0], subregionSizeArr[1])

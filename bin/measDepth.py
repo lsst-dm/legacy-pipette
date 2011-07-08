@@ -15,6 +15,7 @@ import math
 import os
 import sys
 
+import numpy
 import matplotlib.pyplot as pyplot
 import MySQLdb
 
@@ -158,6 +159,11 @@ def measure(exposure, config):
     
     @return sourceList
     """
+    # zero out the masked pixels
+    maskArr = exposure.getMaskedImage().getMask().getArray()
+    print "Zero out the %d masked pixels" % (numpy.sum(maskArr != 0))
+    maskArr[:] = 0
+    
     config['do']['isr']['enabled'] = False
     config['do']['calibrate']['psf'] = True
     config['do']['calibrate']['apcorr'] = True

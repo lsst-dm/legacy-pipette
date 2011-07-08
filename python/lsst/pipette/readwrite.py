@@ -173,75 +173,13 @@ class ReadWrite(object):
 
         output = []
         for sourceList, matchList, header in zip(sources, matches, headers):
-            meta = matchList.getSourceMatchMetadata()
-            matchList = matchList.getSourceMatches()
-            sourceList = sourceList.getSources()
             wcs = afwImage.makeWcs(header)
-
-            filter = header.get('FILTER').strip()
             width, height = header.get('NAXIS1'), header.get('NAXIS2')
-            xc, yc = 0.5 * width, 0.5 * height
-            radec = wcs.pixelToSky(xc, yc)
-            ra = radec.getLongitude(afwCoord.DEGREES)
-            dec = radec.getLatitude(afwCoord.DEGREES)
-            radius = wcs.pixelScale() * math.hypot(xc, yc) * 1.1
 
-            policy = pexPolicy.Policy()
-            policy.set('matchThreshold', 30)
-            solver = measAstrom.createSolver(policy, self.log)
-            idName = 'id'
-            anid = meta.getInt('ANINDID')
+            matches = measAstrom.generateMatchesFromMatchList(matchList, sourceList.getSources(),
+                                                              wcs, width, height, log=self.log)
 
-            cat = solver.getCatalogue(ra, dec, radius, filter, idName, anid)
-            ref = cat.refsources
-            inds = cat.inds
-
-            referrs, stargal = None, None
-            colnames = [c.name for c in solver.getTagAlongColumns(anid)]
-
-            col = 'starnotgal'
-            if col in colnames:
-                stargal1 = solver.getTagAlongBool(anid, col, inds)
-                stargal = []
-                for i in range(len(stargal1)):
-                    stargal.append(stargal1[i])
-
-            fdict = maUtils.getDetectionFlags()
-
-            keepref = []
-            keepi = []
-            for i in xrange(len(ref)):
-                x, y = wcs.skyToPixel(ref[i].getRaDec())
-                if x < 0 or y < 0 or x > width or y > height:
-                    continue
-                ref[i].setXAstrom(x)
-                ref[i].setYAstrom(y)
-                if stargal is not None and stargal[i]:
-                    ref[i].setFlagForDetection(ref[i].getFlagForDetection() | fdict["STAR"])
-                keepref.append(ref[i])
-                keepi.append(i)
-
-            ref = keepref
-
-            if referrs is not None:
-                referrs = [referrs[i] for i in keepi]
-            if stargal is not None:
-                stargal = [stargal[i] for i in keepi]
-
-            stargal = stargal
-            referrs = referrs
-
-            #self.log.setThreshold(self.log.DEBUG)
-            measAstrom.joinMatchList(matchList, ref, first=True, log=self.log)
-            measAstrom.joinMatchList(matchList, sourceList, first=False, log=self.log)
-            #self.log.setThreshold(self.log.INFO)
-
-            cleanList = [m for m in matchList if m.first is not None and m.second is not None]
-            if len(cleanList) != len(matchList):
-                self.log.log(self.log.WARN, "Missing entries after joining match list: %d of %d joined" % 
-                             (len(cleanList), len(matchList)))
-            
-            output.append(cleanList)
+            output.append(matches)
         return output
 
 

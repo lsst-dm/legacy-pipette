@@ -28,7 +28,7 @@ import lsst.pex.policy as pexPolicy
 
 """This module defines the configuration for LSST Algorithms testing (Green Blob 3)."""
 
-class Config(dict):
+class Config(object):
     """Config is a configuration class for LSST Algorithms testing (Green Blob 3).
 
     It quacks like a Python dictionary.

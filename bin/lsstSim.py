@@ -74,7 +74,7 @@ if __name__ == "__main__":
         print >> sys.stderr, 'Unrecognized arguments: "%s"' % '", '.join(args)
         sys.exit(1)
     if len(sys.argv) == 1:
-        print >> sys.stderr, 'Unprocessed arguments: "%s"' % '", '.join(sys.args)
+        parser.print_help()
         sys.exit(1)
     if not opts.rerun:
         print >> sys.stderr, "Please specify a rerun"

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
+
 import os
+import re
 import math
 import lsst.pex.logging as pexLog
 import lsst.pex.policy as pexPolicy
@@ -30,6 +32,10 @@ def getMapper(mapper, root=None, calibRoot=None, registry=None):
         thisMapperBuffer[key] = mapper(root=root, registry=registry, calibRoot=calibRoot)
     return thisMapperBuffer[key]
 
+def parseRoot(root):
+    root = re.sub("~", os.environ['HOME'], root)
+    return root                                  
+
 
 def initMapper(mapper, config, log, inMap=True):
     """Utility function to initialize an input or output mapper"""
@@ -44,12 +50,12 @@ def initMapper(mapper, config, log, inMap=True):
             mapp = getMapper(mapper)
         else:
             roots = config['roots'] if config.has_key('roots') else {}
-            dataRoot = roots['data'] if roots.has_key('data') else None
-            calibRoot = roots['calib'] if roots.has_key('calib') else None
+            dataRoot = parseRoot(roots['data']) if roots.has_key('data') else None
+            calibRoot = parseRoot(roots['calib']) if roots.has_key('calib') else None
             if inMap:
                 mapp = getMapper(mapper, root=dataRoot, calibRoot=calibRoot)
             else:
-                outRoot = roots['output'] if roots.has_key('output') else None
+                outRoot = parseRoot(roots['output']) if roots.has_key('output') else None
                 # if there's no output registry, use the input registry
                 outRegistry = os.path.join(outRoot, "registry.sqlite3")
                 inRegistry = os.path.join(dataRoot, "registry.sqlite3")

@@ -241,7 +241,7 @@ class Master(pipProc.Process):
         if flag is None:
             flag = afwImage.ImageU(dims)
         image = mi.getImage()
-        image /= flat.getMaskedImage().getImage()
+        image /= flat.getImage()
 
         stats = afwMath.makeStatistics(image, mi.getMask(), afwMath.MEDIAN | afwMath.STDEVCLIP, 
                                        afwMath.StatisticsControl())

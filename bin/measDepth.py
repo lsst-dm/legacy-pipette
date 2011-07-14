@@ -159,10 +159,15 @@ def measure(exposure, config):
     
     @return sourceList
     """
-    # zero out the masked pixels
+    # zero out the non-BAD/SATmasked pixels
     maskArr = exposure.getMaskedImage().getMask().getArray()
-    print "Zero out the %d masked pixels" % (numpy.sum(maskArr != 0))
-    maskArr[:] = 0
+    bitMask = afwImage.MaskU.getPlaneBitMask(("EDGE", "BAD")) # should just be EDGE but afw stats sets BAD
+    numZeroed = numpy.sum(numpy.logical_and(maskArr != 0, maskArr & bitMask == 0))
+    newMaskArr = numpy.where(maskArr & bitMask == 0, 0, maskArr)
+    print "Number of masked pixels = %d to start" % (numpy.sum(maskArr != 0),)
+    print "Zero out the %d masked pixels that have neither EDGE nor BAD set" % (numZeroed,)
+    maskArr[:] = newMaskArr
+    print "Number of masked pixels = %d after nulling" % (numpy.sum(maskArr != 0),)
     
     config['do']['isr']['enabled'] = False
     config['do']['calibrate']['psf'] = True

@@ -260,6 +260,7 @@ class Isr(pipProc.Process):
         assert flat, "No flat provided"
         flat = self._checkDimensions("flat", exposure, flat)
         mi = exposure.getMaskedImage()
+        self.log.log(self.log.INFO, "Flat-fielding")
         mi /= flat.getMaskedImage().getImage()
 
         ### This API is bad --- you NEVER want to rescale your flat on the fly.
@@ -403,5 +404,6 @@ class Isr(pipProc.Process):
         @param exposure Exposure to process
         @return Background, Background-subtracted exposure
         """
+        self.log.log(self.log.INFO, "Subtracting background")
         background = self._Background(config=self.config, log=self.log)
         return background.run(exposure)

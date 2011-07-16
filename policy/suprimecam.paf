@@ -33,9 +33,9 @@ do: {
 }
 
 imports: {
-#    HSM: lsst.meas.extensions.shapeHSM
-#    KRON: lsst.meas.extensions.photometryKron
-#    ROTANGLE: lsst.meas.extensions.rotAngle
+    HSM: lsst.meas.extensions.shapeHSM
+    KRON: lsst.meas.extensions.photometryKron
+    ROTANGLE: lsst.meas.extensions.rotAngle
 }
 
 background: {
@@ -46,7 +46,7 @@ background: {
 psf: {
     algorithm: {
         nEigenComponents: 4
-        kernelSize:       31
+        kernelSize:       5
     }
 }
 
@@ -61,24 +61,24 @@ measure: {
         apFlux:  "SINC"
         modelFlux: "GAUSSIAN"
         psfFlux: "PSF"
-#        shape: "HSM_KSB"
+        shape: "HSM_KSB"
     }
     shape: {
-#        HSM_BJ: {
-#            enabled: true
-#        }
-#        HSM_LINEAR: {
-#            enabled: true
-#        }
-#        HSM_KSB: {
-#            enabled: true
-#        }
-#        HSM_REGAUSS: {
-#            enabled: true
-#        }
-#        HSM_SHAPELET: {
-#            enabled: true
-#        }
+        HSM_BJ: {
+            enabled: true
+        }
+        HSM_LINEAR: {
+            enabled: true
+        }
+        HSM_KSB: {
+            enabled: true
+        }
+        HSM_REGAUSS: {
+            enabled: true
+        }
+        HSM_SHAPELET: {
+            enabled: true
+        }
     }
     astrometry: {
         GAUSSIAN: {
@@ -92,9 +92,9 @@ measure: {
         SDSS: {
             enabled: true
         }
-#        ROTANGLE: {
-#            enabled: true
-#        }
+        ROTANGLE: {
+            enabled: true
+        }
     }
     photometry: {
         GAUSSIAN: {
@@ -110,9 +110,9 @@ measure: {
         SINC: {
             radius: 9.0
         }
-#        KRON: {
-#            enabled: true
-#        }
+        KRON: {
+            enabled: true
+        }
     }
 }
 

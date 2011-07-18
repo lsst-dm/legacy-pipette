@@ -96,9 +96,13 @@ if __name__ == "__main__":
     inputs = list()
     for rx in range(2):
         for ry in range(2):
+            if rx,ry in ((0,0), (0,2), (2,0), (2,2)):
+                continue
             raft = "%d,%d" % (rx, ry)
             for sx in range(2):
                 for sy in range(2):
+                    if sx,sy in ((0,0), (0,2), (2,0), (2,2)):
+                        continue
                     sensor = "%d,%d" % (sx, sy)
                     logName = "%s.%d%d%d%d.log" % (opts.rerun, rx, ry, sx, sy)
                     inputs.append(Inputs(rerun=opts.rerun, visit=opts.visit, snap=opts.snap,

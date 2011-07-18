@@ -13,7 +13,7 @@ import lsst.pipette.options as pipOptions
 import lsst.pipette.catalog as pipCatalog
 import lsst.pipette.readwrite as pipReadWrite
 
-Inputs = collections.namedtuple('Inputs', ['rerun', 'visit', 'snap', 'raft', 'sensor', 'config'])
+Inputs = collections.namedtuple('Inputs', ['rerun', 'visit', 'snap', 'raft', 'sensor', 'config', 'log'])
 
 def run(inputs):
     rerun = inputs.rerun
@@ -65,7 +65,7 @@ def getConfig(overrideFile=None):
     return config
 
 def require(value, name):
-    if not value:
+    if value is None:
         print >> sys.stderr, "Please specify %s" % name
         sys.exit(1)
  
@@ -74,9 +74,9 @@ if __name__ == "__main__":
     parser = pipOptions.OptionParser()
     parser.add_option("-R", "--rerun", default=os.getenv("USER", default="rerun"), dest="rerun",
                       help="Rerun name (default=%default)")
-    parser.add_option("-v", "--visit", dest="visit", help="Visit to run")
-    parser.add_option("-S", "--snap", dest="snap", help="Snap to run")
-    parser.add_option("-T", "--threads", dest="threads", help="Number of threads")
+    parser.add_option("-v", "--visit", type="int", dest="visit", help="Visit to run")
+    parser.add_option("-S", "--snap", type="int", dest="snap", help="Snap to run")
+    parser.add_option("-T", "--threads", type="int", dest="threads", help="Number of threads")
 
     default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "ProcessCcdDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "lsstSim.paf")
@@ -94,21 +94,19 @@ if __name__ == "__main__":
     require(opts.threads, "threads")
 
     inputs = list()
-    for rx in range(2):
-        for ry in range(2):
-            if rx,ry in ((0,0), (0,2), (2,0), (2,2)):
+    for rx in range(5):
+        for ry in range(5):
+            if (rx,ry) in ((0,0), (0,4), (4,0), (4,4)):
                 continue
             raft = "%d,%d" % (rx, ry)
-            for sx in range(2):
-                for sy in range(2):
-                    if sx,sy in ((0,0), (0,2), (2,0), (2,2)):
-                        continue
+            for sx in range(3):
+                for sy in range(3):
                     sensor = "%d,%d" % (sx, sy)
                     logName = "%s.%d%d%d%d.log" % (opts.rerun, rx, ry, sx, sy)
                     inputs.append(Inputs(rerun=opts.rerun, visit=opts.visit, snap=opts.snap,
                                          raft=raft, sensor=sensor, config=config, log=logName))
 
-    pool = multiprocessing.Pool(processes=opts.threads, maxtasks=1)
+    pool = multiprocessing.Pool(processes=opts.threads, maxtasksperchild=1)
     pool.map(run, inputs)
     pool.close()
     pool.join()

@@ -102,12 +102,17 @@ class Photometry(pipProc.Process):
             self.log.log(self.log.INFO, "Applying aperture correction to %d sources" % len(sources))
             for source in sources:
                 x, y = source.getXAstrom(), source.getYAstrom()
-                flux = source.getPsfFlux()
-                fluxErr = source.getPsfFluxErr()
-                corr, corrErr = apcorr.computeAt(x, y)
-                if (numpy.isfinite(flux) and numpy.isfinite(fluxErr)):
-                    source.setPsfFlux(flux * corr)
-                    source.setPsfFluxErr(numpy.sqrt(corr**2 * fluxErr**2 + corrErr**2 * flux**2))
+
+                for getter, getterErr, setter, setterErr in (
+                    ('getPsfFlux', 'getPsfFluxErr', 'setPsfFlux', 'setPsfFluxErr'),
+                    ('getInstFlux', 'getInstFluxErr', 'setInstFlux', 'setInstFluxErr'),
+                    ('getModelFlux', 'getModelFluxErr', 'setModelFlux', 'setModelFluxErr')):
+                    flux = getattr(source, getter)()
+                    fluxErr = getattr(source, getterErr)()
+                    if (numpy.isfinite(flux) and numpy.isfinite(fluxErr)):
+                        corr, corrErr = apcorr.computeAt(x, y)
+                        getattr(source, setter)(flux * corr)
+                        getattr(source, setterErr)(numpy.sqrt(corr**2 * fluxErr**2 + corrErr**2 * flux**2))
 
         return sources
 

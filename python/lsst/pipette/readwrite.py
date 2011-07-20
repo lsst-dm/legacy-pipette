@@ -14,6 +14,8 @@ import lsst.afw.coord as afwCoord
 import lsst.meas.astrom as measAstrom
 import lsst.meas.algorithms.utils as maUtils
 
+from lsst.pipette.timer import timecall
+
 """This module provides I/O for pipette (LSST algorithms testing)"""
 
 mapperBuffer = dict()                   # Buffer of mappers for recycling
@@ -143,6 +145,7 @@ class ReadWrite(object):
             identifiers.append(ident)
         return identifiers
 
+    @timecall
     def readRaw(self, dataId):
         """Read raw data of a CCD.
 
@@ -189,6 +192,7 @@ class ReadWrite(object):
         return output
 
 
+    @timecall
     def read(self, which, dataId, ignore=False):
         """Read some data.
 
@@ -253,6 +257,7 @@ class ReadWrite(object):
                 detrends['fringe'] = fringeList
         return detrends
 
+    @timecall
     def write(self, dataId, exposure=None, psf=None, sources=None,
               matches=None, matchMeta=None, **kwargs):
         """Write processed data.

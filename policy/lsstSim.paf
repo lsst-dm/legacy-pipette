@@ -13,9 +13,9 @@ do: {
             overscan: true
         }   
         assembly: true
-        bias: false
+        bias: true
         variance: true
-        dark: false
+        dark: true
         flat: true
         fringe: false
         defects: true

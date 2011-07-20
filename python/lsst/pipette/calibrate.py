@@ -20,6 +20,8 @@ import lsst.pipette.phot as pipPhot
 import lsst.pipette.background as pipBackground
 import lsst.pipette.distortion as pipDist
 
+from lsst.pipette.timer import timecall
+
 class Calibrate(pipProc.Process):
     def __init__(self, Repair=pipRepair.Repair, Photometry=pipPhot.Photometry,
                  Background=pipBackground.Background, Rephotometry=pipPhot.Rephotometry,
@@ -29,7 +31,7 @@ class Calibrate(pipProc.Process):
         self._Photometry = Photometry
         self._Background = Background
         self._Rephotometry = Rephotometry
-    
+
     def run(self, exposure, defects=None, background=None):
         """Calibrate an exposure: PSF, astrometry and photometry
 
@@ -123,6 +125,7 @@ class Calibrate(pipProc.Process):
         return psf, wcs
 
 
+    @timecall
     def repair(self, exposure, psf, defects=None, preserve=False):
         """Repair CCD problems (defects, CRs)
 
@@ -134,6 +137,8 @@ class Calibrate(pipProc.Process):
         repair = self._Repair(keepCRs=preserve, config=self.config, log=self.log)
         repair.run(exposure, psf, defects=defects)
 
+
+    @timecall
     def phot(self, exposure, psf, apcorr=None):
         """Perform photometry
 
@@ -148,6 +153,7 @@ class Calibrate(pipProc.Process):
         return phot.run(exposure, psf)
 
 
+    @timecall
     def psf(self, exposure, sources):
         """Measure the PSF
 
@@ -180,6 +186,7 @@ class Calibrate(pipProc.Process):
         return psf, cellSet
 
 
+    @timecall
     def apCorr(self, exposure, cellSet):
         """Measure aperture correction
 
@@ -202,6 +209,7 @@ class Calibrate(pipProc.Process):
         return corr
 
 
+    @timecall
     def background(self, exposure, footprints=None, background=None):
         """Subtract background from exposure.
 
@@ -224,6 +232,7 @@ class Calibrate(pipProc.Process):
         bg.run(exposure)
 
 
+    @timecall
     def rephot(self, exposure, footprints, psf, apcorr=None):
         """Rephotometer exposure
 
@@ -250,6 +259,7 @@ class Calibrate(pipProc.Process):
         return dist
 
 
+    @timecall
     def distort(self, exposure, sources, distortion=None):
         """Distort source positions before solving astrometry
 
@@ -292,6 +302,7 @@ class Calibrate(pipProc.Process):
         return distSources, llc, size
 
 
+    @timecall
     def astrometry(self, exposure, sources, distSources, distortion=None, llc=(0,0), size=None):
         """Solve astrometry to produce WCS
 
@@ -355,6 +366,7 @@ class Calibrate(pipProc.Process):
         return matches, matchMeta
 
 
+    @timecall
     def undistort(self, exposure, sources, matches, distortion=None):
         """Undistort matches after solving astrometry, resolving WCS
 
@@ -418,6 +430,7 @@ class Calibrate(pipProc.Process):
             exposure.getMetadata().set(k, v)
 
 
+    @timecall
     def zeropoint(self, exposure, matches):
         """Photometric calibration
 

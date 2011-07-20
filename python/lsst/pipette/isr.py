@@ -16,12 +16,14 @@ import lsst.pipette.process as pipProc
 import lsst.pipette.processAmp as pipAmp
 import lsst.pipette.background as pipBackground
 
+from lsst.pipette.timer import timecall
+
 class Isr(pipProc.Process):
     def __init__(self, ProcessAmp=pipAmp.ProcessAmp, Background=pipBackground.Background, *args, **kwargs):
         super(Isr, self).__init__(*args, **kwargs)
         self._ProcessAmp = ProcessAmp
         self._Background = Background
-    
+
     def run(self, exposureList, detrends=None):
         """Run Instrument Signature Removal (ISR)
 
@@ -85,6 +87,7 @@ class Isr(pipProc.Process):
         processAmp = self._ProcessAmp(config=self.config, log=self.log)
         processAmp.run(exposure)
 
+    @timecall
     def assembly(self, exposureList):
         """Assembly of amplifiers into a CCD
 
@@ -148,6 +151,7 @@ class Isr(pipProc.Process):
         targetTrim <<= sourceTrim
         amp.setTrimmed(True)
 
+    @timecall
     def overscan(self, exposure):
         """Overscan subtraction
 
@@ -191,6 +195,7 @@ class Isr(pipProc.Process):
                             exposure.getMaskedImage().getDimensions()))
         return detrend
 
+    @timecall
     def bias(self, exposure, bias):
         """Bias subtraction
 
@@ -204,6 +209,7 @@ class Isr(pipProc.Process):
         ipIsr.biasCorrection(exposure, bias)
         return
 
+    @timecall
     def variance(self, exposure):
         """Set variance from gain
 
@@ -235,6 +241,7 @@ class Isr(pipProc.Process):
         variance /= gain
         return
 
+    @timecall
     def dark(self, exposure, dark):
         """Dark subtraction
 
@@ -250,6 +257,7 @@ class Isr(pipProc.Process):
         ipIsr.darkCorrection(exposure, dark, expTime, darkTime)
         return
 
+    @timecall
     def flat(self, exposure, flat):
         """Flat-fielding
 
@@ -268,6 +276,7 @@ class Isr(pipProc.Process):
         #ipIsr.flatCorrection(exposure, flat, "USER", 1.0)
         return
 
+    @timecall
     def fringe(self, exposure, fringe):
         """Fringe subtraction
 
@@ -359,6 +368,7 @@ class Isr(pipProc.Process):
         self.log.log(self.log.INFO, "Fringe amplitude scaling: %f" % slope)
         science.scaledMinus(slope, fringe)
 
+    @timecall
     def defects(self, exposure):
         """Mask defects
 
@@ -398,6 +408,7 @@ class Isr(pipProc.Process):
 
         return defects
 
+    @timecall
     def background(self, exposure):
         """Background subtraction
 

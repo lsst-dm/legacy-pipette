@@ -27,6 +27,7 @@ import sys
 import optparse
 import lsst.pex.logging as pexLog
 import lsst.pipette.config as pipConfig
+import lsst.pipette.timer as pipTimer
 
 """This module defines the option parsing for pipette LSST Algorithms testing."""
 
@@ -51,6 +52,8 @@ class OptionParser(optparse.OptionParser):
         self.add_option("--calib", dest="calib", type="string", action="callback", callback=optConfigRoot,
                         help="Calibration root directory")
         self.add_option("--debug", dest="debug", default=False, action="callback", callback=optConfigDebug,
+                        help="Debugging output?")
+        self.add_option("--timer", dest="timer", default=False, action="callback", callback=optConfigTimer,
                         help="Debugging output?")
         self.add_option("--log", dest="log", type="string", default=None, help="Logging destination")
 
@@ -115,3 +118,6 @@ def optConfigDebug(option, opt, value, parser):
         parser.values.debug = False
     return
 
+# optparse callback to set timer
+def optConfigTimer(option, opt, value, parser):
+    pipTimer.TimerConfig.setActive(True)

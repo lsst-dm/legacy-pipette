@@ -5,8 +5,11 @@ import lsst.meas.astrom as measAstrom
 
 import lsst.pipette.calibrate as pipCalibrate
 
+from lsst.pipette.timer import timecall
+
 # Use hsc.meas.astrom, failing over to lsst.meas.astrom
 class CalibrateHsc(pipCalibrate.Calibrate):
+    @timecall
     def astrometry(self, exposure, sources, distSources, distortion=None, llc=(0,0), size=None):
         """Solve astrometry to produce WCS
 

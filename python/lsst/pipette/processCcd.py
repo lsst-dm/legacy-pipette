@@ -5,6 +5,8 @@ import lsst.pipette.isr as pipIsr
 import lsst.pipette.calibrate as pipCalib
 import lsst.pipette.phot as pipPhot
 
+from lsst.pipette.timer import timecall
+
 class ProcessCcd(pipProc.Process):
     def __init__(self, Isr=pipIsr.Isr, Calibrate=pipCalib.Calibrate, Photometry=pipPhot.Photometry,
                  *args, **kwargs):
@@ -20,6 +22,7 @@ class ProcessCcd(pipProc.Process):
         self._Photometry = Photometry
         
         
+    @timecall
     def run(self, exposureList, detrendsList=None):
         """Process a CCD.
 
@@ -51,6 +54,7 @@ class ProcessCcd(pipProc.Process):
 
         return exposure, psf, apcorr, brightSources, sources, matches, matchMeta
             
+    @timecall
     def isr(self, exposureList, detrendsList):
         """Perform Instrumental Signature Removal
 
@@ -60,10 +64,12 @@ class ProcessCcd(pipProc.Process):
         isr = self._Isr(config=self.config, log=self.log)
         return isr.run(exposureList, detrendsList)
 
+    @timecall
     def calibrate(self, *args, **kwargs):
         calibrate = self._Calibrate(config=self.config, log=self.log)
         return calibrate.run(*args, **kwargs)
 
+    @timecall
     def phot(self, exposure, psf, apcorr, wcs=None):
         phot = self._Photometry(config=self.config, log=self.log)
         return phot.run(exposure, psf, apcorr, wcs=wcs)

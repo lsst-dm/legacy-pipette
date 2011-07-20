@@ -9,8 +9,10 @@ import lsst.pipette.util as pipUtil
 import lsst.pipette.processCcd as pipProcCcd
 
 from lsst.pipette.specific.Hsc import CalibrateHsc
+from lsst.pipette.timer import timecall
 
 class IsrSuprimeCam(pipIsr.Isr):
+    @timecall
     def defects(self, exposure):
         """Mask defects and trim guider shadow
 

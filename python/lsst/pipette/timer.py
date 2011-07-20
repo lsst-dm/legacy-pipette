@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
+import sys
 import time
+import atexit
 
 """Timing decorator, for measuring execution time.
 
@@ -37,7 +39,7 @@ The license for the original code, profilehooks, is:
 
 
 
-def timecall(fn=None, active=False, immediate=True, report=True):
+def timecall(fn=None, active=False, immediate=False, report=True):
     """Wrap `fn` and print its execution time.
 
     Example::
@@ -48,9 +50,12 @@ def timecall(fn=None, active=False, immediate=True, report=True):
 
         somefunc(2, 3)
 
-    will print the time taken by somefunc on every call, and a report at
-    program termination.  By default (no options passed to decorator @timecall),
-    timing is OFF, but can be turned on using TimerConfig:
+    will report the total time taken in that call at program termination.
+    Immediate reports (for each function call) can be obtained with
+    immedate=True.  The final report can be disabled with report=False.
+    
+    By default (no options passed to decorator @timecall), timing is OFF,
+    but can be turned on using TimerConfig:
 
         TimerConfig.setActive(True)
 
@@ -84,12 +89,10 @@ class TimerConfig(object):
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
             cls._instance = super(TimerConfig, cls).__new__(cls, *args, **kwargs)
+            cls._instance.active = False
+            cls._instance.immediate = False
+            cls._instance.timer = time.time
         return cls._instance
-
-    def __init__(self)
-        self.active = False
-        self.immediate = False
-        self.timer = time.time
 
     @classmethod
     def setActive(cls, active):
@@ -134,7 +137,6 @@ class FuncTimer(object):
     def __call__(self, *args, **kw):
         """Profile a singe call to the function."""
         fn = self.fn
-
         config = TimerConfig()
         if not config.getActive():
             return fn(*args, **kw)
@@ -153,14 +155,14 @@ class FuncTimer(object):
                 lineno = fn.func_code.co_firstlineno
                 print >> sys.stderr, "\n  %s (%s:%s):\n    %f seconds\n" % (
                                         funcname, filename, lineno, duration)
+
     def atexit(self):
         if not self.ncalls:
             return
         funcname = self.fn.__name__
         filename = self.fn.func_code.co_filename
         lineno = self.fn.func_code.co_firstlineno
-        print ("\n  %s (%s:%s):\n"
-               "    %d calls, %.3f seconds (%.3f seconds per call)\n" % (
-                                funcname, filename, lineno, self.ncalls,
-                                self.totaltime, self.totaltime / self.ncalls))
+        print ("TIMER on %s (%s:%s): %d calls, %f seconds%s" % (
+            funcname, filename, lineno, self.ncalls, self.totaltime,
+            " (%f seconds per call)" % (self.totaltime / self.ncalls) if self.ncalls > 1 else ""))
 

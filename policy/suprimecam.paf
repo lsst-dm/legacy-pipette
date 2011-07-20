@@ -46,7 +46,6 @@ background: {
 psf: {
     algorithm: {
         nEigenComponents: 4
-        kernelSize:       5
     }
 }
 

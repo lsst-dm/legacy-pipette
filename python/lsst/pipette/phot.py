@@ -8,13 +8,14 @@ import lsst.meas.utils.sourceMeasurement as muMeasurement
 
 import lsst.pipette.process as pipProc
 
+from lsst.pipette.timer import timecall
 
 class Photometry(pipProc.Process):
     def __init__(self, threshold=None, *args, **kwargs):
         super(Photometry, self).__init__(*args, **kwargs)
         self._threshold = threshold
         return
-    
+
     def run(self, exposure, psf, apcorr=None, wcs=None):
         """Run photometry
 
@@ -49,6 +50,7 @@ class Photometry(pipProc.Process):
                     self.log.log(self.log.WARN, "Failed to import %s (%s): %s" % (modName, module, err))
 
 
+    @timecall
     def detect(self, exposure, psf):
         """Detect sources
 
@@ -72,6 +74,7 @@ class Photometry(pipProc.Process):
             policy['thresholdValue'] = oldThreshold
         return posSources
 
+    @timecall
     def measure(self, exposure, footprintSet, psf, apcorr=None, wcs=None):
         """Measure sources
 

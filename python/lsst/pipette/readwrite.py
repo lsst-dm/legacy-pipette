@@ -215,6 +215,7 @@ class ReadWrite(object):
                     break
         return data
 
+    @timecall
     def detrends(self, dataId, config):
         """Read detrends for a CCD.
 

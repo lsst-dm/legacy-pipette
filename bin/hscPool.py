@@ -35,7 +35,7 @@ def getConfigFromArguments(argv=None):
     config, opts, args = parser.parse_args([default], argv=argv)
     if (len(args) > 0 # or opts.instrument is None
         or opts.rerun is None
-        or opts.frame is None
+        or opts.frames is None
         or opts.threads is None):
 
         parser.print_help()

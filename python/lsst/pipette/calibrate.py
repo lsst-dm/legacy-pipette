@@ -188,7 +188,7 @@ class Calibrate(pipProc.Process):
                 ident = src.getId()
                 src = sources[ident]
                 assert src.getId() == ident
-                src.setFlagForDetection(src.getFlagForDetection() | algorithmsLib.Flags.PSFSTAR)
+                src.setFlagForDetection(src.getFlagForDetection() | measAlg.Flags.PSFSTAR)
 
         exposure.setPsf(psf)
         return psf, cellSet

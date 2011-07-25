@@ -180,8 +180,16 @@ class Calibrate(pipProc.Process):
                      (sdqaRatings["phot.psf.numGoodStars"].getValue(),
                       sdqaRatings["phot.psf.numAvailStars"].getValue()))
 
-        #psfStars, cellSet = maPsfSel.selectPsfSources(exposure, sources, selPolicy)
-        #psf, cellSet, psfStars = maPsfAlg.getPsf(exposure, psfStars, cellSet, algPolicy, sdqaRatings)
+        # The PSF candidates contain a copy of the source, and so we need to explicitly propagate new flags
+        for cand in psfCandidateList:
+            cand = measAlg.cast_PsfCandidateF(cand)
+            src = cand.getSource()
+            if src.getFlagForDetection() & measAlg.Flags.PSFSTAR:
+                ident = src.getId()
+                src = sources[ident]
+                assert src.getId() == ident
+                src.setFlagForDetection(src.getFlagForDetection() | algorithmsLib.Flags.PSFSTAR)
+
         exposure.setPsf(psf)
         return psf, cellSet
 

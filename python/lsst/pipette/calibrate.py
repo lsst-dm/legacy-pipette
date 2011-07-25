@@ -22,6 +22,13 @@ import lsst.pipette.distortion as pipDist
 
 from lsst.pipette.timer import timecall
 
+
+def propagateFlag(flag, old, new):
+    """Propagate a flag from one source to another"""
+    if old.getFlagForDetection() & flag:
+        new.setFlagForDetection(new.getFlagForDetection() | flag)
+
+
 class Calibrate(pipProc.Process):
     def __init__(self, Repair=pipRepair.Repair, Photometry=pipPhot.Photometry,
                  Background=pipBackground.Background, Rephotometry=pipPhot.Rephotometry,
@@ -79,9 +86,8 @@ class Calibrate(pipProc.Process):
         if do['psf'] and (do['astrometry'] or do['zeropoint']):
             newSources = self.rephot(exposure, footprints, psf, apcorr=apcorr)
             for old, new in zip(sources, newSources):
-                if old.getFlagForDetection() & measAlg.Flags.STAR:
-                    newFlag = new.getFlagForDetection() | measAlg.Flags.STAR
-                    new.setFlagForDetection(newFlag)
+                for flag in (measAlg.Flags.STAR, measAlg.Flags.PSFSTAR):
+                    propagateFlag(flag, old, new)
             sources = newSources;  del newSources
 
         if do['distortion']:

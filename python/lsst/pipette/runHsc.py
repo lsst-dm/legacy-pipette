@@ -91,9 +91,11 @@ def doMergeWcs(deferredState, wcs):
     exposure.setWcs(wcs)
 
     # Apply WCS to sources
-    for sources in (deferredState.sources, deferredState.brightSources,
-                    # _Only_ convert the matchlist.second source, which is our measured source.
-                    [m.second for m in deferredState.matchlist]):
+    # In the matchlist, only_ convert the matchlist.second source, which is our measured source.
+    matches = [m.second for m in deferredState.matchlist] if deferredState.matchlist is not None else None
+    for sources in (deferredState.sources, deferredState.brightSources, matches):
+        if sources is None:
+            continue
         for s in sources:
             s.setRaDec(wcs.pixelToSky(s.getXAstrom(), s.getYAstrom()))
 

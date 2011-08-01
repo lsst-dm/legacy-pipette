@@ -61,17 +61,13 @@ class Photometry(pipProc.Process):
         assert exposure, "No exposure provided"
         assert psf, "No psf provided"
         policy = self.config['detect']
-        if self._threshold is not None:
-            oldThreshold = policy['thresholdValue']
-            policy['thresholdValue'] = self._threshold
-        posSources, negSources = muDetection.detectSources(exposure, psf, policy.getPolicy())
+        posSources, negSources = muDetection.detectSources(exposure, psf, policy.getPolicy(),
+                                                           extraThreshold=self._threshold)
         numPos = len(posSources.getFootprints()) if posSources is not None else 0
         numNeg = len(negSources.getFootprints()) if negSources is not None else 0
         if numNeg > 0:
             self.log.log(self.log.WARN, "%d negative sources found and ignored" % numNeg)
         self.log.log(self.log.INFO, "Detected %d sources to %g sigma." % (numPos, policy['thresholdValue']))
-        if self._threshold is not None:
-            policy['thresholdValue'] = oldThreshold
         return posSources
 
     @timecall

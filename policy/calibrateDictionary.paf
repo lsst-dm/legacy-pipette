@@ -34,9 +34,9 @@ definitions: {
     }
     thresholdValue: {
         type: double
-        description: "Threshold (stdev) for PSF stars"
+        description: "Threshold for PSF stars (relative to regular detection limit)"
         minOccurs: 1
         maxOccurs: 1
-        default: 50.0
+        default: 10.0
     }
 }

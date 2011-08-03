@@ -43,9 +43,15 @@ background: {
     undersamplestyle: "REDUCE_INTERP_ORDER"
 }
 
+calibrate: {
+    thresholdValue: 5.0
+}
+
 psf: {
     algorithm: {
         nEigenComponents: 4
+        kernelSize: 7.0
+        spatialOrder: 3
     }
 }
 

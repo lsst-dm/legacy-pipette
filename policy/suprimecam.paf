@@ -48,10 +48,13 @@ calibrate: {
 }
 
 psf: {
+    select: {
+        clumpNSigma: 2.0
+    }
     algorithm: {
         nEigenComponents: 4
         kernelSize: 7.0
-        spatialOrder: 3
+        spatialOrder: 2
     }
 }
 

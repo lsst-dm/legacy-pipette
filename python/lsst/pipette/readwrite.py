@@ -259,7 +259,7 @@ class ReadWrite(object):
         return detrends
 
     @timecall
-    def write(self, dataId, exposure=None, psf=None, sources=None,
+    def write(self, dataId, exposure=None, psf=None, sources=None, brightSources=None,
               matches=None, matchMeta=None, **kwargs):
         """Write processed data.
 
@@ -286,11 +286,15 @@ class ReadWrite(object):
                     smv.push_back(match)
                 self.outButler.put(afwDet.PersistableSourceMatchVector(smv, matchMeta), 'icMatch', dataId)
 
-                matchSources = afwDet.SourceSet()
-                for match in matches:
-                    matchSources.push_back(match.second)
-                self.outButler.put(afwDet.PersistableSourceVector(matchSources), 'icSrc', dataId)
-                
+                if brightSources is None:
+                    brightSources = afwDet.SourceSet()
+                    for match in matches:
+                        brightSources.push_back(match.second)
             except Exception, e:
                 self.log.log(self.log.WARN, "Unable to write matches: %s" % e)
+
+        if brightSources is not None:
+            self.log.log(self.log.INFO, "Writing calibration sources: %s" % (dataId))
+            self.outButler.put(afwDet.PersistableSourceVector(brightSources), 'icSrc', dataId)
+                
         return

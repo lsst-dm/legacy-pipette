@@ -116,7 +116,7 @@ def doMergeWcs(deferredState, wcs):
         print "failed to write matchlist: %s" % (e)
         
     deferredState.io.write(deferredState.dataId, sources=sources, exposure=exposure,
-                           matches=matchlist,
+                           brightSources=deferredState.brightSources, matches=matchlist,
                            matchMeta=deferredState.matchMeta)
 
 

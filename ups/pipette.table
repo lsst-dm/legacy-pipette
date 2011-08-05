@@ -1,6 +1,7 @@
 setupOptional(coadd_utils)
-setupRequired(ip_isr)
-setupRequired(ip_utils)
+setupOptional(ip_isr)
+setupOptional(ip_utils)
+setupRequired(meas_utils)
 setupRequired(meas_pipeline)
 
 setupOptional(obs_subaru)

@@ -113,6 +113,21 @@ class Photometry(pipProc.Process):
                         getattr(source, setter)(flux * corr)
                         getattr(source, setterErr)(numpy.sqrt(corr**2 * fluxErr**2 + corrErr**2 * flux**2))
 
+        if self._display and self._display.has_key('psfinst') and self._display['psfinst']:
+            import matplotlib.pyplot as plt
+            psfMag = -2.5 * numpy.log10(numpy.array([s.getPsfFlux() for s in sources]))
+            instMag = -2.5 * numpy.log10(numpy.array([s.getInstFlux() for s in sources]))
+            fig = plt.figure(1)
+            fig.clf()
+            ax = fig.add_axes((0.1, 0.1, 0.8, 0.8))
+            ax.set_autoscale_on(False)
+            ax.set_ybound(lower=-1.0, upper=1.0)
+            ax.set_xbound(lower=-17, upper=-7)
+            ax.plot(psfMag, psfMag-instMag, 'ro')
+            ax.axhline(0.0)
+            ax.set_title('psf - inst')
+            plt.show()
+
         return sources
 
 

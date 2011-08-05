@@ -55,6 +55,7 @@ psf: {
         nEigenComponents: 4
         kernelSize: 7.0
         spatialOrder: 2
+        kernelSizeMin: 25
     }
 }
 

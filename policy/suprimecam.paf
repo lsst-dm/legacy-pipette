@@ -29,7 +29,10 @@ do: {
         astrometry: true
         zeropoint: true
     }
-    phot: true
+    phot: {
+        enabled: true
+        background: true
+    }
 }
 
 imports: {
@@ -55,6 +58,7 @@ psf: {
         nEigenComponents: 4
         kernelSize: 7.0
         spatialOrder: 2
+        kernelSizeMin: 25
     }
 }
 

@@ -33,8 +33,10 @@ do: {
         astrometry: true
         zeropoint: true
     }   
-    phot: true
-
+    phot: {
+        enabled: true
+        background: true
+    }
 }
 
 background: {

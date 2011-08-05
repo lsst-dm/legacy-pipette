@@ -16,10 +16,10 @@ definitions: {
         dictionaryFile: "DoCalibrateDictionary.paf"
     }
     phot: {
-        type: boolean
+        type: Policy
         description: "Perform photometry?"
         maxOccurs: 1
-        default: false
+        dictionaryFile: "DoPhotDictionary.paf"
     }
 
 }

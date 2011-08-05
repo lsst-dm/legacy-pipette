@@ -176,6 +176,30 @@ class Calibrate(pipProc.Process):
         sdqaRatings = sdqa.SdqaRatingSet()
         self.log.log(self.log.INFO, "Measuring PSF")
 
+        #
+        # Run an extra detection step to mask out faint stars
+        #
+        if False:
+            print "RHL is cleaning faint sources"
+
+            import lsst.afw.math as afwMath
+
+            sigma = 1.0
+            gaussFunc = afwMath.GaussianFunction1D(sigma)
+            gaussKernel = afwMath.SeparableKernel(15, 15, gaussFunc, gaussFunc)
+
+            im = exposure.getMaskedImage().getImage()
+            convolvedImage = im.Factory(im.getDimensions())
+            afwMath.convolve(convolvedImage, im, gaussKernel)
+            del im
+
+            fs = afwDet.makeFootprintSet(convolvedImage, afwDet.createThreshold(4, "stdev"))
+            fs = afwDet.makeFootprintSet(fs, 3, True)
+            fs.setMask(exposure.getMaskedImage().getMask(), "DETECTED")
+            if False:
+                ds9.mtv(exposure, frame=1)
+                import pdb; pdb.set_trace() 
+
         starSelector = measAlg.makeStarSelector(selName, selPolicy)
         psfCandidateList = starSelector.selectStars(exposure, sources)
 

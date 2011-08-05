@@ -20,6 +20,8 @@ class Background(pipProc.Process):
         if not self._subtract:
             return bg
 
+        self.log.log(self.log.INFO, "Subtracted background")
+
         self.display('background', exposure=subtracted)
         return bg, subtracted
 

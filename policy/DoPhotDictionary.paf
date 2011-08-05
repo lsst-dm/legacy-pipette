@@ -1,0 +1,21 @@
+#<?cfg paf dictionary ?>
+
+target: Config
+
+definitions: {
+    enabled: {
+        type: boolean
+        description: "Run photometry"
+        minOccurs: 0
+        maxOccurs: 1
+        default: true
+    }
+
+    background: {
+        type: boolean
+        description: "Perform background subtraction?"
+        minOccurs: 0
+        maxOccurs: 1
+        default: false
+    }
+}

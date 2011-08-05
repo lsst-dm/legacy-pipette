@@ -47,7 +47,7 @@ class ProcessCcd(pipProc.Process):
 
         psf, apcorr, brightSources, matches, matchMeta = self.calibrate(exposure, defects=defects)
 
-        if self.config['do']['phot']:
+        if self.config['do']['phot']['enabled']:
             sources, footprints = self.phot(exposure, psf, apcorr, wcs=exposure.getWcs())
         else:
             sources, footprints = None, None

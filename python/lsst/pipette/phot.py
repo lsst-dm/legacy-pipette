@@ -7,12 +7,14 @@ import lsst.meas.utils.sourceDetection as muDetection
 import lsst.meas.utils.sourceMeasurement as muMeasurement
 
 import lsst.pipette.process as pipProc
+import lsst.pipette.background as pipBackground
 
 from lsst.pipette.timer import timecall
 
 class Photometry(pipProc.Process):
-    def __init__(self, threshold=None, *args, **kwargs):
+    def __init__(self, threshold=None, Background=pipBackground.Background, *args, **kwargs):
         super(Photometry, self).__init__(*args, **kwargs)
+        self._Background = Background
         self._threshold = threshold
         return
 
@@ -33,6 +35,11 @@ class Photometry(pipProc.Process):
         self.imports()
         
         footprintSet = self.detect(exposure, psf)
+
+        do = self.config['do']['phot']
+        if do['background']:
+            bg, exposure = self.background(exposure); del bg
+        
         sources = self.measure(exposure, footprintSet, psf, apcorr=apcorr, wcs=wcs)
 
         self.display('phot', exposure=exposure, sources=sources, pause=True)
@@ -48,6 +55,17 @@ class Photometry(pipProc.Process):
                     exec("import " + module)
                 except ImportError, err:
                     self.log.log(self.log.WARN, "Failed to import %s (%s): %s" % (modName, module, err))
+
+
+    @timecall
+    def background(self, exposure):
+        """Background subtraction
+
+        @param exposure Exposure to process
+        @return Background, Background-subtracted exposure
+        """
+        background = self._Background(config=self.config, log=self.log)
+        return background.run(exposure)
 
 
     @timecall
@@ -142,7 +160,9 @@ class Rephotometry(Photometry):
         @param wcs WCS to apply
         """
         return self.measure(exposure, footprints, psf, apcorr=apcorr, wcs=wcs)
-        
+
+    def background(self, exposure, psf):
+        raise NotImplementedError("This method is deliberately not implemented: it should never be run!")
 
     def detect(self, exposure, psf):
         raise NotImplementedError("This method is deliberately not implemented: it should never be run!")

@@ -45,6 +45,12 @@ definitions: {
         maxOccurs: 1
         default: false
     }
+    colorterms: {
+        type: boolean
+        description: "Correction catalogue with colour terms?"
+        maxOccurs: 1
+        default: false
+    }
     zeropoint: {
         type: boolean
         description: "Perform photometric calibration?"

@@ -4,6 +4,7 @@ import lsst.pex.logging as pexLog
 import lsst.meas.astrom as measAstrom
 
 import lsst.pipette.calibrate as pipCalibrate
+import lsst.pipette.config as pipConfig
 
 from lsst.pipette.timer import timecall
 
@@ -43,6 +44,8 @@ class CalibrateHsc(pipCalibrate.Calibrate):
         try:
             menu = self.config['filters']
             filterName = menu[exposure.getFilter().getName()]
+            if isinstance(filterName, pipConfig.Config):
+                filterName = filterName['primary']
             self.log.log(self.log.INFO, "Using catalog filter: %s" % filterName)
         except:
             self.log.log(self.log.WARN, "Unable to determine catalog filter from lookup table using %s" %

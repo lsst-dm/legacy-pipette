@@ -27,6 +27,7 @@ do: {
         background: false
         distortion: true
         astrometry: true
+        colorterms: true
         zeropoint: true
     }
     phot: {
@@ -159,14 +160,38 @@ instrumentExtras: {
 
 filters: {
     # Translation table for astrometry.net matching, and therefore photometric calibration
-    B: g
-    V: r
-    R: r
-    I: i
-    r: r
-    i: i
-    z: z
-    y: z
+    B.primary: g
+    V.primary: g
+    R.primary: r
+    I.primary: i
+    # The below colour terms are from the last page of
+    # http://www.naoj.org/staff/nakata/suprime/illustration/colorterm_report_ver3.pdf
+    g: {
+        primary: g
+        secondary: r
+        polynomial: -0.00569 -0.0427
+    }
+    r: {
+        primary: r
+        secondary: g
+        polynomial: 0.00261 0.0304
+    }
+    i: {
+        primary: i
+        secondary: r
+        polynomial: 0.00586 0.0827 -0.0118
+    }
+    z: {
+        primary: z
+        secondary: i
+        polynomial: 0.000329 0.0608 0.0219
+    }
+    y: {
+        # Same as Suprime-Cam z for now
+        primary: z
+        secondary: i
+        polynomial: 0.000329 0.0608 0.0219
+    }
 }
 
 astrometry: {
@@ -181,3 +206,4 @@ fringe: {
     filters: y
     filters: W-S-ZR
 }
+

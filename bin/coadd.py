@@ -63,10 +63,11 @@ def coadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     - weightMap: a float Image of the same dimensions as the coadd; the value of each pixel
         is the sum of the weights of all the images that contributed to that pixel.
     """
-    if len(idList) < 1:
+    numExp = len(idList)
+    if numExp < 1:
         print "Warning: no exposures to coadd!"
         sys.exit(1)
-    print "Coadd %s calexp" % (len(idList),)
+    print "Coadd %s calexp" % (numExp,)
 
     warpPolicy = policy.getPolicy("warpPolicy")
     coaddPolicy = policy.getPolicy("coaddPolicy")
@@ -74,29 +75,29 @@ def coadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     if desFwhm > 0:
         psfMatchPolicy = policy.getPolicy("psfMatchPolicy")
         psfMatchPolicy = ipDiffIm.modifyForModelPsfMatch(psfMatchPolicy)
-
-        exposurePsf = butler.get("psf", idList[0])
-        exposurePsfKernel = exposurePsf.getKernel()
-
-        kernelDim = exposurePsfKernel.getDimensions()
-        print "Create double Gaussian PSF model with core fwhm %0.1f and size %dx%d" % \
-            (desFwhm, kernelDim[0], kernelDim[1])
-        coreSigma = desFwhm / FWHMPerSigma
-        modelPsf = afwDetection.createPsf("DoubleGaussian", kernelDim[0], kernelDim[1],
-            coreSigma, coreSigma * 2.5, 0.1)
-    
         psfMatcher = ipDiffIm.ModelPsfMatch(psfMatchPolicy)
     else:
         print "No PSF matching will be done (desFwhm <= 0)"
 
     warper = afwMath.Warper.fromPolicy(warpPolicy)
     coadd = coaddUtils.Coadd.fromPolicy(coaddBBox, coaddWcs, coaddPolicy)
-    for id in idList:
-        print "Processing id=%s" % (id,)
+    prevKernelDim = afwGeom.Extent2I(0, 0) # use this because the test Extent2I == None is an error
+    for ind, id in enumerate(idList):
+        print "Processing exposure %d of %d: id=%s" % (ind+1, numExp, id)
         exposure = butler.get("calexp", id)
         psf = butler.get("psf", id)
         exposure.setPsf(psf)
         if desFwhm > 0:
+            psfKernel = psf.getKernel()
+            kernelDim = psfKernel.getDimensions()
+            if kernelDim != prevKernelDim:
+                print "Create double Gaussian PSF model with core fwhm %0.1f and size %dx%d" % \
+                    (desFwhm, kernelDim[0], kernelDim[1])
+                coreSigma = desFwhm / FWHMPerSigma
+                modelPsf = afwDetection.createPsf("DoubleGaussian", kernelDim[0], kernelDim[1],
+                    coreSigma, coreSigma * 2.5, 0.1)
+                prevKernelDim = kernelDim
+
             print "PSF-match exposure"
             exposure, psfMatchingKernel, kernelCellSet = psfMatcher.matchExposure(exposure, modelPsf)
         print "Warp exposure"

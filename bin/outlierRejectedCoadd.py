@@ -84,7 +84,9 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     - exposureMetadataList: a list of ExposureMetadata objects
         describing the saved psf-matched and warped exposures
     """
-    if len(idList) < 1:
+    numExp = len(idList)
+    
+    if numExp < 1:
         return []
         
     warpPolicy = policy.getPolicy("warpPolicy")
@@ -98,30 +100,20 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     if desFwhm > 0:
         psfMatchPolicy = policy.getPolicy("psfMatchPolicy")
         psfMatchPolicy = ipDiffIm.modifyForModelPsfMatch(psfMatchPolicy)
-
-        exposurePsf = butler.get("psf", idList[0])
-        exposurePsfKernel = exposurePsf.getKernel()
-
-        kernelDim = exposurePsfKernel.getDimensions()
-        print "Create double Gaussian PSF model with core fwhm %0.1f and size %dx%d" % \
-            (desFwhm, kernelDim[0], kernelDim[1])
-        coreSigma = desFwhm / FWHMPerSigma
-        modelPsf = afwDetection.createPsf("DoubleGaussian", kernelDim[0], kernelDim[1],
-            coreSigma, coreSigma * 2.5, 0.1)
-    
         psfMatcher = ipDiffIm.ModelPsfMatch(psfMatchPolicy)
     else:
         print "No PSF matching will be done (desFwhm <= 0)"
         
     warper = afwMath.Warper.fromPolicy(warpPolicy)
-    
     exposureMetadataList = []
-    for id in idList:
+    prevKernelDim = afwGeom.Extent2I(0, 0) # use this because the test Extent2I == None is an error
+    for ind, id in enumerate(idList):
         outPath = "_".join(["%s_%s" % (k, id[k]) for k in sorted(id.keys())])
         outPath = outPath.replace(",", "_")
         outPath = outPath + ".fits"
         if True:        
-            print "Processing id=%s; will save as %s" % (id, outPath)
+            print "Processing exposure %d of %d: id=%s" % (ind+1, numExp, id)
+            print "Saving intermediate exposure as %s" % (outPath,)
             exposure = butler.get("calexp", id)
             psf = butler.get("psf", id)
             exposure.setPsf(psf)
@@ -133,6 +125,17 @@ def psfMatchAndWarp(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
             print "Normalized using scaleFac=%0.3g" % (scaleFac,)
 
             if desFwhm > 0:
+                psfKernel = psf.getKernel()
+        
+                kernelDim = psfKernel.getDimensions()
+                if kernelDim != prevKernelDim:
+                    print "Create double Gaussian PSF model with core fwhm %0.1f and size %dx%d" % \
+                        (desFwhm, kernelDim[0], kernelDim[1])
+                    coreSigma = desFwhm / FWHMPerSigma
+                    modelPsf = afwDetection.createPsf("DoubleGaussian", kernelDim[0], kernelDim[1],
+                        coreSigma, coreSigma * 2.5, 0.1)
+                    prevKernelDim = kernelDim
+            
                 print "PSF-match exposure"
                 exposure, psfMatchingKernel, kernelCellSet = psfMatcher.matchExposure(exposure, modelPsf)
             

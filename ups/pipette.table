@@ -1,8 +1,11 @@
 setupOptional(coadd_utils)
 setupOptional(ip_isr)
+setupRequired(ip_diffim)
 setupOptional(ip_utils)
 setupRequired(meas_utils)
 setupRequired(meas_pipeline)
+setupRequired(coadd_utils)
+setupRequired(coadd_chisquared)
 
 setupOptional(obs_subaru)
 setupOptional(obs_cfht)

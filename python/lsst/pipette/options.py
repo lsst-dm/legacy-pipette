@@ -54,7 +54,7 @@ class OptionParser(optparse.OptionParser):
         self.add_option("--debug", dest="debug", default=False, action="callback", callback=optConfigDebug,
                         help="Debugging output?")
         self.add_option("--timer", dest="timer", default=False, action="callback", callback=optConfigTimer,
-                        help="Debugging output?")
+                        help="Timer for functions?")
         self.add_option("--log", dest="log", type="string", default=None, help="Logging destination")
 
         self.set_default('config', pipConfig.Config())

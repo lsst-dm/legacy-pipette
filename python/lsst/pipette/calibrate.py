@@ -552,8 +552,8 @@ class CalibratePsf(Calibrate):
         newDo['astrometry'] = False
         newDo['zeropoint'] = False
 
-        values = super(CalibratePsf, self).run(*args, **kwargs)
+        psf, apcorr, sources, matches, matchMeta = super(CalibratePsf, self).run(*args, **kwargs)
 
         self.config['do']['calibrate'] = oldDo
 
-        return values
+        return psf, apcorr, sources

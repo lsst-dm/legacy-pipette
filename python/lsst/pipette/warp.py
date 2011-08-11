@@ -70,8 +70,8 @@ class Warp(pipProc.Process):
         
         @return Skycell
         """
-        crval = afwGeom.Point2D.make(ra, dec)
-        crpix = afwGeom.Point2D.make(xSize / 2.0, ySize / 2.0)
+        crval = afwGeom.Point2D(ra, dec)
+        crpix = afwGeom.Point2D(xSize / 2.0, ySize / 2.0)
         wcs = afwImage.createWcs(crval, crpix, scale / 3600.0, 0.0, 0.0, scale / 3600.0)
         return Skycell(wcs, xSize, ySize)
 
@@ -87,8 +87,9 @@ class Warp(pipProc.Process):
 
         skyWcs = skycell.getWcs()
         xSize, ySize = skycell.getDimensions()
-        warp = afwImage.ExposureF(skycell.getDimensions(), skyWcs)
-        weight = afwImage.ImageF(skycell.getDimensions())
+        warpImage = afwImage.MaskedImageF(xSize, ySize)
+        warp = afwImage.ExposureF(warpImage, skyWcs)
+        weight = afwImage.ImageF(xSize, ySize)
         
         for ident in identList:
             md = self.read(butler, ident, ["calexp_md"], ignore=ignore)

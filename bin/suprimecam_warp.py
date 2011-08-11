@@ -12,15 +12,13 @@ import lsst.pipette.readwrite as pipReadWrite
 def run(rerun,                          # Rerun name
         frame,                          # Frame number
         ccds,                           # CCD number
-        skytile,                        # Skytile identifier
+        patch,                          # Sky patch identifier
         config,                         # Configuration
         coords,                         # Skycell centre coordinates
         scale,                          # Pixel scale
         sizes,                          # Skycell size
         ):
-    io = pipReadWrite.ReadWrite(suprimecam.SuprimecamMapper, ['visit', 'ccd'], config=config)
-    roots = config['roots']
-    basename = os.path.join(roots['output'], '%s-%d' % (rerun, frame))
+    io = pipReadWrite.ReadWrite(suprimecam.SuprimecamMapper(rerun=rerun), ['visit', 'ccd'], config=config)
     warpProc = pipWarp.Warp(config=config)
 
     identList = list()
@@ -30,8 +28,7 @@ def run(rerun,                          # Rerun name
 
     warp = warpProc.run(identList, io.inButler, coords[0], coords[1], scale, sizes[0], sizes[1])
 
-    #warp.writeFits(basename + ".fits")
-    warpProc.write(io.outButler, {'visit': frame, 'skytile': skytile}, {"warp": warp})
+    warpProc.write(io.outButler, {'visit': frame, 'patch': patch}, {"warp": warp})
     
 
 
@@ -44,8 +41,8 @@ if __name__ == "__main__":
                       help="visit to run")
     parser.add_option("-c", "--ccds", dest="ccds", default="0:1:2:3:4:5:6:7:8:9",
                       help="CCD to run (default=%default)")
-    parser.add_option("-s", "--skytile", dest="skytile", type="int",
-                      help="Skytile identifier")
+    parser.add_option("-p", "--patch", dest="patch", type="int",
+                      help="Sky patch identifier")
     parser.add_option("--coords", dest="coords", type="float", nargs=2,
                       help="Coordinates for skycell, degrees")
     parser.add_option("--scale", dest="scale", type="float",
@@ -57,9 +54,9 @@ if __name__ == "__main__":
     overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam_warp.paf")
     config, opts, args = parser.parse_args([default, overrides])
     if len(args) > 0 or len(sys.argv) == 1 or opts.rerun is None or opts.frame is None or opts.ccds is None \
-       or opts.skytile is None or opts.coords is None or opts.scale is None or opts.sizes is None:
+       or opts.patch is None or opts.coords is None or opts.scale is None or opts.sizes is None:
         parser.print_help()
         sys.exit(1)
 
-    run(opts.rerun, int(opts.frame), map(int, opts.ccds.split(":")), opts.skytile, config,
+    run(opts.rerun, int(opts.frame), map(int, opts.ccds.split(":")), opts.patch, config,
         opts.coords, opts.scale, opts.sizes)

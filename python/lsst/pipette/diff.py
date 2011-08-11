@@ -21,16 +21,20 @@
 # see <http://www.lsstcorp.org/LegalNotices/>.
 #
 
+import lsst.afw.math as afwMath
+import lsst.afw.image as afwImage
+import lsst.ip.diffim as diffim
 import lsst.pipette.process as pipProc
 
+
 from lsst.pipette.calibrate import CalibratePsf
-from lsst.pipette.phot import Phot
+from lsst.pipette.phot import Photometry
 
 class Diff(pipProc.Process):
-    def __init__(self, Calibrate=CalibratePsf, Phot=Phot, *args, **kwargs):
+    def __init__(self, Calibrate=CalibratePsf, Photometry=Photometry, *args, **kwargs):
         super(Diff, self).__init__(*args, **kwargs)
         self._Calibrate = Calibrate
-        self._Phot = Phot    
+        self._Photometry = Photometry
 
     def run(self, inputExp, templateExp, inverse=False):
         """Subtract a template exposure from an input exposure.
@@ -44,33 +48,60 @@ class Diff(pipProc.Process):
 
         do = self.config['do']['diff']
 
-        if do['match']:
-            cellSet = self.stamps(inputExp, templateExp)
-            kernel = self.kernel(inputExp, templateExp, cellSet)
+        if True:
+            if do['match'] and do['convolve']:
+                convolved = self.match(templateExp, inputExp)
+            else:
+                convolved = templateExp
         else:
-            kernel = None
+            # XXX The ip_diffim API has changed substantially since whenever I wrote this...
+            if do['match']:
+                cellSet = self.stamps(inputExp, templateExp)
+                kernel = self.kernel(inputExp, templateExp, cellSet)
+            else:
+                kernel = None
 
-        if do['match'] and do['convolve']:
-            convolved = self.convolve(templateExp, kernel)
-        else:
-            convolved = templateExp
+            if do['match'] and do['convolve']:
+                convolved = self.convolve(templateExp, kernel)
+            else:
+                convolved = templateExp
         
-        if not inverse:
-            diff = inputExp - convolved
-        else:
-            diff = convolved - inputExp
+        diff = inputExp.Factory(inputExp, True)
+        diffImage = diff.getMaskedImage()
+        convImage = convolved.getMaskedImage()
+        diffImage -= convImage
+        if inverse:
+            diffImage *= -1
 
-        combined = inputExp + convolved
-        combined /= 0.5                 # Get scaling right!
+        combined = inputExp.Factory(inputExp, True)
+        combinedImage = combined.getMaskedImage()
+        combinedImage += convImage
+        combinedImage *= 0.5            # Get scaling right!
 
         psf, apcorr, brightSources = self.calibrate(combined)
 
-        sources = self.phot(diff, psf, apcorr)
+        sources, footprints = self.phot(diff, psf, apcorr)
+
+        import pdb; pdb.set_trace()
+        self.display('diff', exposure=diff, sources=sources)
 
         return diff, sources, psf, apcorr, brightSources
 
+    def match(self, template, input):
+        """Convolve template to match input
 
-    def stamps(exp1, exp2):
+        @param[in] template Template exposure
+        @param[in] input Input exposure
+        @output convolved template exposure
+        """
+        policy = self.config['diff'].getPolicy()
+        matcher = diffim.ImagePsfMatch(policy)
+        convolved, kernel, bg, cells = matcher.matchExposures(template, input, doWarping=False)
+        # XXX dropping kernel, bg, cells on the floor
+        return convolved
+
+
+    def stamps(self, exp1, exp2):
         """Find suitable stamps
 
         @param[in] exp1 First exposure of interest
@@ -89,7 +120,7 @@ class Diff(pipProc.Process):
                                                policy.getInt("sizeCellY"))
 
         # Candidate source footprints to use for Psf matching
-        footprints = diffimLib.getCollectionOfFootprintsForPsfMatching(exp2, exp1, policy)
+        footprints = diffim.getCollectionOfFootprintsForPsfMatching(exp2, exp1, policy)
 
         # Place candidate footprints within the spatial grid
         for fp in footprints:
@@ -106,12 +137,12 @@ class Diff(pipProc.Process):
             tmi  = afwImage.MaskedImageF(exp2, bbox)
             smi  = afwImage.MaskedImageF(exp1, bbox)
 
-            cand = diffimLib.makeKernelCandidate(xC, yC, tmi, smi)
+            cand = diffim.makeKernelCandidate(xC, yC, tmi, smi)
             kernelCellSet.insertCandidate(cand)
 
         return kernelCellSet
 
-    def kernel(targetExp, sourceExp, stamps):
+    def kernel(self, targetExp, sourceExp, stamps):
         """Calculate PSF-matching kernel
 
         @param[in] targetExp Target exposure (to match to)
@@ -130,7 +161,7 @@ class Diff(pipProc.Process):
 
         # Create the Psf matching kernel
         try:
-            kb = diffimLib.fitSpatialKernelFromCandidates(kFunctor, kernelCellSet, policy)
+            kb = diffim.fitSpatialKernelFromCandidates(kFunctor, kernelCellSet, policy)
         except pexExcept.LsstCppException, e:
             pexLog.Trace("lsst.ip.diffim.createPsfMatchingKernel", 1,
                          "ERROR: Unable to calculate psf matching kernel")
@@ -145,7 +176,7 @@ class Diff(pipProc.Process):
         nGood = 0
         for cell in kernelCellSet.getCellList():
             for cand in cell.begin(True):
-                cand = diffimLib.cast_KernelCandidateF(cand)
+                cand = diffim.cast_KernelCandidateF(cand)
                 if cand.getStatus() == afwMath.SpatialCellCandidate.GOOD:
                     nGood += 1
         if nGood == 0:
@@ -157,7 +188,7 @@ class Diff(pipProc.Process):
 
         pass
 
-    def convolve(exposure, kernel):
+    def convolve(self, exposure, kernel):
         """Convolve image with kernel
 
         @param[in] exposure Exposure to convolve
@@ -168,7 +199,7 @@ class Diff(pipProc.Process):
         afwMath.convolve(convolved.getMaskedImage(), exposure.getMaskedImage(), kernel, false)
         return convolved
 
-    def calibrate(exposure):
+    def calibrate(self, exposure):
         """PSF and photometric calibration
         
         @param[in] exposure Exposure to calibrate
@@ -176,7 +207,7 @@ class Diff(pipProc.Process):
         """
         return self._Calibrate(config=self.config, log=self.log).run(exposure)
 
-    def phot(exposure, psf, apcorr):
+    def phot(self, exposure, psf, apcorr):
         """Perform photometry on exposure
 
         @param[in] exposure Exposure to photometer
@@ -184,4 +215,4 @@ class Diff(pipProc.Process):
         @param[in] apcorr Aperture correction
         @output Sources
         """
-        return self._Calibrate(config=self.config, log=self.log).run(exposure, psf, apcorr)
+        return self._Photometry(config=self.config, log=self.log).run(exposure, psf, apcorr)

@@ -1,6 +1,6 @@
 setupOptional(coadd_utils)
 setupOptional(ip_isr)
-setupRequired(ip_diffim)
+setupOptional(ip_diffim)
 setupOptional(ip_utils)
 setupRequired(meas_utils)
 setupRequired(meas_pipeline)

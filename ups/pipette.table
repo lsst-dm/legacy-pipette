@@ -4,7 +4,6 @@ setupOptional(ip_diffim)
 setupOptional(ip_utils)
 setupRequired(meas_utils)
 setupRequired(meas_pipeline)
-setupOptional(coadd_utils)
 setupOptional(coadd_chisquared)
 
 setupOptional(obs_subaru)

@@ -3,6 +3,7 @@
 import numpy
 import math
 
+import lsst.afw.geom as afwGeom
 import lsst.meas.utils.sourceDetection as muDetection
 import lsst.meas.utils.sourceMeasurement as muMeasurement
 

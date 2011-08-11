@@ -19,6 +19,14 @@ definitions: {
         dictionaryFile: "DoDiffDictionary.paf"
     }
 
+    diff: {
+        type: Policy
+        description: "Diff policy"
+        minOccurs: 0
+        maxOccurs: 1
+        dictionary: @@ip_diffim:policy:PsfMatchingDictionary.paf
+    }
+
     calibrate: {
         type: Policy
         description: "Policy for calibration"
@@ -27,13 +35,6 @@ definitions: {
         dictionaryFile: "calibrateDictionary.paf"
     }
 
-    background: {
-        type: Policy
-        description: "Background subtraction policy"
-        minOccurs: 0
-        maxOccurs: 1
-        dictionary: @@meas_utils:policy:BackgroundDictionary.paf
-    }
     detect: {
         type: Policy
         description: "Source detection policy"
@@ -56,19 +57,33 @@ definitions: {
         dictionary: {
             target: Config
             definitions: {
+                selectName: {
+                    type: string
+                    description: "Name of PSF star selection routine"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: "secondMomentStarSelector"
+                }
                 select: {
                     type: Policy
                     description: "PSF star selection policy"
-                    minOccurs: 0
+                    minOccurs: 1
                     maxOccurs: 1
-                    dictionary: @@meas_algorithms:policy:PsfSelectionRhlDictionary.paf
+                    dictionary: @@meas_algorithms:policy:secondMomentStarSelectorDictionary.paf
+                }
+                algorithmName: {
+                    type: string
+                    description: "Name of PSF measurement routine"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: "pcaPsfDeterminer"
                 }
                 algorithm: {
                     type: Policy
                     description: "PSF measurement policy"
-                    minOccurs: 0
+                    minOccurs: 1
                     maxOccurs: 1
-                    dictionary: @@meas_algorithms:policy:PsfAlgorithmRhlDictionary.paf
+                    dictionary: @@meas_algorithms:policy:pcaPsfDeterminerDictionary.paf
                 }
             }
         }
@@ -79,14 +94,6 @@ definitions: {
         minOccurs: 0
         maxOccurs: 1
         dictionary: @@meas_algorithms:policy:ApertureCorrectionDictionary.paf
-    }
-
-    diff: {
-        type: Policy
-        description: "Diff policy"
-        minOccurs: 0
-        maxOccurs: 1
-        dictionary: @@ip_diffim:policy:ImageSubtractionDictionary.paf
     }
 
 }

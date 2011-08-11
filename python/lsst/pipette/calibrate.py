@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import math
+import numpy
 
 import lsst.pex.logging as pexLog
 import lsst.afw.detection as afwDet
@@ -19,6 +20,7 @@ import lsst.pipette.repair as pipRepair
 import lsst.pipette.phot as pipPhot
 import lsst.pipette.background as pipBackground
 import lsst.pipette.distortion as pipDist
+import lsst.pipette.config as pipConfig
 
 from lsst.pipette.timer import timecall
 
@@ -103,6 +105,9 @@ class Calibrate(pipProc.Process):
             self.verifyAstrometry(exposure, matches)
         else:
             matches, matchMeta = None, None
+
+        if matches is not None and do['colorterms']:
+            self.colorterms(exposure, matches, matchMeta)
 
         if do['zeropoint']:
             self.zeropoint(exposure, matches)
@@ -363,6 +368,8 @@ class Calibrate(pipProc.Process):
         try:
             menu = self.config['filters']
             filterName = menu[exposure.getFilter().getName()]
+            if isinstance(filterName, pipConfig.Config):
+                filterName = filterName['primary']
             self.log.log(self.log.INFO, "Using catalog filter: %s" % filterName)
         except:
             self.log.log(self.log.WARN, "Unable to determine catalog filter from lookup table using %s" %
@@ -394,14 +401,62 @@ class Calibrate(pipProc.Process):
         exposure.setWcs(wcs)
 
         # Apply WCS to sources
+        areas = []
         for index, source in enumerate(sources):
             distSource = distSources[index]
             sky = wcs.pixelToSky(distSource.getXAstrom() - llc[0], distSource.getYAstrom() - llc[1])
             source.setRaDec(sky)
+            areas.append(wcs.pixArea((distSource.getXAstrom() - llc[0], distSource.getYAstrom() - llc[1])))
+
+        print areas
 
         self.display('astrometry', exposure=exposure, sources=sources, matches=matches)
 
         return matches, matchMeta
+
+    def colorterms(self, exposure, matches, matchMeta):
+        natural = exposure.getFilter().getName() # Natural band
+        filterData = self.config['filters']
+        if not isinstance(filterData, pipConfig.Config):
+            # No data to do anything
+            return
+        filterData = filterData[natural]
+        if not isinstance(filterData, pipConfig.Config):
+            # No data to do anything
+            return
+        primary = filterData['primary'] # Primary band for correction
+        secondary = filterData['secondary'] # Secondary band for correction
+
+        polyData = filterData.getPolicy().getDoubleArray('polynomial') # Polynomial correction
+        polyData.reverse()            # Numpy wants decreasing powers
+        polynomial = numpy.poly1d(polyData)
+
+        policy = self.config['astrometry'].getPolicy()
+
+        # We already have the 'primary' magnitudes in the matches
+        secondaries = measAst.readReferenceSourcesFromMetadata(matchMeta, log=self.log, policy=policy,
+                                                               filterName=secondary)
+        secondariesDict = dict()
+        for s in secondaries:
+            secondariesDict[s.getId()] = (s.getPsfFlux(), s.getPsfFluxErr())
+        del secondaries
+
+        polyString = ["%f (%s-%s)^%d" % (polynomial[order+1], primary, secondary, order+1) for
+                      order in range(polynomial.order)]
+        self.log.log(self.log.INFO, "Adjusting reference magnitudes: %f + %s" % (polynomial[0],
+                                                                                 " + ".join(polyString)))
+
+        for m in matches:
+            index = m.first.getId()
+            primary = -2.5 * math.log10(m.first.getPsfFlux())
+            primaryErr = m.first.getPsfFluxErr()
+            
+            secondary = -2.5 * math.log10(secondariesDict[index][0])
+            secondaryErr = secondariesDict[index][1]
+
+            diff = polynomial(primary - secondary)
+            m.first.setPsfFlux(math.pow(10.0, -0.4*(primary + diff)))
+            # XXX Ignoring the error for now
 
 
     @timecall
@@ -488,7 +543,7 @@ class CalibratePsf(Calibrate):
     """Calibrate only the PSF for an image.
     Explicitly turns off other functions.
     """
-    def run(*args, **kwargs):
+    def run(self, *args, **kwargs):
         oldDo = self.config['do']['calibrate'].copy()
         newDo = self.config['do']['calibrate']
 
@@ -497,8 +552,8 @@ class CalibratePsf(Calibrate):
         newDo['astrometry'] = False
         newDo['zeropoint'] = False
 
-        values = super(CalibratePsf, self).run(*args, **kwargs)
+        psf, apcorr, sources, matches, matchMeta = super(CalibratePsf, self).run(*args, **kwargs)
 
         self.config['do']['calibrate'] = oldDo
 
-        return values
+        return psf, apcorr, sources

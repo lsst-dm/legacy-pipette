@@ -3,6 +3,9 @@ import math
 import os
 import sys
 
+import numpy
+
+import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.meas.algorithms as measAlg
 import lsst.pipette.idListOptions
@@ -20,16 +23,17 @@ def computeGaussianWidth(psf, bbox):
             gaussWidthList.append(gaussWidth)
     return max(gaussWidthList)
 
-def reportFwhm(idList, butler):
-    """Print the maximum FWHM of each PSF found, sorted by filter name and FWHM
+def reportFwhmAndRaDec(idList, butler):
+    """Print the maximum FWHM and center RA/Dec of each image, sorted by filter name and FWHM
 
     @param[in] idList: list of data identity dictionaries
     @param[in] butler: data butler for input images
     """
-    print "Processing %d PSFs" % (len(idList),)
+    begLen = len(idList)
+    print "Processing %d exposures" % (begLen,)
     reportInterval = max(len(idList) / 80, 5)
     dataList = []
-    for id in idList:
+    for ind, id in enumerate(idList):
         try:
             exposure = butler.get("calexp", id)
             bbox = exposure.getBBox(afwImage.PARENT)
@@ -37,18 +41,25 @@ def reportFwhm(idList, butler):
             psf = butler.get("psf", id)
             maxGaussWidth = computeGaussianWidth(psf, bbox)
             maxFwhm = FWHMPerSigma * maxGaussWidth
-            dataList.append((filterName, maxFwhm, id))
-            if len(dataList) % reportInterval == 0:
-                sys.stdout.write(".")
-                sys.stdout.flush()
-        except Exception:
-            print "Failed on %s: %s" % (id, e)
-            continue            
-    print "\nDetermined %d PSFs:" % (len(dataList),)
+
+            floatBBox = afwGeom.Box2D(bbox)
+            ctrPixArr = (numpy.array(floatBBox.getMax()) + numpy.array(floatBBox.getMin())) / 2.0
+            ctrPixPos = afwGeom.Point2D(*ctrPixArr)
+            ctrSkyPos = exposure.getWcs().pixelToSky(ctrPixPos).getPosition()
+
+            dataList.append((filterName, maxFwhm, ctrSkyPos, id))
+            sys.stdout.write("\r%d of %d" % (ind+1, begLen))
+            sys.stdout.flush()
+        except Exception, e:
+            print "\nFailed on %s: %s" % (id, e)
+            continue
+    endLen = len(dataList)
+    print "\nProcessed %d exposures (skipped %d)" % (endLen, endLen - begLen)
+    print "ID\tFWHM\tRA\tDec"
 
     dataList.sort()
-    for filterName, maxFwhm, id in dataList:
-        print "%s\t%0.2f" % (id, maxFwhm)
+    for filterName, maxFwhm, ctrSkyPos, id in dataList:
+        print "%s\t%0.2f\t%0.5f\t%0.5f" % (id, maxFwhm, ctrSkyPos[0], ctrSkyPos[1])
     
 
 if __name__ == "__main__":
@@ -56,7 +67,7 @@ if __name__ == "__main__":
     policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "blankDictionary.paf")
     config, opts, args = parser.parse_args(policyPath)
     
-    reportFwhm(
+    reportFwhmAndRaDec(
         idList = parser.getIdList(),
         butler = parser.getReadWrite().inButler,
     )

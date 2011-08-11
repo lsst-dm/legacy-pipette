@@ -151,6 +151,7 @@ def getObjectsInField(exposure, filterName, db, user, password, host="lsst10.ncs
         source.setDec(source.getDecObject())
     return sourceList
 
+
 def measure(exposure, config):
     """Detect and measure sources on an exposure
 
@@ -159,15 +160,16 @@ def measure(exposure, config):
     
     @return sourceList
     """
-    # zero out the non-BAD/SATmasked pixels
-    maskArr = exposure.getMaskedImage().getMask().getArray()
-    bitMask = afwImage.MaskU.getPlaneBitMask(("EDGE", "BAD")) # should just be EDGE but afw stats sets BAD
-    numZeroed = numpy.sum(numpy.logical_and(maskArr != 0, maskArr & bitMask == 0))
-    newMaskArr = numpy.where(maskArr & bitMask == 0, 0, maskArr)
-    print "Number of masked pixels = %d to start" % (numpy.sum(maskArr != 0),)
-    print "Zero out the %d masked pixels that have neither EDGE nor BAD set" % (numZeroed,)
-    maskArr[:] = newMaskArr
-    print "Number of masked pixels = %d after nulling" % (numpy.sum(maskArr != 0),)
+    # zero out the mask except for "nan"s.
+    print "Remake mask to only mask out NaNs"
+    edgeMask = afwImage.MaskU.getPlaneBitMask(["EDGE"])
+    mi = exposure.getMaskedImage()
+    imArr = mi.getImage().getArray()
+    maskArr = mi.getMask().getArray()
+    print "Number of masked pixels = %d before remaking mask" % (numpy.sum(maskArr != 0),)
+    maskArr[:] = numpy.where(numpy.isfinite(imArr), 0, edgeMask)
+    print "Number of masked pixels = %d after remaking mask" % (numpy.sum(maskArr != 0),)
+    exposure.writeFits("remaskedExposure.fits")
     
     config['do']['isr']['enabled'] = False
     config['do']['calibrate']['psf'] = True
@@ -179,8 +181,6 @@ def measure(exposure, config):
     config['do']['calibrate']['repair']['cosmicray'] = False
     config['do']['calibrate']['background'] = False
 
-#    config['calibrate']['thresholdValue'] = 10.0 # default is 50
-    config['detect']['thresholdValue'] = 5.0
     config["psf"]["select"]["fluxLim"] = 10.0 # why is the default so much larger?
     
     procCcdProc = lsst.pipette.processCcd.ProcessCcd(config=config)
@@ -191,11 +191,8 @@ def measure(exposure, config):
         print "Warning: rejecting %d sources with psfFlux <= 0" % (len(badSourceList),)
         sourceList = [s for s in sourceList if s.getPsfFlux() > 0]
 
-#     # copy Ra/Dec to RaObject/DecObject
-#     for source in sourceList:
-#         source.setRaObject(source.getRa())
-#         source.setDecObject(source.getDec())
     return sourceList
+
 
 def matchSources(sourceList, refSourceList, maxSep):
     """Match exposure sources to reference sources
@@ -207,7 +204,7 @@ def matchSources(sourceList, refSourceList, maxSep):
     @return
     - matchedSources:       set of matched exposure Sources
     - matchedRefSources:    set of matched reference Sources
-    - unmatchedSources:   set of unmatched exposure Sources
+    - unmatchedSources:     set of unmatched exposure Sources
     - unmatchedRefSources:  set of unmatched reference Sources
     """
     sourceMatchList = afwDet.matchRaDec(sourceList, refSourceList, float(maxSep))
@@ -229,6 +226,7 @@ def matchSources(sourceList, refSourceList, maxSep):
     unmatchedRefSources = set(refSourceDict[id] for id in unmatchedRefSourceIds)
 
     return matchedSources, matchedRefSources, unmatchedSources, unmatchedRefSources
+
 
 if __name__ == "__main__":
     # Note: coadds don't have an official spot in repositories yet
@@ -300,8 +298,10 @@ if __name__ == "__main__":
         (len(refSourceList), len(matchedRefStars) + len(unmatchedRefStars))
     print "Found %d sources on the exposure" % (len(sourceList),)
     print "Matched using maxSep=%0.1f arcsec" % (maxSep,)
-    print "Matched %d stars from the exposure; failed to detect %d stars and falsely detected %d sources" % \
-        (len(matchedRefStars), len(unmatchedRefStars), len(unmatchedSources))
+    print "Matched %d sources; failed to detect %d reference sources; falsely detected %d sources" % \
+        (len(matchedSources), len(unmatchedRefSources), len(unmatchedSources))
+    print "Matched %d stars; failed to detect %d reference stars" % \
+        (len(matchedRefStars), len(unmatchedRefStars))
     
     matchedStarPsfMags = sorted(list(calib.getMagnitude(s.getPsfFlux()) for s in matchedStars))
     unmatchedRefStarPsfMags = sorted(list(calib.getMagnitude(s.getPsfFlux()) for s in unmatchedRefStars))

@@ -167,7 +167,7 @@ class Config(object):
         return
 
     def copy(self):
-        policy = pexPolicy.Policy(self._policy, deep=True)
+        policy = pexPolicy.Policy(self._policy, True)
         return Config(policy)
         
 

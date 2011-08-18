@@ -16,7 +16,10 @@ do: {
         background: false
     }
     cr: true
-    phot: true
+    phot: {
+        enabled: true
+        background: false
+    }
     scale: NONE
 }
 

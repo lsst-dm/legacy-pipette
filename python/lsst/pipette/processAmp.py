@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import math
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.afw.cameraGeom as cameraGeom
@@ -15,10 +16,15 @@ class ProcessAmp(pipProc.Process):
         """
         assert exposure, "No exposure provided"
         do = self.config['do']['isr']['processAmp']
+
         if do['saturation']:
             self.saturation(exposure)
+
         if do['overscan']:
             self.overscan(exposure)
+
+        if do['linearize']:
+            self.linearize(exposure)
 
         # XXX trim is unnecessary given CCD assembly
         #if do['trim']:
@@ -27,6 +33,51 @@ class ProcessAmp(pipProc.Process):
         self.display('amp', exposure=exposure, pause=True)
         return
     
+
+    def linearize(self, exposure):
+        """Correct for non-linearity
+
+        @param exposure Exposure to process
+        """
+        assert exposure, "No exposure provided"
+
+        image = exposure.getMaskedImage().getImage()
+
+        ccd = pipUtil.getCcd(exposure)
+
+        for amp in ccd:
+            if not pipUtil.haveAmp(exposure, amp):
+                continue
+
+            if False:
+                linear_threshold = amp.getElectronicParams().getLinearizationThreshold()
+                linear_c = amp.getElectronicParams().getLinearizationCoefficient()
+            else:
+                linear_threshold = self.config["linearize"]["threshold"]
+                linear_c = self.config["linearize"]["coefficient"]
+
+            if linear_c == 0.0:     # nothing to do
+                continue
+            
+            self.log.log(self.log.INFO,
+                         "Applying linearity corrections to Ccd %s Amp %s" % (ccd.getId(), amp.getId()))
+
+            log10_thresh = math.log10(linear_threshold)
+
+            ampImage = image.Factory(image, amp.getDiskDataSec(), afwImage.LOCAL)
+
+            width, height = ampImage.getDimensions()
+
+            for y in range(height):
+                for x in range(width):
+                    val = ampImage.get(x, y)
+                    if True:
+                        val += linear_c*val*val
+                        ampImage.set(x, y, val)
+                    else:
+                        if val > linear_threshold:
+                            val += val*linear_c*(math.log10(val) - log10_thresh)
+                            ampImage.set(x, y, val)
 
     def saturation(self, exposure):
         """Mask saturated pixels
@@ -45,7 +96,7 @@ class ProcessAmp(pipProc.Process):
             miAmp = MaskedImage(mi, amp.getDiskDataSec(), afwImage.LOCAL)
             expAmp = Exposure(miAmp)
             bboxes = ipIsr.saturationDetection(expAmp, saturation, doMask = True)
-            self.log.log(self.log.INFO, "Masked %d saturated pixels on amp %s: %f" %
+            self.log.log(self.log.INFO, "Masked %d saturated objects on amp %s: %f" %
                          (len(bboxes), amp.getId(), saturation))
         return
 

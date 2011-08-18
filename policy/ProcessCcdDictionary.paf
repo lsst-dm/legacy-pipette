@@ -26,6 +26,30 @@ definitions: {
         dictionaryFile: "DoProcessCcdDictionary.paf"
     }
 
+    linearize: {
+        type: policy
+        description: "Characterize non-linearity (should be in cameraGeom)"
+        minOccurs: 1
+        dictionary: {
+            definitions: {
+                threshold: {
+                    type: int
+                    description: "Threshold for non-linearity correction"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: 0
+                }
+                coefficient: {
+                    type: double
+                    description: "Coefficient for non-linearity correction"
+                    minOccurs: 1
+                    maxOccurs: 1
+                    default: 0.00
+                }
+            }
+        }
+    }
+
     fringe: {
         type: Policy
         description: "Policy for fringe subtraction"

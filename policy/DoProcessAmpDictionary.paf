@@ -24,4 +24,10 @@ definitions: {
         maxOccurs: 1
         default: true
     }
+    linearize: {
+        type: boolean
+        description: "Perform linearity correction?"
+        maxOccurs: 1
+        default: false
+    }
 }

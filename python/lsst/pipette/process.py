@@ -16,8 +16,6 @@ class Process(object):
         if log is None: log = pexLog.getDefaultLog()
         self.log = pexLog.Log(log, self.__class__.__name__)
         self._display = lsstDebug.Info(__name__).display
-        return
-
 
     def run(self):
         raise NotImplementedError("This method needs to be provided by the subclass.")
@@ -99,16 +97,17 @@ class Process(object):
         return
 
 
-    def display(self, name, exposure=None, sources=None, matches=None, pause=None):
+    def display(self, name, exposure=None, sources=[], matches=None, pause=None, prompt=None):
         """Display image and/or sources
 
         @param name Name of product to display
         @param exposure Exposure to display, or None
-        @param sources Sources to display, or None
+        @param sources list of sets of Sources to display, or []
         @param matches Matches to display, or None
         @param pause Pause execution?
         """
-        if not self._display or not self._display.has_key(name) or self._display <= 0:
+        if not self._display or not self._display.has_key(name) or self._display < 0 or \
+               self._display in (False, None) or self._display[name] in (False, None):
             return
 
         if isinstance(self._display, int):
@@ -130,17 +129,39 @@ class Process(object):
         else:
             x0, y0 = 0, 0
 
-        if sources and isinstance(sources, afwDet.SourceSet) or isinstance(sources, list):
-            for source in sources:
+        try:
+            sources[0][0]
+        except IndexError:              # empty list
+            pass
+        except TypeError:               # not a list of sets of sources
+            sources = [sources]
+            
+        ctypes = [ds9.GREEN, ds9.RED, ds9.BLUE]
+        for i, ss in enumerate(sources):
+            try:
+                ds9.buffer()
+            except AttributeError:
+                ds9.cmdBuffer.pushSize()
+
+            for source in ss:
                 xc, yc = source.getXAstrom() - x0, source.getYAstrom() - y0
-                ds9.dot("o", xc, yc, size=4, frame=frame)
+                ds9.dot("o", xc, yc, size=4, frame=frame, ctype=ctypes[i%len(ctypes)])
                 #try:
                 #    mag = 25-2.5*math.log10(source.getPsfFlux())
                 #    if mag > 15: continue
                 #except: continue
                 #ds9.dot("%.1f" % mag, xc, yc, frame=frame, ctype="red")
+            try:
+                ds9.buffer(False)
+            except AttributeError:
+                ds9.cmdBuffer.popSize()
 
         if matches:
+            try:
+                ds9.buffer()
+            except AttributeError:
+                ds9.cmdBuffer.pushSize()
+
             for match in matches:
                 first = match.first
                 x1, y1 = first.getXAstrom() - x0, first.getYAstrom() - y0
@@ -148,7 +169,21 @@ class Process(object):
                 second = match.second
                 x2, y2 = second.getXAstrom() - x0, second.getYAstrom() - y0
                 ds9.dot("x", x2, y2, size=8, frame=frame, ctype="red")
+            try:
+                ds9.buffer(False)
+            except AttributeError:
+                ds9.cmdBuffer.popSize()
 
         if pause:
-            raw_input("Press [ENTER] when ready....")
+            if prompt is None:
+                prompt = "%s: Enter or c to continue [chp]: " % name
+            while True:
+                ans = raw_input(prompt).lower()
+                if ans in ("", "c",):
+                    break
+                if ans in ("p",):
+                    import pdb; pdb.set_trace()
+                elif ans in ("h", ):
+                    print "h[elp] c[ontinue] p[db]"
+                    
         return

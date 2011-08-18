@@ -3,7 +3,9 @@ do: {
     dark: false
     flat: false
     fringe: false
-    phot: false
+    phot: {
+        enabled: false
+    }
     cr: false
     scale: false
 }

@@ -1,7 +1,7 @@
 do: {
     flat: false
     fringe: false
-    phot: false
+    phot.enabled: false
     cr: false
     scale: true
 }

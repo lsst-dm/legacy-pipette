@@ -39,4 +39,11 @@ definitions: {
         maxOccurs: 1
         default: 10.0
     }
+    magnitudeLimitForCalibration: {
+        type: double
+        description: "The faintest star to consider for photometric calibration"
+        minOccurs: 1
+        maxOccurs: 1
+        default: 22.0
+    }
 }

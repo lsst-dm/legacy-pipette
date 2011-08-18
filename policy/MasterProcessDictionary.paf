@@ -26,11 +26,10 @@ definitions: {
                     dictionaryFile: "DoIsrDictionary.paf"
                 }
                 phot: {
-                    type: boolean
+                    type: Policy
                     description: "Perform photometry?"
-                    minOccurs: 1
                     maxOccurs: 1
-                    default: false
+                    dictionaryFile: "DoPhotDictionary.paf"
                 }
                 cr: {
                     type: boolean

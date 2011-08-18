@@ -68,7 +68,16 @@ def run(rerun,                          # Rerun name
     dataId = { 'visit': frame, 'ccd': ccd }
     raws = io.readRaw(dataId)
     detrends = io.detrends(dataId, config)
-    
+
+    if len([x for x in detrends if x]): # We need to run at least part of the ISR
+        raws = io.readRaw(dataId)
+    else:
+        config['do']['calibrate']['repair']['cosmicray'] = False
+
+        io.fileKeys = ['visit', 'ccd']
+        raws = io.read('calexp', dataId)
+        detrends = None
+
     exposure, psf, apcorr, brightSources, sources, matches, matchMeta = ccdProc.run(raws, detrends)
     io.write(dataId, exposure=None, psf=psf, sources=None)
 
@@ -127,14 +136,14 @@ def getConfigFromArguments(argv=None):
                       help="rerun name (default=%default)")
     parser.add_option("-f", "--frame", dest="frame",
                       help="visit to run (default=%default)")
-    parser.add_option("-c", "--ccd", dest="ccd",
+    parser.add_option("-c", "--ccd", dest="ccds", action="append",
                       help="CCD to run (default=%default)")
 
     config, opts, args = parser.parse_args([default], argv=argv)
     if (len(args) > 0 # or opts.instrument is None
         or opts.rerun is None
         or opts.frame is None
-        or opts.ccd is None):
+        or opts.ccds is None):
 
         parser.print_help()
         print "argv was: %s" % (argv)
@@ -182,8 +191,18 @@ def main(argv=None):
     if not config:
         raise SystemExit("argument parsing error")
     
-    state = run(opts.rerun, int(opts.frame), int(opts.ccd), config)
-    doMergeWcs(state, None)
+    ccds = []
+    for c in opts.ccds:
+        c = c.split(":")
+        if len(c) == 1:
+            c.append(int(c[0]) + 1)
+
+        for ccd in range(int(c[0]), int(c[1])):
+            ccds.append(ccd)
+
+    for ccd in ccds:
+        state = run(opts.rerun, int(opts.frame), ccd, config)
+        doMergeWcs(state, None)
 
 if __name__ == "__main__":
     main()

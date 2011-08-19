@@ -6,6 +6,8 @@ setupRequired(meas_utils)
 setupRequired(meas_pipeline)
 setupOptional(coadd_chisquared)
 
+setupOptional(skymap)
+
 setupOptional(obs_subaru)
 setupOptional(obs_cfht)
 setupOptional(obs_lsstSim)

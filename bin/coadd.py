@@ -120,17 +120,22 @@ if __name__ == "__main__":
     policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "%sDictionary.paf" % (algName,))
     config, opts, args = parser.parse_args(policyPath, requiredArgs=["fwhm"])
     
+    desFwhm = opts.fwhm
     coaddExposure, weightMap = coadd(
         idList = parser.getIdList(),
         butler = parser.getReadWrite().inButler,
-        desFwhm = opts.fwhm,
+        desFwhm = desFwhm,
         coaddWcs = parser.getCoaddWcs(),
         coaddBBox = parser.getCoaddBBox(),
         policy = config.getPolicy())
-
+    
+    filterName = coaddExposure.getFilter().getName()
+    if filterName == "_unknown_":
+        filterStr = "unk"
     coaddBasePath = parser.getCoaddBasePath()
-    coaddPath = "%s_%s.fits" % (coaddBasePath, algName)
-    weightPath = "%s_%s_weight.fits" % (coaddBasePath, algName)
+    coaddBaseName = "%s_%s_filter_%s_fwhm_%s" % (coaddBasePath, algName, filterName, desFwhm)
+    coaddPath = coaddBaseName + ".fits"
+    weightPath = coaddBaseName + "weight.fits"
     print "Saving coadd as %s" % (coaddPath,)
     coaddExposure.writeFits(coaddPath)
     print "saving weight map as %s" % (weightPath,)

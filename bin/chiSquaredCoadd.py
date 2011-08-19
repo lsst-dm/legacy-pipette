@@ -81,6 +81,7 @@ def chiSquaredCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
 
     warper = afwMath.Warper.fromPolicy(warpPolicy)
     coadd = coaddChiSq.Coadd.fromPolicy(coaddBBox, coaddWcs, coaddPolicy)
+    print "bad pixel mask=", coadd._badPixelMask
     prevKernelDim = afwGeom.Extent2I(0, 0) # use this because the test Extent2I == None is an error
     for ind, id in enumerate(idList):
         print "Processing exposure %d of %d: id=%s" % (ind+1, numExp, id)
@@ -120,17 +121,22 @@ if __name__ == "__main__":
     policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "%sDictionary.paf" % (algName,))
     config, opts, args = parser.parse_args(policyPath, requiredArgs=["fwhm"])
     
+    desFwhm = opts.fwhm
     coaddExposure, weightMap = chiSquaredCoadd(
         idList = parser.getIdList(),
         butler = parser.getReadWrite().inButler,
-        desFwhm = opts.fwhm,
+        desFwhm = desFwhm,
         coaddWcs = parser.getCoaddWcs(),
         coaddBBox = parser.getCoaddBBox(),
         policy = config.getPolicy())
 
+    filterName = coaddExposure.getFilter().getName()
+    if filterName == "_unknown_":
+        filterStr = "unk"
     coaddBasePath = parser.getCoaddBasePath()
-    coaddPath = "%s_%s.fits" % (coaddBasePath, algName)
-    weightPath = "%s_%s_weight.fits" % (coaddBasePath, algName)
+    coaddBaseName = "%s_%s_filter_%s_fwhm_%s" % (coaddBasePath, algName, filterName, desFwhm)
+    coaddPath = coaddBaseName + ".fits"
+    weightPath = coaddBaseName + "weight.fits"
     print "Saving coadd as %s" % (coaddPath,)
     coaddExposure.writeFits(coaddPath)
     print "saving weight map as %s" % (weightPath,)

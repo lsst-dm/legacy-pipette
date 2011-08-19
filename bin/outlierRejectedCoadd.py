@@ -56,6 +56,7 @@ class ExposureMetadata(object):
         self.path = path
         self.wcs = exposure.getWcs()
         self.bbox = exposure.getBBox(afwImage.PARENT)
+        self.filter = exposure.getFilter()
         
         maskedImage = exposure.getMaskedImage()
 
@@ -234,6 +235,16 @@ def outlierRejectedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
 
     coaddExposure = afwImage.ExposureF(coaddBBox, coaddWcs)
     coaddExposure.setCalib(coaddCalib)
+
+    filterDict = {} # dict of name: Filter
+    for expMeta in exposureMetadataList:
+        filterDict.setdefault(expMeta.filter.getName(), expMeta.filter)
+    if len(filterDict) == 1:
+        coaddExposure.setFilter(filterDict.values()[0])
+    print "Filter=", coaddExposure.getFilter().getName()
+    
+    coaddExposure.writeFits("blankCoadd.fits")
+
     coaddMaskedImage = coaddExposure.getMaskedImage()
     subregionSizeArr = policy.getArray("subregionSize")
     subregionSize = afwGeom.Extent2I(subregionSizeArr[0], subregionSizeArr[1])
@@ -247,7 +258,8 @@ def outlierRejectedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
             if expMeta.bbox.contains(bbox):
                 maskedImage = afwImage.MaskedImageF(expMeta.path, 0, dumPS, bbox, afwImage.PARENT)
             elif not bbox.overlaps(expMeta.bbox):
-                print "Skipping %s; no overlap" % (expMeta.path, bbox)
+                print "Skipping %s; no overlap" % (expMeta.path,)
+                continue
             else:
                 overlapBBox = afwGeom.Box2I(expMeta.bbox)
                 overlapBBox.clip(bbox)
@@ -283,15 +295,21 @@ if __name__ == "__main__":
     policyPath = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "%sDictionary.paf" % (algName,))
     config, opts, args = parser.parse_args(policyPath, requiredArgs=["fwhm"])
     
+    desFwhm = opts.fwhm
+    
     coaddExposure = outlierRejectedCoadd(
         idList = parser.getIdList(),
         butler = parser.getReadWrite().inButler,
-        desFwhm = opts.fwhm,
+        desFwhm = desFwhm,
         coaddWcs = parser.getCoaddWcs(),
         coaddBBox = parser.getCoaddBBox(),
         policy = config.getPolicy())
 
+    filterName = coaddExposure.getFilter().getName()
+    if filterName == "_unknown_":
+        filterStr = "unk"
     coaddBasePath = parser.getCoaddBasePath()
-    coaddPath = "%s_%s.fits" % (coaddBasePath, algName)
+    coaddBaseName = "%s_%s_filter_%s_fwhm_%s" % (coaddBasePath, algName, filterName, desFwhm)
+    coaddPath = coaddBaseName + ".fits"
     print "Saving coadd as %s" % (coaddPath,)
     coaddExposure.writeFits(coaddPath)

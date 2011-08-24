@@ -28,10 +28,8 @@ def run(rerun,                          # Rerun name
 
     sources = afwDet.PersistableSourceVector(sources)
 
-    diffProc.write(io.outButler, {'diff': diff, 'patch': patch}, {"diff": diffExp,
-                                                                  "diffpsf": psf,
-                                                                  "diffsources": sources})
-
+    diffProc.write(io.outButler, {'diff': diff, 'patch': patch, 'filter': diffExp.getFilter().getName()},
+                   {"diff": diffExp, "diffpsf": psf, "diffsources": sources})
 
 if __name__ == "__main__":
     parser = pipOptions.OptionParser()

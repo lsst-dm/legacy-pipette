@@ -201,9 +201,6 @@ class Calibrate(pipProc.Process):
             fs = afwDet.makeFootprintSet(convolvedImage, afwDet.createThreshold(4, "stdev"))
             fs = afwDet.makeFootprintSet(fs, 3, True)
             fs.setMask(exposure.getMaskedImage().getMask(), "DETECTED")
-            if False:
-                ds9.mtv(exposure, frame=1)
-                import pdb; pdb.set_trace() 
 
         starSelector = measAlg.makeStarSelector(selName, selPolicy)
         psfCandidateList = starSelector.selectStars(exposure, sources)

@@ -82,7 +82,6 @@ class Diff(pipProc.Process):
 
         sources, footprints = self.phot(diff, psf, apcorr)
 
-        import pdb; pdb.set_trace()
         self.display('diff', exposure=diff, sources=sources)
 
         return diff, sources, psf, apcorr, brightSources

@@ -1,0 +1,64 @@
+### Overrides for differencing with Suprime-Cam
+
+do: {
+    diff: {
+        match: true
+        convolve: true
+    }
+    calibrate: {
+        repair: {
+            interpolate: true
+        }
+        psf: true
+        apcorr: true
+        background: true
+    }
+    phot: {
+        enabled: true
+        background: false
+    }
+}
+
+measure: {
+    source: {
+        astrom:  "SDSS"
+        apFlux:  "SINC"
+        modelFlux: "GAUSSIAN"
+        psfFlux: "PSF"
+        shape: "SDSS"
+    }
+
+    astrometry: {
+        GAUSSIAN: {
+            enabled: true
+        }
+        
+        NAIVE: {
+            enabled: true
+        }
+        
+        SDSS: {
+            enabled: true
+        }
+    }
+    photometry: {
+        GAUSSIAN: {
+            background: 0.0
+            shiftmax: 10
+        }
+        NAIVE: {
+            radius: 9.0
+        }
+        PSF: {
+            enabled: true
+        }
+        SINC: {
+            radius: 9.0
+        }
+    }
+    shape: {
+        SDSS: {
+            enabled: true
+        }
+    }
+}

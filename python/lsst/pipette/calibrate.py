@@ -403,7 +403,9 @@ class Calibrate(pipProc.Process):
             distSource = distSources[index]
             sky = wcs.pixelToSky(distSource.getXAstrom() - llc[0], distSource.getYAstrom() - llc[1])
             source.setRaDec(sky)
-            areas.append(wcs.pixArea((distSource.getXAstrom() - llc[0], distSource.getYAstrom() - llc[1])))
+            point = afwGeom.Point2D(distSource.getXAstrom() - llc[0], distSource.getYAstrom() - llc[1])
+            # in square degrees
+            areas.append(wcs.pixArea(point))
 
         print areas
 

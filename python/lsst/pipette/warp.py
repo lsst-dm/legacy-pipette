@@ -57,7 +57,7 @@ class Warp(pipProc.Process):
         """
 
         skycell = self.skycell(ra, dec, scale, xSize, ySize)
-        return self.warp(identList, butler, skycell)
+        return self.warp(identList, butler, skycell, True)
 
     def skycell(self, ra, dec, scale, xSize, ySize):
         """Define a skycell
@@ -72,7 +72,7 @@ class Warp(pipProc.Process):
         """
         crval = afwGeom.Point2D(ra, dec)
         crpix = afwGeom.Point2D(xSize / 2.0, ySize / 2.0)
-        wcs = afwImage.createWcs(crval, crpix, scale / 3600.0, 0.0, 0.0, scale / 3600.0)
+        wcs = afwImage.createWcs(crval, crpix, -scale / 3600.0, 0.0, 0.0, scale / 3600.0)
         return Skycell(wcs, xSize, ySize)
 
     def warp(self, identList, butler, skycell, ignore=False):
@@ -92,13 +92,24 @@ class Warp(pipProc.Process):
         weight = afwImage.ImageF(xSize, ySize)
         
         for ident in identList:
-            md = self.read(butler, ident, ["calexp_md"], ignore=ignore)
+            try:
+                md = self.read(butler, ident, ["calexp_md"], ignore=ignore)
+            except RuntimeError as e:
+                self.log.log(self.log.WARN, e.__str__())
+                continue
             if md is None or len(md) == 0:
                 self.log.log(self.log.WARN, "Unable to read %s --- ignoring" % ident)
                 continue
             md = md[0]
             width, height = md.get("NAXIS1"), md.get("NAXIS2")
-            expWcs = afwImage.makeWcs(md)
+            # Read wcs created by hscMosaic
+            md_wcs = self.read(butler, ident, ["wcs_md"], ignore=ignore)
+            if md_wcs is None or len(md_wcs) == 0:
+                expWcs = afwImage.makeWcs(md)
+                fscale = 1.0
+            else:
+                expWcs = afwImage.makeWcs(md_wcs[0])
+                fscale = md_wcs[0].get('FSCALE')
 
             xSkycell = list()
             ySkycell = list()
@@ -115,7 +126,9 @@ class Warp(pipProc.Process):
             self.log.log(self.log.INFO, "Bounds of image: %d,%d --> %d,%d" % (xMin, yMin, xMax, yMax))
             if xMin < xSize and xMax >= 0 and yMin < ySize and yMax >= 0:
                 bbox = afwGeom.Box2I(afwGeom.Point2I(xMin, yMin), afwGeom.Point2I(xMax, yMax))
-                exp = self.read(butler, ident, ["calexp"])[0]
+                exp = self.read(butler, ident, ["calexp"], ignore=ignore)[0]
+                mi = exp.getMaskedImage()
+                mi *= fscale
                 self.warpComponent(warp, weight, exp, bbox)
                 del exp
             del md

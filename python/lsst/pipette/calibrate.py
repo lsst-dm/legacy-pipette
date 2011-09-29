@@ -398,14 +398,10 @@ class Calibrate(pipProc.Process):
         exposure.setWcs(wcs)
 
         # Apply WCS to sources
-        areas = []
         for index, source in enumerate(sources):
             distSource = distSources[index]
             sky = wcs.pixelToSky(distSource.getXAstrom() - llc[0], distSource.getYAstrom() - llc[1])
             source.setRaDec(sky)
-            areas.append(wcs.pixArea((distSource.getXAstrom() - llc[0], distSource.getYAstrom() - llc[1])))
-
-        print areas
 
         self.display('astrometry', exposure=exposure, sources=sources, matches=matches)
 

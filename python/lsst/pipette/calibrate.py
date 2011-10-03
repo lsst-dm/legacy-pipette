@@ -398,16 +398,14 @@ class Calibrate(pipProc.Process):
         exposure.setWcs(wcs)
 
         # Apply WCS to sources
-        areas = []
         for index, source in enumerate(sources):
             distSource = distSources[index]
             sky = wcs.pixelToSky(distSource.getXAstrom() - llc[0], distSource.getYAstrom() - llc[1])
             source.setRaDec(sky)
-            point = afwGeom.Point2D(distSource.getXAstrom() - llc[0], distSource.getYAstrom() - llc[1])
-            # in square degrees
-            areas.append(wcs.pixArea(point))
 
-        print areas
+            #point = afwGeom.Point2D(distSource.getXAstrom() - llc[0], distSource.getYAstrom() - llc[1])
+            # in square degrees
+            #areas.append(wcs.pixArea(point))
 
         self.display('astrometry', exposure=exposure, sources=sources, matches=matches)
 

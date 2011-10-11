@@ -130,7 +130,7 @@ class Calibrate(pipProc.Process):
 
         calibrate = self.config['calibrate']
         model = calibrate['model']
-        fwhm = calibrate['fwhm'] / wcs.pixelScale()
+        fwhm = calibrate['fwhm'] / wcs.pixelScale().asArcseconds()
         size = calibrate['size']
         psf = afwDet.createPsf(model, size, size, fwhm/(2*math.sqrt(2*math.log(2))))
         return psf, wcs
@@ -403,6 +403,10 @@ class Calibrate(pipProc.Process):
             sky = wcs.pixelToSky(distSource.getXAstrom() - llc[0], distSource.getYAstrom() - llc[1])
             source.setRaDec(sky)
 
+            #point = afwGeom.Point2D(distSource.getXAstrom() - llc[0], distSource.getYAstrom() - llc[1])
+            # in square degrees
+            #areas.append(wcs.pixArea(point))
+
         self.display('astrometry', exposure=exposure, sources=sources, matches=matches)
 
         return matches, matchMeta
@@ -489,14 +493,13 @@ class Calibrate(pipProc.Process):
             sip = astromSip.CreateWcsWithSip(matches, exposure.getWcs(), self.config['astrometry']['sipOrder'])
             wcs = sip.getNewWcs()
             self.log.log(self.log.INFO, "Astrometric scatter: %f arcsec (%s non-linear terms)" %
-                         (sip.getScatterInArcsec(), "with" if wcs.hasDistortion() else "without"))
+                         (sip.getScatterOnSky().asArcseconds(), "with" if wcs.hasDistortion() else "without"))
             exposure.setWcs(wcs)
             
             # Apply WCS to sources
             for index, source in enumerate(sources):
                 sky = wcs.pixelToSky(source.getXAstrom(), source.getYAstrom())
-                source.setRa(sky[0])
-                source.setDec(sky[1])
+                source.setRaDec(sky)
         else:
             self.log.log(self.log.WARN, "Not calculating a SIP solution; matches may be suspect")
         

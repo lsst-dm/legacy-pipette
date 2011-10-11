@@ -4,7 +4,8 @@ import numpy
 import pyfits
 import math
 
-import lsst.afw.detection        as afwDet
+import lsst.afw.detection as afwDet
+import lsst.afw.geom      as afwGeom
 
 try:
     from IPython.core.debugger import Tracer;
@@ -44,7 +45,8 @@ def genOutputDict(outlist):
                     "bits": out[6],      # the number of bits for the value (needed as flags are 16 bit)
                     "fitstype": out[7],  # The fits type (I, E, etc) to write file
                     "side": out[8],      # For matchlists, the side to call
-                    "convertRadians": out[9], # Whether we need to convert from/to radians
+                    "angle": out[9],
+                    "units": out[10],
                     }
         dictList.append(outdict)
     return dictList
@@ -53,36 +55,32 @@ def getSourceOutputListHsc(addRefFlux=False, simple=False):
 
     # We have pulled all the schema-based entries out. There are still a few stragglers:
     outlistSimple = [
-        ["objId",    "getId",          "setId", "%5s",     "%06d",       int,   32,   "K",0,0],
-        ["objFlags", "getFlagForDetection", "setFlagForDetection", "%6s",        "0x%04x",      int,     16,   "I",0,0],
-        ["ra",     "getRa",           "setRa",           "%10s",       "%10.6f",     float,   32,   "E",0,0],
-        ["dec",    "getDec",          "setDec",          "%10s",       "%10.6f",     float,   32,   "E",0,0],
-        #["raErr",  "getRaErrForWcs",  "setRaErrForWcs",  "%10s",       "%10.6f",     float,   32,   "E",0,0],
-        #["decErr", "getDecErrForWcs", "setDecErrForWcs", "%10s",       "%10.6f",     float,   32,   "E",0,0],
-        
+        ["objId",    "getId",               "setId",               "%5s",        "%06d",       int,     32,   "K", 0, False, None ],
+        ["objFlags", "getFlagForDetection", "setFlagForDetection", "%6s",        "0x%04x",     int,     16,   "I", 0, False, None ],
+        ["ra",       "getRa",               "setRa",               "%10s",       "%10.6f",     float,   64,   "D", 0, True,  'deg'],
+        ["dec",      "getDec",              "setDec",              "%10s",       "%10.6f",     float,   64,   "D", 0, True,  'deg'],
+        #["raErr",   "getRaErrForWcs",      "setRaErrForWcs",      "%10s",       "%10.6f",     float,   32,   "E", 0, True,  'deg'],
+        #["decErr",  "getDecErrForWcs",     "setDecErrForWcs",     "%10s",       "%10.6f",     float,   32,   "E", 0, True,  'deg'],
         ]
     
     outlist1 = [
         # label    get method        set method       headformat   dataformat   pytype   bits  fitstype
-        ["amp",    "getAmpExposureId","setAmpExposureId", "%4s",       "%04d",   int,   32,   "I",0,0],
-        ["x",      "getXAstrom",     "setXAstrom",    "%8s",       "%8.3f",     float,   32,   "E",0,0],
-        ["xerr",   "getXAstromErr",  "setXAstromErr", "%8s",       "%8.3f",     float,   32,   "E",0,0],
-        ["y",      "getYAstrom",     "setYAstrom",    "%8s",       "%8.3f",     float,   32,   "E",0,0],
-        ["yerr",   "getYAstromErr",  "setYAstromErr", "%8s",       "%8.3f",     float,   32,   "E",0,0],
-        
-        ["Ixx",    "getIxx",         "setIxx",        "%9s",       "%9.3f",     float,   32,   "E",0,0],
-        ["Ixy",    "getIxy",         "setIxy",        "%9s",       "%9.3f",     float,   32,   "E",0,0],
-        ["Iyy",    "getIyy",         "setIyy",        "%9s",       "%9.3f",     float,   32,   "E",0,0],
-        ["f_psf",  "getPsfFlux",     "setPsfFlux",    "%11s",      "%11.1f",    float,   32,   "E",0,0],
-        ["f_ap",   "getApFlux",      "setApFlux",     "%11s",      "%11.1f",    float,   32,   "E",0,0],
-        ["flags",  "getFlagForDetection", "setFlagForDetection",
-         "%6s",        "0x%04x",      int,     16,   "I",0,0],
+        ["amp",   "getAmpExposureId",    "setAmpExposureId",    "%4s",  "%04d",   int,   32, "I", 0, False, None],
+        ["x",     "getXAstrom",          "setXAstrom",          "%8s",  "%8.3f",  float, 32, "E", 0, False, 'pixels'],
+        ["xerr",  "getXAstromErr",       "setXAstromErr",       "%8s",  "%8.3f",  float, 32, "E", 0, False, 'pixels'],
+        ["y",     "getYAstrom",          "setYAstrom",          "%8s",  "%8.3f",  float, 32, "E", 0, False, 'pixels'],
+        ["yerr",  "getYAstromErr",       "setYAstromErr",       "%8s",  "%8.3f",  float, 32, "E", 0, False, 'pixels'],
+        ["Ixx",   "getIxx",              "setIxx",              "%9s",  "%9.3f",  float, 32, "E", 0, False, None],
+        ["Ixy",   "getIxy",              "setIxy",              "%9s",  "%9.3f",  float, 32, "E", 0, False, None],
+        ["Iyy",   "getIyy",              "setIyy",              "%9s",  "%9.3f",  float, 32, "E", 0, False, None],
+        ["f_psf", "getPsfFlux",          "setPsfFlux",          "%11s", "%11.1f", float, 32, "E", 0, False, None],
+        ["f_ap",  "getApFlux",           "setApFlux",           "%11s", "%11.1f", float, 32, "E", 0, False, None],
+        ["flags", "getFlagForDetection", "setFlagForDetection", "%6s",  "0x%04x", int,   16, "I", 0, False, None],
         ]
     
     outlistRef = [
-        ["f_ref_psf",  "getPsfFlux",     "setPsfFlux",    "%11s",      "%g",    float,   32,   "E",0,0],
+        ["f_ref_psf", "getPsfFlux",      "setPsfFlux",          "%11s",   "%g",   float, 32, "E", 0, False, None],
         ]
-    
     
     outlist = outlistSimple[:]
     if not simple:
@@ -93,18 +91,18 @@ def getSourceOutputListHsc(addRefFlux=False, simple=False):
 
 def getMatchOutputList():
     outlist = [
-        ["catId",     "getId",           None,           "%8s",        "%08df",     int,   32,   "K",1,0],
-        ["catRa",     "getRa",           None,           "%10s",       "%10.6f",     float,   32,   "E",1,0],
-        ["catDec",    "getDec",          None,           "%10s",       "%10.6f",     float,   32,   "E",1,0],
-        ["catFlux",   "getPsfFlux",      None,            "%8s",       "%8.3f",     float,   32,   "E",1,0],
-        ["objId",     "getId",          "setId",          "%6s",       "%06d",       int,   32,   "K",0,0],
-        ["objFlags",  "getFlagForDetection", "setFlagForDetection", "%6s",        "0x%04x",      int,     16,   "I",0,0],
-        ["ra",        "getRa",           "setRa",           "%10s",       "%10.6f",     float,   32,   "E",0,0],
-        ["dec",       "getDec",          "setDec",          "%10s",       "%10.6f",     float,   32,   "E",0,0],
-        ["x",         "getXAstrom",     "setXAstrom",    "%8s",       "%8.3f",     float,   32,   "E",0,0],
-        ["xerr",      "getXAstromErr",  "setXAstromErr", "%8s",       "%8.3f",     float,   32,   "E",0,0],
-        ["y",         "getYAstrom",     "setYAstrom",    "%8s",       "%8.3f",     float,   32,   "E",0,0],
-        ["yerr",      "getYAstromErr",  "setYAstromErr", "%8s",       "%8.3f",     float,   32,   "E",0,0],
+        ["catId",     "getId",               None,                  "%8s",  "%08df",  int,   32, "K", 1, False, None],
+        ["catRa",     "getRa",               None,                  "%10s", "%10.6f", float, 64, "D", 1, True,  'deg'],
+        ["catDec",    "getDec",              None,                  "%10s", "%10.6f", float, 64, "D", 1, True,  'deg'],
+        ["catFlux",   "getPsfFlux",          None,                  "%8s",  "%8.3f",  float, 32, "E", 1, False, None],
+        ["objId",     "getId",               "setId",               "%6s",  "%06d",   int,   32, "K", 0, False, None],
+        ["objFlags",  "getFlagForDetection", "setFlagForDetection", "%6s",  "0x%04x", int,   16, "I", 0, False, None],
+        ["ra",        "getRa",               "setRa",               "%10s", "%10.6f", float, 64, "D", 0, True,  'deg'],
+        ["dec",       "getDec",              "setDec",              "%10s", "%10.6f", float, 64, "D", 0, True,  'deg'],
+        ["x",         "getXAstrom",          "setXAstrom",          "%8s",  "%8.3f",  float, 32, "E", 0, False, 'pixels'],
+        ["xerr",      "getXAstromErr",       "setXAstromErr",       "%8s",  "%8.3f",  float, 32, "E", 0, False, 'pixels'],
+        ["y",         "getYAstrom",          "setYAstrom",          "%8s",  "%8.3f",  float, 32, "E", 0, False, 'pixels'],
+        ["yerr",      "getYAstromErr",       "setYAstromErr",       "%8s",  "%8.3f",  float, 32, "E", 0, False, 'pixels'],
         ]
     return genOutputDict(outlist)
         
@@ -126,9 +124,8 @@ def writeMatchListAsFits(matchList, fileName, log=NoLogging()):
 
         for i in range(nOut):
             columnName = outputs[i]["label"]
-            convertRadians = outputs[i]["convertRadians"] == 1
-            j = 0
-            for sourceMatch in matchList:
+            isangle = outputs[i]['angle']
+            for j,sourceMatch in enumerate(matchList):
                 s1 = sourceMatch.first
                 s2 = sourceMatch.second
                 if outputs[i]['side'] == 1:
@@ -136,10 +133,11 @@ def writeMatchListAsFits(matchList, fileName, log=NoLogging()):
                 else:
                     s = s2              # source
                 getMethod = getattr(s, outputs[i]["get"])
-                arrays[columnName][j] = getMethod()
-                if convertRadians:
-                   arrays[columnName][j] *= 180.0 / math.pi
-                j += 1
+                X = getMethod()
+                if isangle:
+                    arrays[columnName][j] = X.asDegrees()
+                else:
+                    arrays[columnName][j] = X
 
         # create the column defs
         columnDefs = []
@@ -147,6 +145,7 @@ def writeMatchListAsFits(matchList, fileName, log=NoLogging()):
             columnName = outputs[i]["label"]
             columnDefs.append(pyfits.Column(name=columnName,
                                             format=outputs[i]["fitstype"],
+                                            unit=outputs[i]['units'],
                                             array=arrays[columnName]))
 
         tabhdu = pyfits.new_table(columnDefs, nrows=nSource)
@@ -160,7 +159,6 @@ def writeMatchListAsFits(matchList, fileName, log=NoLogging()):
 #
 ###############################################################################
 def readSourcesetFromFits(baseName, hdrKeys=[], outputStyle="hsc"):
-
 
     fits = pyfits.open("%s.fits" % (baseName))
     hdu = 1
@@ -186,10 +184,13 @@ def readSourcesetFromFits(baseName, hdrKeys=[], outputStyle="hsc"):
             setMethod = getattr(source, outputs[j]["set"])
             thistype = outputs[j]["pytype"]
             value = data[i].field(outputs[j]["label"])
-            try:
-                setMethod(thistype(value))
-            except:
-                setMethod(thistype("nan"))
+            if outputs[j]['angle']:
+                setMethod(value * afwGeom.degrees)
+            else:
+                try:
+                    setMethod(thistype(value))
+                except:
+                    setMethod(thistype("nan"))
 
 
 
@@ -241,8 +242,7 @@ def readMatchListFits(baseName, outputStyle="hsc"):
             matchList.append(afwDet.SourceMatch(s1, s2, 0.0))
 
             for j in range(nOut):
-
-                if re.search("^(ra|dec)$", outputs[j]["label"]):
+                if outputs[j]['label'] in ['ra','dec']:
                     s = s1
                 else:
                     s = s2
@@ -250,7 +250,10 @@ def readMatchListFits(baseName, outputStyle="hsc"):
                 setMethod = getattr(s, outputs[j]["set"])
                 thistype = outputs[j]["pytype"]
                 value = data[i].field(outputs[j]["label"])
-                setMethod(thistype(value))
+                if outputs[j]['angle']:
+                    setMethod(value * afwGeom.degrees)
+                else:
+                    setMethod(thistype(value))
 
     return matchList
 
@@ -335,13 +338,12 @@ def getFitsColumns(sourceSet, outputs):
         columnName = outputs[i]["label"]
         arrays[columnName] = numpy.zeros(nSource, dtype=outputs[i]["dtype"])
 
-    for i in range(nOut):
-        columnName = outputs[i]["label"]
-        j = 0
-        for source in sourceSet:
+        for j,source in enumerate(sourceSet):
             getMethod = getattr(source, outputs[i]["get"])
-            arrays[columnName][j]  = getMethod()
-            j += 1
+            X = getMethod()
+            if outputs[i]['angle']:
+                X = X.asDegrees()
+            arrays[columnName][j] = X
 
     # create the column defs
     columnDefs = []
@@ -349,6 +351,7 @@ def getFitsColumns(sourceSet, outputs):
         columnName = outputs[i]["label"]
         columnDefs.append(pyfits.Column(name=columnName,
                                         format=outputs[i]["fitstype"],
+                                        unit=outputs[i]['units'],
                                         array=arrays[columnName]))
     return columnDefs
 

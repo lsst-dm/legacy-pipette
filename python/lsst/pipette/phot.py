@@ -13,10 +13,10 @@ import lsst.pipette.background as pipBackground
 from lsst.pipette.timer import timecall
 
 class Photometry(pipProc.Process):
-    def __init__(self, threshold=None, Background=pipBackground.Background, *args, **kwargs):
+    def __init__(self, thresholdMultiplier=1.0, Background=pipBackground.Background, *args, **kwargs):
         super(Photometry, self).__init__(*args, **kwargs)
         self._Background = Background
-        self._threshold = threshold
+        self._thresholdMultiplier = thresholdMultiplier
         return
 
     def run(self, exposure, psf, apcorr=None, wcs=None):
@@ -81,7 +81,7 @@ class Photometry(pipProc.Process):
         assert psf, "No psf provided"
         policy = self.config['detect']
         posSources, negSources = muDetection.detectSources(exposure, psf, policy.getPolicy(),
-                                                           extraThreshold=self._threshold)
+                                                           extraThreshold=self._thresholdMultiplier)
         numPos = len(posSources.getFootprints()) if posSources is not None else 0
         numNeg = len(negSources.getFootprints()) if negSources is not None else 0
         if numNeg > 0:
@@ -181,16 +181,11 @@ class PhotometryDiff(Photometry):
         assert exposure, "No exposure provided"
         assert psf, "No psf provided"
         policy = self.config['detect']
-        if self._threshold is not None:
-            oldThreshold = policy['thresholdValue']
-            policy['thresholdValue'] = self._threshold
         posSources, negSources = muDetection.detectSources(exposure, psf, policy.getPolicy())
         numPos = len(posSources.getFootprints()) if posSources is not None else 0
         numNeg = len(negSources.getFootprints()) if negSources is not None else 0
         self.log.log(self.log.INFO, "Detected %d positive and %d negative sources to %g sigma." % 
                      (numPos, numNeg, policy['thresholdValue']))
-        if self._threshold is not None:
-            policy['thresholdValue'] = oldThreshold
 
         for f in negSources.getFootprints():
             posSources.getFootprints().push_back(f)

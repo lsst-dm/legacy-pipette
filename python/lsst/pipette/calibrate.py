@@ -159,8 +159,8 @@ class Calibrate(pipProc.Process):
         @param wcs World Coordinate System, or None
         @return Source list
         """
-        threshold = self.config['calibrate']['thresholdValue']
-        phot = self._Photometry(config=self.config, log=self.log, threshold=threshold)
+        thresholdMultiplier = self.config['calibrate']['thresholdValue']
+        phot = self._Photometry(config=self.config, log=self.log, thresholdMultiplier=thresholdMultiplier)
         return phot.run(exposure, psf)
 
 

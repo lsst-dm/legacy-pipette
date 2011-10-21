@@ -70,9 +70,9 @@ class Warp(pipProc.Process):
         
         @return Skycell
         """
-        crval = afwGeom.Point2D(ra, dec)
+        crval = afwCoord.Coord(afwGeom.Point2D(ra, dec))
         crpix = afwGeom.Point2D(xSize / 2.0, ySize / 2.0)
-        wcs = afwImage.createWcs(crval, crpix, -scale / 3600.0, 0.0, 0.0, scale / 3600.0)
+        wcs = afwImage.makeWcs(crval, crpix, -scale / 3600.0, 0.0, 0.0, scale / 3600.0)
         return Skycell(wcs, xSize, ySize)
 
     def warp(self, identList, butler, skycell, ignore=False):

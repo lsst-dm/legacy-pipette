@@ -1,0 +1,14 @@
+
+# /
+/.sconsign.dblite
+/config.log
+/.sconf_temp
+
+# /doc/
+/doc/htmlDir
+
+# /python/lsst/pipette/
+/python/lsst/pipette/*.pyc
+
+# /tests/
+/tests/.tests

@@ -232,15 +232,18 @@ class Calibrate(pipProc.Process):
         assert cellSet, "No cellSet provided"
         policy = self.config['apcorr'].getPolicy()
         control = maApCorr.ApertureCorrectionControl(policy)
-        sdqaRatings = sdqa.SdqaRatingSet()
+
+        class FakeSdqa(dict):
+            def set(self, name, value):
+                self[name] = value
+            
+        sdqaRatings = FakeSdqa()
+                
         corr = maApCorr.ApertureCorrection(exposure, cellSet, sdqaRatings, control, self.log)
-        sdqaRatings = dict(zip([r.getName() for r in sdqaRatings], [r for r in sdqaRatings]))
         x, y = exposure.getWidth() / 2.0, exposure.getHeight() / 2.0
         value, error = corr.computeAt(x, y)
         self.log.log(self.log.INFO, "Aperture correction using %d/%d stars: %f +/- %f" %
-                     (sdqaRatings["phot.apCorr.numAvailStars"].getValue(),
-                      sdqaRatings["phot.apCorr.numGoodStars"].getValue(),
-                      value, error))
+                     (sdqaRatings["numAvailStars"], sdqaRatings["numGoodStars"], value, error))
         return corr
 
 

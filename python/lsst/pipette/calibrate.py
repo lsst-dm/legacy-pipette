@@ -178,7 +178,6 @@ class Calibrate(pipProc.Process):
         selPolicy = psfPolicy['select'].getPolicy()
         algName   = psfPolicy['algorithmName']
         algPolicy = psfPolicy['algorithm'].getPolicy()
-        sdqaRatings = sdqa.SdqaRatingSet()
         self.log.log(self.log.INFO, "Measuring PSF")
 
         #
@@ -206,11 +205,7 @@ class Calibrate(pipProc.Process):
         psfCandidateList = starSelector.selectStars(exposure, sources)
 
         psfDeterminer = measAlg.makePsfDeterminer(algName, algPolicy)
-        psf, cellSet = psfDeterminer.determinePsf(exposure, psfCandidateList, sdqaRatings)
-        sdqaRatings = dict(zip([r.getName() for r in sdqaRatings], [r for r in sdqaRatings]))
-        self.log.log(self.log.INFO, "PSF determination using %d/%d stars." % 
-                     (sdqaRatings["phot.psf.numGoodStars"].getValue(),
-                      sdqaRatings["phot.psf.numAvailStars"].getValue()))
+        psf, cellSet = psfDeterminer.determinePsf(exposure, psfCandidateList)
 
         # The PSF candidates contain a copy of the source, and so we need to explicitly propagate new flags
         for cand in psfCandidateList:

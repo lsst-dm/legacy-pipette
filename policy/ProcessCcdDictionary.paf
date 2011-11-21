@@ -163,7 +163,7 @@ definitions: {
         description: "Astrometric calibration policy"
         minOccurs: 0
         maxOccurs: 1
-        dictionary: @@meas_pipeline:policy:WcsDeterminationStageDictionary.paf
+        dictionary: @@meas_astrom:policy:WcsDeterminationDictionary.paf
     }
     filters: {
         type: Policy

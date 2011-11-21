@@ -3,7 +3,6 @@ setupOptional(ip_isr)
 setupOptional(ip_diffim)
 setupOptional(ip_utils)
 setupRequired(meas_utils)
-setupRequired(meas_pipeline)
 setupOptional(coadd_chisquared)
 
 setupOptional(skymap)

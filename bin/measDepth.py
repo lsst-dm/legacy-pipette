@@ -24,7 +24,6 @@ import lsst.afw.detection as afwDet
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.meas.algorithms as measAlg
-import lsst.sdqa as sdqa
 import lsst.pipette.options
 import lsst.pipette.calibrate
 import lsst.pipette.phot

@@ -3,11 +3,11 @@
 import math
 import numpy
 
+import lsst.daf.base as dafBase
 import lsst.pex.logging as pexLog
 import lsst.afw.detection as afwDet
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
-import lsst.sdqa as sdqa
 import lsst.meas.algorithms as measAlg
 import lsst.meas.algorithms.apertureCorrection as maApCorr
 import lsst.meas.astrom as measAst
@@ -233,17 +233,14 @@ class Calibrate(pipProc.Process):
         policy = self.config['apcorr'].getPolicy()
         control = maApCorr.ApertureCorrectionControl(policy)
 
-        class FakeSdqa(dict):
-            def set(self, name, value):
-                self[name] = value
-            
-        sdqaRatings = FakeSdqa()
-                
-        corr = maApCorr.ApertureCorrection(exposure, cellSet, sdqaRatings, control, self.log)
+        metadata = dafBase.PropertyList()
+
+        corr = maApCorr.ApertureCorrection(exposure, cellSet, metadata, control, self.log)
         x, y = exposure.getWidth() / 2.0, exposure.getHeight() / 2.0
         value, error = corr.computeAt(x, y)
+
         self.log.log(self.log.INFO, "Aperture correction using %d/%d stars: %f +/- %f" %
-                     (sdqaRatings["numAvailStars"], sdqaRatings["numGoodStars"], value, error))
+                     (metadata.get("numAvailStars"), metadata.get("numGoodStars"), value, error))
         return corr
 
 

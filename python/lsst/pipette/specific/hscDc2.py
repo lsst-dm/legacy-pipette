@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
 import numpy
+import lsst.daf.base as dafBase
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.meas.algorithms as measAlg
 import lsst.afw.display.ds9 as ds9
-import lsst.sdqa as sdqa
 import lsst.meas.algorithms as measAlg
 
 from lsst.pipette.specific.Hsc import CalibrateHsc
@@ -100,7 +100,7 @@ class CalibrateHscDc2(CalibrateHsc):
 
         algName   = psfPolicy['algorithmName']
         algPolicy = psfPolicy['algorithm']
-        sdqaRatings = sdqa.SdqaRatingSet()
+        metadata = dafBase.PropertyList()
         self.log.log(self.log.INFO, "Measuring PSF")
 
         if matches:
@@ -128,7 +128,7 @@ class CalibrateHscDc2(CalibrateHsc):
         psfCandidateList = self.select(exposure, matches, algPolicy)
 
         psfDeterminer = measAlg.makePsfDeterminer(algName, algPolicy.getPolicy())
-        psf, cellSet = psfDeterminer.determinePsf(exposure, psfCandidateList, sdqaRatings)
+        psf, cellSet = psfDeterminer.determinePsf(exposure, psfCandidateList, metadata)
         exposure.setPsf(psf)
         return psf, cellSet
 

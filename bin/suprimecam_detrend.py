@@ -16,12 +16,13 @@ import lsst.pipette.catalog as pipCatalog
 def run(rerun,                          # Rerun name
         frames,                         # Frame number
         ccds,                           # CCD number
+        mit,                            # MIT CCDs?
         config,                         # Configuration
         ):
 #    log = pexLog.getDefaultLog()
 #    log.setThreshold(log.DEBUG)
 
-    mapper = suprimecam.SuprimecamMapper(rerun=rerun)
+    mapper = suprimecam.SuprimecamMapper(rerun=rerun, mit=mit)
     io = pipReadWrite.ReadWrite(mapper, ['visit', 'ccd'], config=config)
     detProc = pipMaster.Master(config=config)
     identMatrix = list()
@@ -50,6 +51,8 @@ if __name__ == "__main__":
                       help="visits to run, colon-delimited")
     parser.add_option("-c", "--ccds", dest="ccds",
                       help="CCDs to run, colon-delimited")
+    parser.add_option("--mit", dest="mit", default=False, action="store_true",
+                      help="MIT CCDs?")
 
     default = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "MasterProcessDictionary.paf")
     overrides = os.path.join(os.getenv("PIPETTE_DIR"), "policy", "suprimecam_detrend.paf")
@@ -58,4 +61,4 @@ if __name__ == "__main__":
         parser.print_help()
         sys.exit(1)
 
-    run(opts.rerun, map(int, opts.frames.split(":")), map(int, opts.ccds.split(":")), config)
+    run(opts.rerun, map(int, opts.frames.split(":")), map(int, opts.ccds.split(":")), opts.mit, config)

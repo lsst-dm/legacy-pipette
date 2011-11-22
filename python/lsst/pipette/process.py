@@ -107,7 +107,8 @@ class Process(object):
         @param pause Pause execution?
         """
         if not self._display or not self._display.has_key(name) or self._display < 0 or \
-               self._display in (False, None) or self._display[name] in (False, None):
+               self._display in (False, None) or \
+               self._display[name] in (False, None) or self._display[name] < 0:
             return
 
         if isinstance(self._display, int):

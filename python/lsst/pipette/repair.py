@@ -70,6 +70,10 @@ class Repair(pipProc.Process):
             crBit = mask.getMaskPlane("CR")
             mask.clearMaskPlane(crBit)
         except: pass
+
+        if display and displayCR:
+            ds9.incrDefaultFrame()
+            ds9.mtv(exposure, title="Pre-CR")
         
         policy = self.config['cosmicray'].getPolicy()
         mi = exposure.getMaskedImage()

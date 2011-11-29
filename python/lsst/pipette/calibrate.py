@@ -417,6 +417,10 @@ class Calibrate(pipProc.Process):
             # No data to do anything
             return
         primary = filterData['primary'] # Primary band for correction
+        if not filterData.has_key('secondary'):
+            # No data to do anything
+            return
+        
         secondary = filterData['secondary'] # Secondary band for correction
 
         polyData = filterData.getPolicy().getDoubleArray('polynomial') # Polynomial correction

@@ -172,13 +172,15 @@ def doLoad(instrument="hsc", output=None, data=None, calib=None, log=pexLog.Log.
 
 def doRun(rerun=None, frameId=None, ccdId=None,
           doMerge=True,
+          config=None,
           instrument="hsc",
           output=None,
           data=None,
           calib=None,
           log = pexLog.Log.getDefaultLog() # Log object
           ):
-    config = getConfig(instrument=instrument, output=output, data=data, calib=calib)
+    if config is None:
+        config = getConfig(instrument=instrument, output=output, data=data, calib=calib)
     state = run(rerun, frameId, ccdId, config, log=log)
     if doMerge:
         doMergeWcs(state, None)

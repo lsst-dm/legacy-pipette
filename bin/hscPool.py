@@ -21,7 +21,7 @@ def run(inputs):
     pexLog.Log.getDefaultLog().addDestination(log)
     log = pexLog.Log.getDefaultLog()
 
-    runHsc.doRun(rerun, frame, ccd, instrument=config['camera'], log=log)
+    runHsc.doRun(rerun, frame, ccd, instrument=config['camera'], config=config, log=log)
 
 
 def getConfigFromArguments(argv=None):

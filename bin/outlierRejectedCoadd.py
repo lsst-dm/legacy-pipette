@@ -204,10 +204,7 @@ def outlierRejectedCoadd(idList, butler, desFwhm, coaddWcs, coaddBBox, policy):
     @param[in] coaddWcs: WCS for coadd
     @param[in] coaddBBox: bounding box for coadd
     @param[in] policy: see policy/outlierRejectedCoaddDictionary.paf
-    @output:
-    - coaddExposure: coadd exposure
-    - weightMap: a float Image of the same dimensions as the coadd; the value of each pixel
-        is the sum of the weights of all the images that contributed to that pixel.
+    @return    coaddExposure: coadd exposure
     """
     if len(idList) < 1:
         print "Warning: no exposures to coadd!"

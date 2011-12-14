@@ -97,7 +97,6 @@ psf: {
         fluxLim: 200.0
 	clumpNSigma: 1.5
 	borderWidth: 0
-	kernelSize: 21
     }
     algorithmName: "pcaPsfDeterminer"
     algorithm: {
@@ -109,7 +108,6 @@ psf: {
 	lambda: 0.5
 	reducedChi2ForPsfCandidates: 2.0 #1.2
 	nEigenComponents: 4
-	kernelSize:       4
 	spatialOrder: 2
 	nStarPerCell: 0                 # unlimited
 	nStarPerCellSpatialFit: 10

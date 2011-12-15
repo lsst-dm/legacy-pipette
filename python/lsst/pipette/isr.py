@@ -99,7 +99,7 @@ class Isr(pipProc.Process):
             return exposureList
         assert len(exposureList) > 0, "Nothing in exposureList"
         if len(exposureList) == 1 and exposureList[0].getMaskedImage().getDimensions() == \
-           pipUtil.getCcd(exposureList[0]).getAllPixels(True).getDimensions():
+           pipUtil.getCcd(exposureList[0]).getAllPixelsNoRotation(True).getDimensions():
             # Special case: single exposure of the correct size
             return exposureList[0]
         
@@ -108,7 +108,7 @@ class Isr(pipProc.Process):
         Exposure = type(egExp)
         MaskedImage = type(egMi)
         ccd = pipUtil.getCcd(egExp)
-        miCcd = MaskedImage(ccd.getAllPixels(True).getDimensions())
+        miCcd = MaskedImage(ccd.getAllPixelsNoRotation(True).getDimensions())
 
         for exp in exposureList:
             mi = exp.getMaskedImage()
@@ -140,14 +140,14 @@ class Isr(pipProc.Process):
         @param amp Amplifier
         """
         sourceDataSec = amp.getDiskDataSec()
-        targetDataSec = amp.getDataSec(True)
+        targetDataSec = amp.getAllPixelsNoRotation(True)
         self.log.log(self.log.INFO, "Assembling amp %s: %s --> %s" %
                      (amp.getId(), sourceDataSec, targetDataSec))
-        sourceTrim = source.Factory(source, sourceDataSec, afwImage.LOCAL)
+        sourceTrim = source.Factory(source, sourceDataSec, afwImage.PARENT)
         sourceTrim = sourceTrim.Factory(amp.prepareAmpData(sourceTrim.getImage()),
                                         amp.prepareAmpData(sourceTrim.getMask()),
                                         amp.prepareAmpData(sourceTrim.getVariance()))
-        targetTrim = target.Factory(target, targetDataSec, afwImage.LOCAL)
+        targetTrim = target.Factory(target, targetDataSec, afwImage.PARENT)
         targetTrim <<= sourceTrim
         amp.setTrimmed(True)
 

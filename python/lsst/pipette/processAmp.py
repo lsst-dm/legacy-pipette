@@ -93,7 +93,7 @@ class ProcessAmp(pipProc.Process):
             if not pipUtil.haveAmp(exposure, amp):
                 continue
             saturation = amp.getElectronicParams().getSaturationLevel()
-            miAmp = MaskedImage(mi, amp.getDiskDataSec(), afwImage.LOCAL)
+            miAmp = MaskedImage(mi, amp.getDiskDataSec(), afwImage.PARENT)
             expAmp = Exposure(miAmp)
             bboxes = ipIsr.saturationDetection(expAmp, saturation, doMask = True)
             self.log.log(self.log.INFO, "Masked %d saturated objects on amp %s: %f" %
@@ -143,7 +143,7 @@ class ProcessAmp(pipProc.Process):
             miCcd = MaskedImage(ccd.getAllPixels(True).getDimensions())
             for amp in ccd:
                 diskDataSec = amp.getDiskDataSec()
-                trimDataSec = amp.getDataSec(True)
+                trimDataSec = amp.getElectronicDataSec(True)
                 miTrim = MaskedImage(mi, diskDataSec, afwImage.LOCAL)
                 miTrim = MaskedImage(amp.prepareAmpData(miTrim.getImage()),
                                      amp.prepareAmpData(miTrim.getMask()),

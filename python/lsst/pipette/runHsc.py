@@ -72,10 +72,12 @@ def run(rerun,                          # Rerun name
     if len([x for x in detrends if x]): # We need to run at least part of the ISR
         raws = io.readRaw(dataId)
     else:
-        config['do']['calibrate']['repair']['cosmicray'] = False
-
         io.fileKeys = ['visit', 'ccd']
-        raws = io.read('calexp', dataId)
+        try:
+            raws = io.read('calexp', dataId)
+            config['do']['calibrate']['repair']['cosmicray'] = False
+        except:
+            raws = io.readRaw(dataId)
         detrends = None
 
     exposure, psf, apcorr, brightSources, sources, matches, matchMeta = ccdProc.run(raws, detrends)

@@ -154,6 +154,7 @@ filters: {
     # Translation table for astrometry.net matching, and therefore photometric calibration
     B: g
     V: r
+    VR: r
     R: r
     I: i
     r: r

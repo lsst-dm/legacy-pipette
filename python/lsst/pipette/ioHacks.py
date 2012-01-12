@@ -409,7 +409,7 @@ def schema2pyfits(objs, schemaNamePrefix, getterName, log=NoLogging()):
                 # I'm guessing about arrays in schemas. -- CPL
                 if s.isArray():
                     v = getValue(val, s)
-                    for v_i in range(s.getDimens()):
+                    for v_i in range(s.getDimen()):
                         npCols[s_i][i][v_i] = v[v_i]
                 else:
                     npCols[s_i][i] = getValue(val, s)
@@ -420,7 +420,7 @@ def schema2pyfits(objs, schemaNamePrefix, getterName, log=NoLogging()):
     for npCol, colSchema, colName in zip(npCols, colSchemas, colNames):
         fitsType = schema2FitsTypes[colSchema.getType()]
         if colSchema.isArray():
-            fitsType = "%d%s" % (s.getDimens(), fitsType)
+            fitsType = "%d%s" % (s.getDimen(), fitsType)
 
         col = pyfits.Column(name=colName,
                             format=fitsType,

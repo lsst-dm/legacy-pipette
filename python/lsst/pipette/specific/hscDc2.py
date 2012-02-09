@@ -142,7 +142,7 @@ class CalibrateHscDc2(CalibrateHsc):
         #
         # Unpack policy
         #
-        kernelSize   = psfPolicy["kernelSize"]
+        kernelSize   = psfPolicy["kernelSizeMin"]
         borderWidth  = psfPolicy["borderWidth"]
         #
         mi = exposure.getMaskedImage()
